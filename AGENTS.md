@@ -9,5 +9,6 @@ Use `make help` for the command surface. Begin with `make bootstrap` and `make u
 3. An issue is complete once its evidence is reproducible. Record the affected requirement, source identity, exact command, observed verdict and any residual limitations in the issue or PR. A passing fragment cannot satisfy a whole-call requirement.
 4. When a mismatch reveals a gap, keep the minimal test and update the applicable living requirement or toolchain note. Keep frozen research as provenance. Link new findings to the issue that owns the fix.
 5. For a pin change, include a short architecture decision record covering changed rules and fixtures. Rebuild and retest both binaries and account for changes in expected results. Scope performance claims to measured builds.
+6. A speed change follows the [performance contract](docs/spec/performance.md): verdicts first, then the same measurement before and after. A change on the verification path also runs `make fuzz`. The [assurance contract](docs/spec/assurance.md) says what the tests must keep showing.
 
 Run `make ci` and `make docs-check` before handoff. Include the native/integration commands exercised and disclose lanes that were unavailable. Check the Makefile for whether CI covers a particular fixture size.

@@ -150,6 +150,10 @@ standalone-extended: standalone oracle  ## compare 122 altered sets and a cross-
 request-claims-test: bootstrap upstream plans public-tables  ## check local, carried and deferred equations at a fixed genuine transcript
 	@python3 -B scripts/test-request-claims.py
 
+.PHONY: fuzz
+fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend must never accept where C++ refuses
+	@python3 -B scripts/fuzz-differential.py
+
 .PHONY: benchmark-standalone
 benchmark-standalone: standalone oracle  ## measure validated standalone and C++ whole calls on both exact fixtures
 	@python3 -B scripts/benchmark-standalone.py
