@@ -16,6 +16,8 @@ CASES = {
     "fold": (1, "", "NO: request-carry-proximity\n"),
     "merge": (1, "", "NO: lin-own-proximity\n"),
     "weight": (1, "", "NO: lin-own-proximity\n"),
+    "attention": (1, "", "NO: request-carry-proximity\n"),
+    "head": (1, "", "NO: request-carry-proximity\n"),
 }
 
 

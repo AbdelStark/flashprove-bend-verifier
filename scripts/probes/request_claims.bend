@@ -24,15 +24,35 @@ import ../../src/header.bend as H
 import ../../src/hash_bytes.bend as Hash
 import ../../src/key_stage.bend as Key
 import ../../src/leaf_stage.bend as Leaf
+import ../../src/segment_forest.bend as Forest
+import ../../src/key_stage_lookup_rows.bend as Lookup
 
-# Inject into the derived obligation of the first G only. The key, leaf,
-# request files, Fiat–Shamir messages, nonce checks and openings remain real.
+# Change a derived obligation after the genuine transcript has been authenticated.
 type Mode is Data:
   Honest{}
   Bat{}
   Folded{}
   Merged{}
   Weight{}
+  Attention{}
+  Head{}
+
+def changed_join(input: M.Inputs) -> M.Inputs:
+  M.Inputs{i,Forest.Claims{Lookup.Point{p,ms,y},a,s,rows},d,e,st,ps,ds} = input
+  M.Inputs{i,Forest.Claims{Lookup.Point{p,ms,E.add(y,F.one())},a,s,rows},d,e,st,ps,ds}
+
+def target(mode: Mode,link: Nat,last: Bool) -> Bool:
+  match mode:
+    case Attention{}: Nat.is_eq(link,1n)
+    case Head{}: last
+    case _: False{}
+
+def family_inputs(inputs: Inputs.Batches,+mode: Mode) -> Inputs.Batches:
+  match inputs:
+    case []: []
+    case +x <> +tail:
+      alter = target(mode,L.number(x),List.is_empty(&2,M.Inputs,tail))
+      Bool.pick(M.Inputs -> M.Inputs,alter,changed_join,y => y)(x) <> family_inputs(tail,mode)
 
 def changed_bound(m: Own.Pending) -> Own.Pending:
   Own.Pending{terms,point,ms,y} = m
@@ -78,13 +98,13 @@ def start(ctx: L.Context,ms: Inputs.Batches,events: Tr.Events,items: List<&2,P.I
         Chain.finish(st,c,m,later,ev,items)
     case _ _: IO.die(Own.First,1,"fixture needs a first G segment")
 
-def stage(pair: R.Reader & Req.FirstData,+items: List<&2,P.Item>,mode: Mode) -> IO(Unit):
+def stage(pair: R.Reader & Req.FirstData,+items: List<&2,P.Item>,+mode: Mode) -> IO(Unit):
   (reader,+data) = pair
   Req.FirstData{_,ev,Req.Context{_,profile,_,_,_,_,_},_,_} = data
   do IO<Unit>:
     ctx : L.Context <- L.context(items,profile)
     inputs : Inputs.Batches <- Req.family_inputs(data)
-    own : Own.First <- start(ctx,inputs,ev,items,mode)
+    own : Own.First <- start(ctx,family_inputs(inputs,mode),ev,items,mode)
     finish(own,(reader,data))
 
 def verify(mode: Mode,leaf: Leaf.Trace,+cfg: C.Configured,st: Statement.Statement,path: String,copy: U32,plans: String) -> IO(Unit):
@@ -111,6 +131,8 @@ def parsed(name: String) -> IO(Mode):
     case "fold": IO.pure(Mode,Folded{})
     case "merge": IO.pure(Mode,Merged{})
     case "weight": IO.pure(Mode,Weight{})
+    case "attention": IO.pure(Mode,Attention{})
+    case "head": IO.pure(Mode,Head{})
     case _: IO.die(Mode,2,"unknown mutation")
 
 def digest(c: C.Configured) -> Hash.Bytes:
