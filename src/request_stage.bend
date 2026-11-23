@@ -112,9 +112,11 @@ def shared(pair: R.Reader & H.Bytes, +ctx: Context, book: K.Book, session: O.Ses
     +root : M.Digest <- K.need(M.Digest,O.binding_root(depth,number,cfg,seal,
       List.take(&2,U32,List.drop(&2,U32,path,8n),salt),salt,
       O.digests(H.u32s(List.drop(&2,U32,path,Nat.add(8n,salt))))),"NO: request-binding-slot")
+    opened : O.Opened <- K.need(O.Opened,O.binding_record(depth,number,cfg,root,salt,
+      H.cat([seal,List.drop(&2,U32,path,8n)]),session),"NO: request-binding-vertex")
     +plan : P.Plan <- P.load(O.digest_bytes(cfg),PT.RequestShared{},dir)
     trace : R.Reader & W.Traced <- W.begin_traced((r,O.digest_bytes(root)),1179798787n,plan,
-      H.cat([st,Item.item("the binding tree's root",O.digest_bytes(root))]),cfg,table,[],session,
+      H.cat([st,Item.item("the binding tree's root",O.digest_bytes(root))]),cfg,table,[],O.retained(opened),
       G.schedule(profile,PT.RequestShared{}),[fold,omega])
     result : R.Reader & Lin.Shared <- Lin.check(trace,plan,Leaf.Table{table,record},O.digest_bytes(cfg))
     second(result,ctx,number,root,book,seal,pending)

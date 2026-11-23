@@ -14,9 +14,11 @@ def add(a: Ext.E3, b: Ext.E3) -> Ext.E3:
 
 # Negation also feeds exported targets and direct equality checks, which require canonical zero.
 def negative(+bh: U32, +bl: U32) -> Field.Gl:
-  +lo = U32.sub(1, bl)
+  lo = U32.sub(1, bl)
   hi = U32.sub(U32.sub(4294967295, bh), Field.borrow(1, bl))
-  Bool.pick(Field.Gl,U32.is_zero(U32.or(bh,bl)),Field.Gl{0,0},Field.Gl{hi,lo})
+  # Keep this kernel unboxed for the legacy worker's allocation-free C ABI.
+  +mask = U32.sub(0,Field.borrow(0,U32.or(bh,bl)))
+  Field.Gl{U32.and(hi,mask),U32.and(lo,mask)}
 
 def negate(b: Ext.E3) -> Ext.E3:
   Ext.E3{y0, y1, y2, y3, y4, y5} = b

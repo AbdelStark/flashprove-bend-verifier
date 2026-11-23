@@ -72,6 +72,30 @@ def binding(+slot: Nat) -> String:
   path: Path.Siblings = [M.Digest{588778754,1329871150,2070963546,2812055942,3553148338,83159518,807737871,1548830267},M.Digest{723390724,1599227192,2475063660,3350900128,15655380,874977805,1750814273,2626650741}]
   show_digest(O.binding_root(2n,slot,config,pattern(32n,0n,5n,1n),pattern(40n,0n,3n,9n),40n,path))
 
+def sibling_saved(v: Maybe<&2,O.Opened>,key: String) -> String:
+  match v:
+    case Some{O.Opened{_,session}}:
+      record = Pair.snd(O.Session,Path.Record,Map.get(Path.Record,Map.new(&2,Path.Value),session,key))
+      found = Pair.snd(Path.Record,Path.Value,Map.get(Path.Value,None{},record,"1/0"))
+      show_digest(found)
+    case None{}: "invalid"
+
+# The one-leaf path at slot 1 discloses its sibling at vertex 1/0.
+def recorded(root: Maybe<&2,M.Digest>,bytes: H.Bytes,conflicting: Bool) -> String:
+  match root:
+    case None{}: "missing root"
+    case Some{+r}:
+      +key = H.hex(O.digest_bytes(r))
+      wrong = Map.set(&2,Path.Value,Map.new(&2,Path.Value),"1/0",Some{config()})
+      session = Bool.pick(O.Session,conflicting,Map.set(&2,Path.Record,O.empty_session(),key,wrong),O.empty_session())
+      sibling_saved(O.binding_record(1n,1n,config(),r,40n,bytes,session),key)
+
+def binding_session(conflicting: Bool) -> String:
+  +seal = pattern(32n,0n,5n,1n)
+  +salt = pattern(40n,0n,3n,9n)
+  root = O.binding_root(1n,1n,config(),seal,salt,40n,[start()])
+  recorded(root,H.cat([seal,salt,O.digest_bytes(start())]),conflicting)
+
 def main() -> IO(Unit):
   +bytes = opening1()
   +opened = O.verify(shape(),config(),root(),xs(),bytes,O.empty_session())
@@ -102,6 +126,8 @@ def main() -> IO(Unit):
     IO.print(accepted(O.verify(shape(),config(),root(),xs(),H.cat([bytes,[0]]),O.empty_session())))
     IO.print(accepted(O.verify(shape(),config(),root(),xs(),H.cat([H.zero(8n),List.drop(&2,U32,bytes,8n)]),O.empty_session())))
     IO.print(accepted(O.verify(shape(),config(),root(),xs(),H.cat([List.replicate(U32,8n,255),List.drop(&2,U32,bytes,8n)]),O.empty_session())))
+    IO.print(binding_session(False{}))
+    IO.print(binding_session(True{}))
 
 #|11849a2d11ba514292eb743d1e64ec3db561ca1f9bcc827f4a42f6dc0d068f4e
 #|dc8b600e35209b9d3d4cbe8d7703cb42866eebbf8fdf55069f5f16e6c929f88f
@@ -128,4 +154,6 @@ def main() -> IO(Unit):
 #|invalid
 #|invalid
 #|invalid
+#|invalid
+#|01060b10151a1f24292e33383d42474c51565b60656a6f74797e83888d92979c
 #|invalid

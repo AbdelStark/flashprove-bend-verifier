@@ -40,7 +40,7 @@ WORKER_NATIVE := $(wildcard src/native/*.patch src/native/*.inc src/native/*.h) 
 build/verify: $(wildcard src/policy*.bend src/layout*.bend) src/verify.bend src/header.bend src/commitment.bend src/hash_bytes.bend src/record_seeds.bend src/hashlib.bend src/native/exec_verifier.c src/native/exec_verifier.js src/native/verify_main.c scripts/build-cli.sh toolchain.lock | bootstrap
 	@sh scripts/build-cli.sh
 
-build/bend_verify: $(WORKER_NATIVE) $(WORKER_MODULES) scripts/build-verifier.sh upstream.lock toolchain.lock | bootstrap upstream
+build/bend_verify: $(WORKER_NATIVE) $(WORKER_MODULES) tests/native_sumcheck.cpp scripts/build-verifier.sh upstream.lock toolchain.lock | bootstrap upstream
 	@sh scripts/build-verifier.sh
 
 build/bend_verify.digest: | build/bend_verify

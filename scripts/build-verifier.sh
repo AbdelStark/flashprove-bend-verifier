@@ -33,6 +33,8 @@ PY
 )
 set -- -O2 -fstack-protector-strong -ftrivial-auto-var-init=zero -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fPIE
 clang "$@" -std=gnu11 -I. -c "$native/bridge.c" -o bridge.o
+clang++ -O2 -std=c++17 -I"$native" "$root/tests/native_sumcheck.cpp" bridge.o -lpthread -lm -o sumcheck_test
+./sumcheck_test
 case $(uname -s) in
   Darwin) set -- "$@" -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -Wl,-dead_strip ;;
   Linux) set -- "$@" -D_GLIBCXX_ASSERTIONS -fstack-clash-protection -pie -Wl,-z,relro,-z,now,-z,noexecstack ;;

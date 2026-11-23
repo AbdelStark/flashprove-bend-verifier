@@ -233,3 +233,11 @@ def binding_root(+depth: Nat, +slot: Nat, +config: Tree.Digest, +seal: H.Bytes, 
   valid = valid_shape(shape) && Nat.is_eq(H.length(seal),32n) && Nat.is_eq(H.length(salt),salt_size) &&
     Nat.is_eq(List.length(&2,Tree.Digest,path),depth) && Nat.is_eq(slot,short(Nat.min(depth,48n),slot))
   binding_checked(depth,slot,config,seal,salt,path,valid)
+
+def retained(opened: Opened) -> Session:
+  Opened{_,session} = opened
+  session
+
+# R7.14 also covers the below-root vertices of the computed R7.18 binding root.
+def binding_record(depth: Nat,slot: Nat,+config: Tree.Digest,root: Tree.Digest,salt_size: Nat,opening: H.Bytes,session: Session) -> Maybe<&2,Opened>:
+  verify(Shape{173,0,depth,4n,salt_size,config},config,root,[slot],opening,session)
