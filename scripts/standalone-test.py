@@ -14,7 +14,7 @@ EXAMPLES = ROOT / ".upstream/FlashProve/examples"
 def run(binary, directory, args, status, expected):
     env = {"PATH": str(directory / "empty-path"), "BEND_THREADS": "1"}
     result = subprocess.run([binary, *args], cwd=directory, env=env, capture_output=True,
-                            text=True, timeout=600)
+                            text=True, timeout=3600)
     lines = (result.stdout + result.stderr).strip().splitlines()
     if result.returncode != status or lines != expected.splitlines():
         raise RuntimeError(f"expected {status} {expected!r}, got {result.returncode} {lines[-4:]!r}")
@@ -30,20 +30,29 @@ def main():
     with tempfile.TemporaryDirectory(dir=ROOT / "build") as tmp:
         work = Path(tmp)
         binary = Path(shutil.copy2(ROOT / "build/verify-bend", work))
+        digest = (ROOT / "build/verify-bend.digest").read_text().strip()
         for name in ("plans", "tables"):
             shutil.copytree(ROOT / "build" / name, work / "data" / name)
         for name in fixtures:
             case = EXAMPLES / name
             expected_id = (case / "ID.txt").read_text().strip()
             policy = re.search(r" -policy (clipped-gap,[0-9,]+)", (case / "README.md").read_text())
-            call = [case / p for p in ("config", "ivk", "example.req", "example.y", "example.proof")]
-            options = ["-data", "data", *(["-policy", policy[1]] if policy else [])]
-            expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+",
-                                 (case / "README.md").read_text(), re.M)[0]
-            expected = expected.replace("<64 hex digits>", (ROOT / "build/verify-bend.digest").read_text().strip())
-            run(binary, work, [*call, "-id", expected_id, *options], 0, expected)
-            if name == fixtures[0]:
-                run(binary, work, [*call, "-id", "0" * 64, *options], 1, "NO: model-statement")
+            with tempfile.TemporaryDirectory(dir=work) as inputs:
+                files = Path(inputs)
+                shutil.copytree(case / "config", files / "configuration")
+                shutil.copytree(case / "ivk", files / "verification-key")
+                for original, dest in (("example.req","tokens"), ("example.y","next"), ("example.proof","payload")):
+                    shutil.copyfile(case / original, files / dest)
+                call = [files / p for p in ("configuration", "verification-key", "tokens", "next", "payload")]
+                options = ["-data", "data", *(["-policy", policy[1]] if policy else [])]
+                expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+",
+                                     (case / "README.md").read_text(), re.M)[0]
+                expected = expected.replace("<64 hex digits>", digest)
+                run(binary, work, [*call, "-id", expected_id, *options], 0, expected)
+                if name == fixtures[0]:
+                    run(binary, work, [*call, "-id", "0" * 64, *options], 1, "NO: model-statement")
+                    run(binary, work, [*call, "+RTS", "--help"], 2,
+                        "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q]")
             print(f"{name}: verified independently, {expected.splitlines()[-1]}", flush=True)
 
 

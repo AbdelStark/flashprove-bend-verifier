@@ -73,11 +73,19 @@ def items(plan: P.Plan) -> List<&2,P.Item>:
   P.Plan{_,_,_,xs} = plan
   xs
 
+# The leaf number comes from the proof header. A missing selected leaf is a refusal.
+def selected_file(res: Result<&1,&1,U32 & String,File>) -> IO(R.Reader):
+  match res:
+    case Done{f}: R.proof_file(f,4294967295)
+    case Fail{(2,_)}: IO.die(R.Reader,1,"NO: cp-entry-missing")
+    case Fail{(code,msg)}: IO.die(R.Reader,code,msg)
+
 def inspect(path: String, +config: H.Bytes, plans: String, anchor: Table, session: O.Session) -> IO(Trace):
   do IO<Trace>:
     cfg : M.Digest <- K.digest(config)
     +plan : P.Plan <- P.load(config,Profile.Entry{},plans)
     +shape : S.Shape <- S.from_items(items(plan))
-    r : R.Reader <- R.open_proof(path,4294967295)
+    opened : Result<&1,&1,U32 & String,File> <- File.open(path,"r")
+    r : R.Reader <- selected_file(opened)
     data : R.Reader & H.Bytes <- R.take(r,40)
     head(data,cfg,plan,shape,anchor,session)

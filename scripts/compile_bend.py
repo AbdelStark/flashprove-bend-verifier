@@ -4,9 +4,10 @@ import subprocess
 import tempfile
 
 
-def native(compiler, source, binary):
+def native(compiler, source, binary, driver=None):
     binary = Path(binary)
     with tempfile.TemporaryDirectory(dir=binary.parent) as work:
-        generated = Path(work) / "main.c"
+        generated = Path(work) / "verify_generated.c"
         subprocess.run([compiler, source, "-o", generated], check=True)
-        subprocess.run(["clang", "-std=c11", "-O3", generated, "-lpthread", "-lm", "-o", binary], check=True)
+        subprocess.run(["clang", "-std=c11", "-O3", "-I", work,
+                        driver or generated, "-lpthread", "-lm", "-o", binary], check=True)

@@ -9,10 +9,11 @@ from compile_bend import native
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"
 ENTRY = ROOT / "src/standalone.bend"
+DRIVER = ROOT / "src/native/verify_main.c"
 
 
 def identity():
-    files = {Path(__file__).resolve(), ROOT / "scripts/compile_bend.py", ROOT / "toolchain.lock"}
+    files = {Path(__file__).resolve(), ROOT / "scripts/compile_bend.py", DRIVER, ROOT / "toolchain.lock"}
     todo = [ENTRY]
     while todo:
         source = todo.pop()
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         entry.write_text('import Base\nimport ../../src/standalone.bend as CLI\n\n'
                          f'def main() -> IO(Unit): CLI.run_build("{digest}")\n')
         binary = work / "verify-bend"
-        native(ROOT / ".toolchain/bend/bin/bend", entry, binary)
+        native(ROOT / ".toolchain/bend/bin/bend", entry, binary, DRIVER)
         hashfile = work / "verify-bend.digest"
         hashfile.write_text(digest + "\n")
         binary.replace(BUILD / binary.name)

@@ -35,12 +35,12 @@ def leaf_index(xs: List<&2, U32>) -> IO(U32):
   match xs:
     case [67, 80, 80, 70, 72, 56, 50, 49, a, b, c, d]:
       IO.pure(U32, le32(a, b, c, d))
-    case _: IO.die(U32, 1, "cp-proof-head")
+    case _: IO.die(U32, 1, "NO: cp-proof-head")
 
 def token_word(xs: List<&2, U32>) -> IO(U32):
   match xs:
     case [a,b,c,d]: IO.pure(U32, le32(a,b,c,d))
-    case _: IO.die(U32, 1, "statement-range")
+    case _: IO.die(U32, 1, "NO: statement-range")
 
 type RequestStatus is Data:
   Valid{}

@@ -22,12 +22,16 @@ def limit_file(pair: File & U32, cap: U32) -> IO(Reader):
     ok : Unit <- Header.require(U32.is_le(size, cap), "NO: file-too-long")
     return Reader{f, size, 0, [], None{}}
 
-def open_proof(path: String, cap: U32) -> IO(Reader):
+def proof_file(f: File, cap: U32) -> IO(Reader):
   do IO<Reader>:
-    f : File <- IO.try(File, File.open(path, "r"))
     result : File & Result<&1, &1, U32 & String, U32> <- File.size(f)
     sized : File & U32 <- Commitment.unpack(U32, result)
     limit_file(sized, cap)
+
+def open_proof(path: String, cap: U32) -> IO(Reader):
+  do IO<Reader>:
+    f : File <- IO.try(File, File.open(path, "r"))
+    proof_file(f,cap)
 
 def absorb(hash: Hash, bytes: H.Bytes) -> Hash:
   match hash:

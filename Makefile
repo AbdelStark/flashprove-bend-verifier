@@ -125,7 +125,7 @@ stages-full: build/key-stage build/leaf-checked plans upstream  ## run the indep
 public-tables:  ## materialize the public tables that Bend authenticates
 	@python3 scripts/generate-tables.py --output build/tables
 
-build/verify-bend: $(STAGE_MODULES) scripts/build-standalone.py scripts/compile_bend.py toolchain.lock | bootstrap
+build/verify-bend: $(STAGE_MODULES) src/native/verify_main.c scripts/build-standalone.py scripts/compile_bend.py toolchain.lock | bootstrap
 	@python3 scripts/build-standalone.py
 
 build/verify-bend.digest: | build/verify-bend
