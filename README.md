@@ -41,15 +41,15 @@ The [native integration decision](docs/adr/native-kernels.md) describes the trus
 
 ## Whole-proof performance
 
-Baseline at revision `c1b975e`. The table gives median wall time over three fresh processes per executable and fixture, on one Apple M4 Max. Every call verified the published exact-match commitment and returned the expected coverage and accounting.
+Median wall time over three fresh processes per executable and fixture, on one Apple M4 Max. Every call verified the published exact-match commitment and returned the expected coverage and accounting.
 
 | Verifier | Small proof | Full-size proof |
 |---|---:|---:|
-| Bend 2 hybrid, public CLI | 3.484 s | 74.196 s |
+| Bend 2 hybrid, public CLI | 2.377 s | 47.225 s |
 | Lean OnBytes | 3.858 s | 59.567 s |
-| FlashProve C++ | 0.644 s | 8.077 s |
+| FlashProve C++ | 0.644 s | 8.144 s |
 
-At full size the hybrid took 24.6% longer than Lean OnBytes and 9.19 times as long as C++. Field multiplication dominated a sample of the hybrid request stage. The hybrid and C++ used one request-stage thread and could overlap stages. OnBytes ran them sequentially. FlashProve's theorem-linked Linux verifier is a separate executable with no timing in this comparison. [Bend and C++ measurements](docs/research/whole-call.md) · [Lean measurements](docs/research/onbytes.md)
+Simplifying field multiplication in Bend reduced the full-size median from 74.196 s to 47.225 s. At full size the optimized hybrid took 20.7% less time than Lean OnBytes and 5.80 times as long as C++. The hybrid and C++ used one request-stage thread and could overlap stages. OnBytes ran them sequentially. FlashProve's theorem-linked Linux verifier is a separate executable with no timing in this comparison. [Optimized measurements](docs/research/field-performance.md) · [Original field profile](docs/research/whole-call.md) · [Lean measurements](docs/research/onbytes.md)
 
 ## Reproduce the evidence
 
