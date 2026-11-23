@@ -4,7 +4,7 @@
 
 ## Verify a proof
 
-Building requires the pinned Bend 2 compiler, clang, Python 3 and make. The upstream checkout supplies the examples and independent test oracles. The packaged plan and table data can be installed offline once the toolchain is available.
+Building requires the pinned Bend 2 compiler, clang, Python 3 and make. The benchmark harness requires Python 3.11 or newer. The upstream checkout supplies the examples and independent test oracles. The packaged plan and table data can be installed offline once the toolchain is available.
 
 ```sh
 make standalone upstream
@@ -29,6 +29,19 @@ This proof covers tokens 16 through 47. Its next token lies outside the requeste
 The independent verifier admits the four H821 configurations bundled with FlashProve, the small and full-size models under exact match and clipped gap. It hashes the complete configuration, authenticates all seven chain plans and four public tables, and checks each stage’s largest dyadic error at each work factor against the 128-bit target. The release embeds public geometry. Key bytes, proof bytes, transcript challenges, layer equations and verdicts are computed at verification time. A new configuration requires reproducing and reviewing its public catalog entries. [Public plan contract](docs/adr/public-plans.md) · [Verification requirements](docs/spec/verifier.md)
 
 The request stage checks the feed-forward, attention and output-head relations, their lookup forests and smallness constraints, the folded codewords, and the shared and request-specific linear claims that bind the model weights. The accounting includes proof of work and assumes the upstream theorem on codes. The formal theorem for the Lean verifier applies to the Lean implementation. [Protocol research and source map](docs/research/protocol.md) · [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12)
+
+## Whole-proof benchmarks
+
+Median elapsed seconds on Lucid’s Xeon Platinum 8480CL, for three complete exact-match verifications per entry. Each process reads the caller's files and returns a checked verdict. The theorem-linked Lean runner supports only the full-size fixture.
+
+| CPU verifier | Small | Full-size |
+|---|---:|---:|
+| Native Bend 2 | 14.727 | 665.120 |
+| FlashProve C++ | 1.454 | 19.098 |
+| Lean OnBytes | 5.814 | 95.482 |
+| Theorem-linked Lean | — | 1,141.270 |
+
+On the full-size proof Bend used 41.7% less elapsed time than theorem-linked Lean. Lean OnBytes was 6.97× faster than Bend, and C++ was 34.83× faster. Bend's full-size peak RSS was 10.84 GiB. The Linux CPU benchmark used the H100 server's host processors. The run log distinguishes the matched Bend/C++ pairs from the earlier Lean runs on the same host. [Setup and results](docs/research/lucid.md) · [Raw benchmark records](docs/research/notes/lucid-standalone.tsv)
 
 ## Reproduce the evidence
 
