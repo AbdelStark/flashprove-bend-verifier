@@ -42,4 +42,6 @@ Closing conditions cover a caller-named ID, the target security accounting, allo
 | full-size | Full-size, exact | YES |
 | full-size-clipped-gap | Full-size, bounded cost | WITHIN LIMITS: clipped-gap C=25856 theta=512 cap=1 s=15 sh=8 |
 
+The fresh-generation check commits the small synthetic model under a new ID and verifies a next-token-only request with both implementations. It records the actual four closing lines and proof digest. [Fresh H100 proof](../research/fresh-proof.md)
+
 The altered-copy suites cover corrupted proof, key, leaf, request, token file, configuration and caller ID. Add boundary-specific unit cases for every ported component. Format walks validate transcripts and openings, while the whole call additionally enforces algebraic constraints and closing conditions. The Lean theorem applies to its specified verifier and hypotheses. Port conformance evidence consists of executable comparisons and tests. [Upstream examples](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples) · [Lean theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md)

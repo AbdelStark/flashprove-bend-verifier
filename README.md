@@ -49,6 +49,7 @@ On the full-size proof Bend used 41.7% less elapsed time than theorem-linked Lea
 |---|---|
 | `make ci` | Type and proof checks, JS and native unit tests, the small proof matrix and differential checks. |
 | `make standalone-full` | All four real proofs with the freestanding binary and caller-selected public inputs. Compares all four closing lines and the exit status. |
+| `make fresh-proof` | Generates a new small H821 commitment and next-token proof on an H100 and verifies it with C++ and standalone Bend. [Observed result](docs/research/fresh-proof.md) |
 | `make standalone-extended` | Compares both small altered-copy tables, 79 item mutations and 23 altered record sets with C++. Also substitutes a valid leaf from another commitment. |
 | `make stages-full` | Intermediate evidence against upstream, including all three model families and both model sizes. |
 | `make request-claims-test` | Individually change a real BAT target, carried FOLD target, weight-merge target, weight coefficient, attention lookup join and output-head lookup join. Each must reach and fail its final equation. |

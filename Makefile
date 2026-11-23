@@ -153,3 +153,8 @@ request-claims-test: bootstrap upstream plans public-tables  ## check local, car
 .PHONY: benchmark-standalone
 benchmark-standalone: standalone oracle  ## measure validated standalone and C++ whole calls on both exact fixtures
 	@python3 -B scripts/benchmark-standalone.py
+
+.PHONY: fresh-proof
+
+fresh-proof: standalone upstream  ## generate a fresh small next-token proof on an H100 and verify it with C++ and Bend
+	@python3 scripts/fresh-proof.py
