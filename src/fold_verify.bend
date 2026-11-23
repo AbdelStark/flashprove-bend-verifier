@@ -146,7 +146,7 @@ def advance(+old: S.Stage, next: S.Stage, c: F.Claim, open_cs: Open, events: Eve
       +bits = U32.to_nat(k)
       +mbits = U32.to_nat(h)
       ok = String.eq(name,"FOLD epsilon") && Nat.is_le(1n,bits) && Nat.is_le(mbits,bits) && Nat.is_le(Nat.sub(1n+Nat.mul(2n,bits),mbits),n) &&
-        F.fits(form,Nat.add(bits,CS.bits(m))) && Nat.is_eq(List.length(&2,Ext.E3,ms),Nat.mul(n,CS.size(mbits)))
+        F.fits(form,Nat.add(bits,CS.bits(m))) && Nat.is_eq(F.count(Ext.E3,ms,0n),Nat.mul(n,CS.size(mbits)))
       begun(old,next,F.Claim{form,ms,target},first(stream),value(msg),target,bits,open_cs,tail,ok)
     case _: Failed{}
 

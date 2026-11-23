@@ -2,6 +2,7 @@ import Base
 import ./key_stage_geometry.bend as G
 import ./key_stage_trace.bend as Trace
 import ./key_stage_wf.bend as WF
+import ./key_stage_range_check.bend as Range
 import ./key_stage_base.bend as B
 import ./key_stage_codes.bend as Code
 import ./key_stage_openings.bend as K
@@ -88,10 +89,12 @@ def initial_cursor(state: T.State, book: K.Book, session: O.Session, groups: G.S
 def finish_traced(pair: R.Reader & Cursor) -> IO(R.Reader & Traced):
   (r,cur) = pair
   Cursor{T.State{_,_,rho},book,session,groups,seal,base,+wf,events} = cur
+  +trace = List.reverse(&2,Trace.Observed,events)
   do IO<R.Reader & Traced>:
     ok : Unit <- Header.require(List.is_empty(&2,List<&2,G.Tree>,groups),"NO: unfinished-key-openings")
     done : Unit <- Header.require(B.complete(base) && WF.finished(wf),"NO: unfinished-key-base")
-    return (r,Traced{End{book,session,seal,rho},List.reverse(&2,Trace.Observed,events),wf})
+    valid : Unit <- Range.verify(wf,trace)
+    return (r,Traced{End{book,session,seal,rho},trace,wf})
 
 def start(first: T.Start, r: R.Reader, config: M.Digest, table: M.Digest, rounds: List<&2,P.Round>,
   book: K.Book, session: O.Session, groups: G.Schedule, finals: List<&2,Code.Final>, wf: WF.Stage) -> IO(R.Reader & Traced):

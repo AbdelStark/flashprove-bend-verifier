@@ -6,11 +6,13 @@ Verify a FlashProve H821 inference proof on a CPU using a native Bend command. T
 
 ## Independent Bend stages
 
-The standalone stage tests reconstruct the public statement, authenticate the seven configuration-bound plans and consume the genuine key, leaf and request proof bytes. The leaf checker implements the full LINK relation given the anchor table. It derives both tables’ record and column claims, compares the folded messages before their padding, and follows the batched claim through each code switch to the final BASE equality. The key and request probes currently report transcript evidence and authenticated final symbols. The independent whole-call verdict depends on completing the remaining key and request equations. [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12) · [Public plan contract](docs/adr/public-plans.md)
+The native `build/verify-bend` command authenticates the public inputs and seven plans, checks the entire key proof, derives the caller’s commitment ID from that key, and checks the selected leaf’s LINK proof against the authenticated table. It also verifies the request transcript, Merkle openings, lookup-forest reductions and shared LIN equations. Request model equations and their final proximity checks are still in development. The command exits with status 3 after these stages. [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12) · [Public plan contract](docs/adr/public-plans.md)
 
 ```sh
-make public-input-test plans-reproduce stages-full
+make standalone-full stages-full plans-reproduce
 ```
+
+The stage suite includes fixed-transcript algebra tests. Changing the range target, the Dot weight or the leaf LINK target leaves the genuine proof bytes intact and causes the corresponding final equation to reject. The request suite compares 120 forest projections from the four stored proofs with projections from the pinned C++ verifier.
 
 ## Run a proof
 

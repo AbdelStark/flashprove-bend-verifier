@@ -127,25 +127,38 @@ def variables(+message: U32) -> Nat:
     case 1: 0n
     case _: Nat.add(U32.log2(U32.sub(message, 1)), 1n)
 
-def record_hash(shape: Shape, pair: File & H.Bytes, +config: H.Bytes) -> IO(String):
+def record_start(shape: Shape, root: H.Bytes, +config: H.Bytes) -> H.Context:
   Shape{+b,n,+i,m,salt} = shape
-  (f, +head) = pair
-  +rows = U32.shln(1, U32.to_nat(b))
-  +length = Nat.mul(24n, U32.to_nat(rows))
-  root = List.drop(&2, U32, head, 8n)
-  +name = H.cat([root, config, H.word(n), H.word(i), H.word(m), H.word(b), H.word(1), H.word(salt)])
+  rows = U32.shln(1,U32.to_nat(b))
+  +name = H.cat([root,config,H.word(n),H.word(i),H.word(m),H.word(b),H.word(1),H.word(salt)])
   +coordinates = variables(i)
-  ctx = H.start(179, 0)
-  do IO<String>:
-    check : Unit <- Header.require(Nat.is_eq(List.length(&2, U32, head), 40n) &&
-      Header.key_head(List.take(&2, U32, head, 8n)), "NO: key-refused")
-    stream : H.Context <- chunks(Nat.div(length, 8192n),
-      (f, H.update(ctx, H.cat([config, H.word(112), name, H.word(U32.from_nat(Nat.add(coordinates, 1n))),
-      Seeds.sample(name, coordinates), H.word(rows)]))), Nat.mod(length, 8192n), True{})
-    return H.hex(H.finish(H.update(stream, H.word(0)), 32))
+  H.update(H.start(179,0),H.cat([config,H.word(112),name,H.word(U32.from_nat(1n+coordinates)),
+    Seeds.sample(name,coordinates),H.word(rows)]))
 
-# Build R4.11 from the same authenticated configuration snapshot consumed by
-# the independent statement and layout checks. ivk is the public key folder.
+def record_finish(ctx: H.Context) -> String:
+  H.hex(H.finish(H.update(ctx,H.word(0)),32))
+
+def record_length(shape: Shape) -> Nat:
+  Shape{b,_,_,_,_} = shape
+  Nat.mul(24n,Nat.pow(2n,U32.to_nat(b)))
+
+# R4.11 uses precisely the root and record consumed by the validated key.
+def from_record(+shape: Shape, +root: H.Bytes, +record: H.Bytes, config: H.Bytes) -> IO(String):
+  do IO<String>:
+    ok : Unit <- Header.require(Nat.is_eq(H.length(root),32n) && Nat.is_eq(H.length(record),record_length(shape)) &&
+      canonical(H.u32s(record)), "NO: commitment-record")
+    return record_finish(H.update(record_start(shape,root,config),record))
+
+def record_hash(+shape: Shape, pair: File & H.Bytes, config: H.Bytes) -> IO(String):
+  (f,+head) = pair
+  +length = record_length(shape)
+  root = List.drop(&2,U32,head,8n)
+  do IO<String>:
+    check : Unit <- Header.require(Nat.is_eq(H.length(head),40n) &&
+      Header.key_head(List.take(&2,U32,head,8n)), "NO: key-refused")
+    stream : H.Context <- chunks(Nat.div(length,8192n),(f,record_start(shape,root,config)),Nat.mod(length,8192n),True{})
+    return record_finish(stream)
+
 def from_config(shape: Shape, digest: H.Bytes, ivk: String) -> IO(String):
   do IO<String>:
     f : File <- IO.try(File, File.open(ivk ++ "/key.bin", "r"))

@@ -31,18 +31,29 @@ def completed(out: Arg.Output, meta: M.Metadata, expected: U32) -> IO(Stage):
     return Rows{meta,List.reverse(&2,L.Row,rows),List.reverse(&2,Arg.Pending,pending),ms,ix}
 
 def batch(+meta: M.Metadata, previous: L.Events, count: U32) -> IO(Stage):
-  M.Metadata{lookups,cols,_,_,_} = meta
+  M.Metadata{lookups,cols,_,_,_,_} = meta
   do IO<Stage>:
     out : Arg.Output <- Arg.run(lookups,cols,0n,Arg.Output{[],L.Tape{List.reverse(&2,L.AlgebraRound,previous),0n,0n,[]}})
     completed(out,meta,count)
 
+def action(name: String) -> U32:
+  match name:
+    case "BAT": 1
+    case "SEND seed": 2
+    case "SEND answer": 2
+    case _: 0
+
+def collect(tag: U32, name: String, n: U32, nz: U32, rows: U32, meta: M.Metadata,
+  acc: L.Events, message: H.Bytes, stream: T.Stream) -> IO(Stage):
+  match tag:
+    case 1: batch(meta,acc,rows)
+    case 2: IO.pure(Stage,Collect{meta,acc})
+    case _: IO.pure(Stage,Collect{meta,L.event(name,message,stream,n,nz) <> acc})
+
 def record(stage: Stage, round: P.Round, message: H.Bytes, stream: T.Stream) -> IO(Stage):
   match stage round:
-    case Collect{+meta,acc} P.Round{"BAT",_,_,_,_,_,_,_,_,_,_,count}: batch(meta,acc,count)
-    case Collect{meta,acc} P.Round{"SEND seed",_,_,_,_,_,_,_,_,_,_,_}: IO.pure(Stage,Collect{meta,acc})
-    case Collect{meta,acc} P.Round{"SEND answer",_,_,_,_,_,_,_,_,_,_,_}: IO.pure(Stage,Collect{meta,acc})
-    case Collect{meta,acc} P.Round{name,_,_,_,_,_,n,nz,_,_,_,_}:
-      IO.pure(Stage,Collect{meta,L.event(name,message,stream,n,nz) <> acc})
+    case Collect{meta,acc} P.Round{+name,_,_,_,_,_,n,nz,_,_,_,rows}:
+      collect(action(name),name,n,nz,rows,meta,acc,message,stream)
     case other _: IO.pure(Stage,other)
 
 def finished(stage: Stage) -> Bool:

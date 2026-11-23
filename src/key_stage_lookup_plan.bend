@@ -1,6 +1,7 @@
 import Base
 import ./plan.bend as Plan
 import ./key_stage_codes.bend as C
+import ./leaf_shape.bend as S
 import ./key_stage_openings.bend as K
 import ./wire_reader.bend as R
 import ./hash_bytes.bend as H
@@ -14,7 +15,7 @@ type Lookup is Data:
   Lookup{digits: U32, planes: U32, live: U32, weights: H.Bytes, offset: U32, pad: U32,
     parts: List<&2,Part>, first: H.Bytes}
 type Metadata is Data:
-  Metadata{lookups: List<&2,Lookup>, col_bits: Nat, matrix_rows: Nat, main_rows: U32, mask_rows: U32}
+  Metadata{lookups: List<&2,Lookup>, col_bits: Nat, matrix_rows: Nat, main_rows: U32, mask_rows: U32, stages: List<&2,S.Stage>}
 
 type Read<-A: Data> is Data:
   Read{value: A, rest: H.Bytes}
@@ -83,24 +84,25 @@ def lookups(n: Nat, buf: Read<List<&2,Lookup>>) -> IO(Read<List<&2,Lookup>>):
         lookups(k,more(row,acc))
     case _ _: fail(Read<List<&2,Lookup>>)
 
-def shapes(found: Read<List<&2,Lookup>>, +table: H.Bytes) -> IO(Metadata):
+def shapes(found: Read<List<&2,Lookup>>, +table: H.Bytes, codes: S.Codes) -> IO(Metadata):
   match found:
-    case Read{rows,_ <> _ <> main <> _ <> mask <> _}:
+    case Read{rows,_ <> _ <> main <> 1 <> mask <> 1 <> 0 <> 1 <> n <> tail}:
       +b = List.drop(&2,U32,table,3n)
       +c = List.drop(&2,U32,table,15n)
       do IO<Metadata>:
         v : U32 <- K.need(U32,List.head(&2,U32,b),"NO: key-table-rows")
         lo : U32 <- K.need(U32,List.head(&2,U32,c),"NO: key-table-columns")
         m : U32 <- K.need(U32,List.get(&2,U32,c,1n),"NO: key-matrix-rows")
-        return Metadata{rows,Nat.add(U32.to_nat(v),U32.to_nat(lo)),U32.to_nat(m),main,mask}
+        stages : List<&2,S.Stage> <- S.later(U32.to_nat(n),tail,codes)
+        return Metadata{rows,Nat.add(U32.to_nat(v),U32.to_nat(lo)),U32.to_nat(m),main,mask,stages}
     case _: fail(Metadata)
 
-def ranges(xs: H.Bytes, table: H.Bytes) -> IO(Metadata):
+def ranges(xs: H.Bytes, table: H.Bytes, codes: S.Codes) -> IO(Metadata):
   match xs:
     case n <> rest:
       do IO<Metadata>:
         found : Read<List<&2,Lookup>> <- lookups(U32.to_nat(n),Read{[],rest})
-        shapes(found,table)
+        shapes(found,table,codes)
     case _: fail(Metadata)
 
 def load(+items: List<&2,Plan.Item>) -> IO(Metadata):
@@ -109,4 +111,7 @@ def load(+items: List<&2,Plan.Item>) -> IO(Metadata):
     # All numbers, including the lookup digit weights and offset, fit U32 in the admitted profiles.
     fields : H.Bytes <- R.words(H.u32s(raw))
     table : H.Bytes <- C.table_words(items)
-    ranges(fields,table)
+    codes_raw : H.Bytes <- C.item(items,"codes")
+    words : H.Bytes <- R.words(H.u32s(codes_raw))
+    codes : S.Codes <- S.codes(words)
+    ranges(fields,table,codes)

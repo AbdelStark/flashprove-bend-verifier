@@ -78,10 +78,10 @@ def message_read(pair: R.Reader & H.Bytes, state: T.State, tag: U32, size: U32,
     nonce(work,r,message,state,tag,size)
 
 def advance(r: R.Reader, state: T.State, round: Plan.Round) -> IO(R.Reader & Step):
-  Plan.Round{name,_,work,+size,+roots,_,_,_,_,_,_,_} = round
+  Plan.Round{name,count,work,+size,+roots,_,_,_,_,_,_,_} = round
   +tag = kind(name)
   do IO<R.Reader & Step>:
-    ok : Unit <- Header.require(U32.is_ne(tag,0) && U32.is_zero(U32.and(size,7)) &&
+    ok : Unit <- Header.require(U32.is_eq(count,1) && U32.is_ne(tag,0) && U32.is_zero(U32.and(size,7)) &&
       U32.is_le(roots,U32.shrn(size,5n)), "NO: round-plan")
     raw : R.Reader & H.Bytes <- R.take(r,size)
     message_read(raw,state,tag,size,work,roots)

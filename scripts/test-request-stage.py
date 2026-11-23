@@ -95,10 +95,17 @@ def main():
             cmd = [binary,example,proof,example / "example.req",y,tables,plans]
             if name.endswith("-clipped-gap"):
                 cmd.append(re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())[1])
-            slot, root, first, shared, rho = run(cmd).split()
+            output = run(cmd).splitlines()
+            projections = [line.removeprefix("forest ") for line in output[:-1]]
+            known = [row.split("\t")[1] for row in (ROOT / "tests/data/segment-forests.tsv").read_text().splitlines()
+                     if row.split("\t")[0] == name]
+            if not known or projections != known:
+                first_bad = next((i for i, pair in enumerate(zip(projections,known)) if pair[0] != pair[1]), len(projections))
+                raise ValueError(f"{name}: forest {first_bad} differs: {projections[first_bad:first_bad+1]} vs {known[first_bad:first_bad+1]}")
+            slot, root, first, shared, rho = output[-1].split()
             if (slot,root) != expected or not all(re.fullmatch(r"[0-9a-f]{64}",x) for x in (first,shared,rho)):
                 raise ValueError(f"{name}: transcript disagrees with the pinned Python walker")
-            print(f"{name}: reached EOF, slot {slot}, binding root {root}",flush=True)
+            print(f"{name}: {len(known)} forest projections, reached EOF, slot {slot}, binding root {root}",flush=True)
             if name == "accepted-proof":
                 mutate(tmp,cmd,proof,y,walk)
 

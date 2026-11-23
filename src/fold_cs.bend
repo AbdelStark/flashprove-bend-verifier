@@ -17,7 +17,7 @@ def Draws() -> Data: List<&2,Draw>
 def bits(+len: Nat) -> Nat:
   Bool.pick(Nat,Nat.is_eq(len,1n+4294967295n),32n,U32.log2(U32.from_nat(len)))
 def size(k: Nat) -> Nat: Nat.pow(2n,k)
-def zeros(len: Nat) -> B.Elements: List.replicate(Ext.E3,len,F.zero())
+def zeros(len: Nat) -> B.Elements: F.fill(len,F.zero(),[])
 
 def embed(x: Field.Gl) -> Ext.E3:
   Field.Gl{h,l} = x
@@ -41,10 +41,17 @@ def factors(n: Nat, +z: Field.Gl) -> F.Factors:
     case 0n: []
     case 1n+left: F.Factor{F.one(),embed(z)} <> factors(left,Ext.product(z,z))
 
-def powers(n: Nat, +z: Field.Gl, +first: Ext.E3) -> B.Elements:
+def power_vector(n: Nat, +z: Field.Gl, +v: Ext.E3, acc: B.Elements) -> B.Elements:
   match n:
-    case 0n: []
-    case 1n+left: first <> powers(left,z,scale(z,first))
+    case 0n: List.reverse(&2,Ext.E3,acc)
+    case 1n+p: power_vector(p,z,scale(z,v),v <> acc)
+
+def powers(n: Nat, z: Field.Gl, first: Ext.E3) -> B.Elements: power_vector(n,z,first,[])
+
+def concat(xs: List<&2,B.Elements>) -> B.Elements:
+  match xs:
+    case []: []
+    case x <> more: F.cat(Ext.E3,x,concat(more))
 
 def eqs(xs: B.Elements) -> F.Factors:
   match xs:
@@ -79,7 +86,7 @@ def sample_at(main_bits: Nat, +mask_bits: Nat, +theta: Ext.E3, coords: B.Element
   main = sample_term(z,main_bits,E.mul(theta,F.sub(F.one(),top)))
   ws = dense(sample_term(z,mask_bits,E.mul(theta,top)))
   +last = Nat.sub(size(mask_bits),1n)
-  mask = List.append(&2,Ext.E3,List.take(&2,Ext.E3,ws,last),[E.mul(theta,beta)])
+  mask = F.cat(Ext.E3,F.take(Ext.E3,ws,last),[E.mul(theta,beta)])
   F.Claim{[main],mask,F.zero()}
 
 def sample(main_bits: Nat, mask_bits: Nat, theta: Ext.E3, coords: B.Elements, beta: Ext.E3) -> Maybe<&2,F.Claim>:
@@ -100,7 +107,7 @@ def generator(main: B.Code, mask: B.Code, +theta: Ext.E3, d: Draw, st: State,
       +v = E.mul(q,theta)
       term: F.Term = F.Term{scale(pow(z,r),p),factors(bits(m),z)}
       +shift = pow(b,s)
-      coeff = List.concat(&2,Ext.E3,[powers(n,b,scale(shift,q)),powers(n,b,scale(shift,v)),
+      coeff = concat([powers(n,b,scale(shift,q)),powers(n,b,scale(shift,v)),
         powers(r,z,p),powers(s,b,q),powers(s,b,v)])
       sum = B.masked(B.masked(B.masked(target,p,x),q,y),v,f)
       Some{State{term <> terms,F.plus(rest,coeff),sum,E.mul(v,theta)}}
@@ -117,9 +124,9 @@ def generators(+main: B.Code, +mask: B.Code, +theta: Ext.E3, ds: Draws, acc: May
 def finish(st: Maybe<&2,State>, sampled: Maybe<&2,F.Claim>, +len: Nat) -> Maybe<&2,F.Claim>:
   match st sampled:
     case Some{State{main,+rest,target,_}} Some{F.Claim{form,ws,_}}:
-      +used = List.length(&2,Ext.E3,rest)
-      mask = F.plus(List.append(&2,Ext.E3,rest,zeros(Nat.sub(len,used))),ws)
-      row: F.Claim = F.Claim{List.append(&2,F.Term,main,form),mask,target}
+      +used = F.count(Ext.E3,rest,0n)
+      mask = F.plus(F.cat(Ext.E3,rest,zeros(Nat.sub(len,used))),ws)
+      row: F.Claim = F.Claim{F.cat(F.Term,main,form),mask,target}
       Bool.pick(Maybe<&2,F.Claim>,Nat.is_lt(used,len),Some{row},None{})
     case _ _: None{}
 
@@ -131,7 +138,7 @@ def switch_valid(old: S.Stage, next: S.Stage, single: F.Single, +theta: Ext.E3, 
   +main_bits = Nat.add(U32.to_nat(k),bits(u))
   +mask_bits = Nat.add(U32.to_nat(h),bits(v))
   sample_row = sample(main_bits,mask_bits,theta,List.reverse(&2,Ext.E3,z),beta)
-  rest = List.concat(&2,Ext.E3,[d,f,zeros(r),zeros(s),zeros(s)])
+  rest = concat([d,f,zeros(r),zeros(s),zeros(s)])
   st: State = State{main,rest,B.masked(target,theta,answer),E.mul(theta,theta)}
   acc = generators(B.Code{a,m,r},B.Code{b,n,s},theta,draw,Some{st})
   finish(acc,sample_row,size(mask_bits))
@@ -153,8 +160,8 @@ def admissible(old: S.Stage, next: S.Stage, row: F.Single, src: Seed) -> Bool:
   nbits = Nat.add(bits(v),U32.to_nat(h))
   used = Nat.add(Nat.mul(2n,n),Nat.add(r,Nat.mul(2n,s)))
   Nat.is_eq(m,Nat.mul(u,size(U32.to_nat(k)))) && Nat.is_lt(used,Nat.mul(v,size(U32.to_nat(h)))) &&
-    F.fits(form,bits(m)) && Nat.is_eq(List.length(&2,Ext.E3,d),n) && Nat.is_eq(List.length(&2,Ext.E3,f),n) &&
-    Nat.is_eq(List.length(&2,Ext.E3,z),1n+Nat.max(mbits,nbits)) && Bool.not(T.is_zero(beta))
+    F.fits(form,bits(m)) && Nat.is_eq(F.count(Ext.E3,d,0n),n) && Nat.is_eq(F.count(Ext.E3,f,0n),n) &&
+    Nat.is_eq(F.count(Ext.E3,z,0n),1n+Nat.max(mbits,nbits)) && Bool.not(T.is_zero(beta))
 
 def switch_ready(old: S.Stage, next: S.Stage, row: F.Single, theta: Ext.E3, ds: Draws, src: Seed, answer: Ext.E3, okay: Bool) -> Maybe<&2,F.Claim>:
   match okay:

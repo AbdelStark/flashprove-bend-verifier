@@ -1,4 +1,5 @@
 import Base
+import ./segment_projection.bend as Projection
 import ../../src/request_stage.bend as Q
 import ../../src/policy_statement.bend as S
 import ../../src/policy_config.bend as C
@@ -9,8 +10,10 @@ import ../../src/hash_bytes.bend as H
 import ../../src/opening_bytes.bend as O
 
 def print_trace(trace: Q.Trace) -> IO(Unit):
-  Q.Trace{slot,root,first,shared,rho,_} = trace
-  IO.print(Nat.show(slot) ++ " " ++ H.hex(O.digest_bytes(root)) ++ " " ++ H.hex(first) ++ " " ++ H.hex(shared) ++ " " ++ H.hex(rho))
+  Q.Trace{slot,root,first,shared,rho,_,forests} = trace
+  do IO<Unit>:
+    ok : Unit <- Projection.groups(forests)
+    IO.print(Nat.show(slot) ++ " " ++ H.hex(O.digest_bytes(root)) ++ " " ++ H.hex(first) ++ " " ++ H.hex(shared) ++ " " ++ H.hex(rho))
 
 def proof(trace: Leaf.Trace, cfg: C.Configured, stmt: S.Statement, path: String, copy: U32, plans: String) -> IO(Unit):
   Leaf.Trace{_,_,checked,_,session,_} = trace

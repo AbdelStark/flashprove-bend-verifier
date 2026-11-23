@@ -3,7 +3,8 @@
 
 The reference walk uses the generated public tree schedule for sizes and tree places.
 All bytes, commitments, challenges, nonces, binding links and expected seals are decoded
-again with the upstream format equations. The Bend side also tests BASE code symbols.
+again with the upstream format equations. The Bend stage checks the key equations. Two
+in-memory claim changes keep genuine Fiat-Shamir transcripts and openings intact.
 """
 import argparse
 from io import BytesIO
@@ -129,8 +130,8 @@ def reference(folder, plans):
     return "key-transcript " + " ".join(x.hex() for x in (seal, shared, last)), locations
 
 
-def run(exe, plans, folder, key, success, want):
-    proc = subprocess.run([exe, plans, folder / "config", key], text=True, capture_output=True, timeout=240)
+def run(exe, plans, folder, key, success, want, *options):
+    proc = subprocess.run([exe, *options, plans, folder / "config", key], text=True, capture_output=True, timeout=240)
     out = (proc.stdout + proc.stderr).strip()
     if (proc.returncode == 0) != success or want not in out:
         raise AssertionError(f"{key}: exit {proc.returncode}, wanted {want!r}, got {out!r}")
@@ -153,6 +154,10 @@ def main():
         print(case, expected, flush=True)
         if case != "accepted-proof":
             continue
+        for option, gate in (("--changed-range-target", "NO: key-range-proximity"),
+                             ("--changed-dot-weight", "NO: lin-own-proximity")):
+            run(args.exe, args.plans, folder, key, False, gate, option)
+        print("refused changed range target and changed Dot weight on unchanged key bytes", flush=True)
         original = key.read_bytes()
         changes = {"slot": (loc["slot"], b"\x01", "key-binding-slot"),
                    "nonce": (loc["nonce"], (int.from_bytes(original[loc["nonce"]:loc["nonce"]+8], "little") ^ 1).to_bytes(8, "little"), "chain-round"),

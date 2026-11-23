@@ -1,4 +1,7 @@
 import Base
+import ./lin_own.bend as Own
+import ./lin_shared.bend as Shared
+import ./lin_bridge.bend as Lin
 import ./wire_item.bend as Item
 import ./policy_statement.bend as S
 import ./policy_config.bend as Config
@@ -18,17 +21,20 @@ import ./opening_bytes.bend as O
 import ./merkle.bend as M
 import ./request_geometry.bend as G
 import ./request_walk.bend as RW
+import ./segment_stage.bend as Seg
+import ./segment_geometry.bend as SG
+import ./policy_tables.bend as Tables
 
 # The transcript stage returns evidence to the checkers of segment and fold
 # claims. Only the whole-call verifier can issue a proof verdict.
 type Trace is Data:
-  Trace{slot: Nat, binding: M.Digest, first_seal: H.Bytes, shared_seal: H.Bytes, rho: H.Bytes, session: O.Session}
+  Trace{slot: Nat, binding: M.Digest, first_seal: H.Bytes, shared_seal: H.Bytes, rho: H.Bytes, session: O.Session, forests: Seg.Groups}
 
 type Geometry is Data:
   Geometry{depth: Nat, salt: Nat, finals: Codes.Finals}
 
 type Context is Data:
-  Context{cfg: M.Digest, profile: PT.Profile, dir: String, table: M.Digest, statement: H.Bytes, geometry: Geometry}
+  Context{cfg: M.Digest, profile: PT.Profile, dir: String, table: M.Digest, statement: H.Bytes, geometry: Geometry, record: H.Bytes}
 
 def dimensions(raw: H.Bytes, finals: Codes.Finals) -> IO(Geometry):
   match raw:
@@ -57,11 +63,22 @@ def complete(pair: R.Reader & W.End, slot: Nat, binding: M.Digest, first: H.Byte
   (r,W.End{_,session,_,rho}) = pair
   do IO<Trace>:
     done : Unit <- R.end_proof(r)
-    return Trace{slot,binding,first,shared,rho,session}
+    return Trace{slot,binding,first,shared,rho,session,[]}
 
-def second(shared: R.Reader & W.End, ctx: Context, slot: Nat, binding: M.Digest, book: K.Book, +first: H.Bytes) -> IO(Trace):
-  (r,W.End{published,session,+seal,_}) = shared
-  Context{+cfg,profile,dir,table,_,Geometry{_,_,Codes.Finals{_,_,_,own}}} = ctx
+def finish_own(trace: R.Reader & W.Traced, adopted: Shared.Adopted, pending: Own.First) -> IO(R.Reader & W.End):
+  (r,W.Traced{end,events,_}) = trace
+  do IO<R.Reader & W.End>:
+    ok : Unit <- Own.check(events,adopted,pending)
+    return (r,end)
+
+def check_own(trace: R.Reader & W.Traced, adopted: Shared.Adopted, pending: Maybe<&2,Own.First>) -> IO(R.Reader & W.End):
+  match pending:
+    case None{}: IO.pure(R.Reader & W.End,W.end_only(trace))
+    case Some{p}: finish_own(trace,adopted,p)
+
+def second(shared: R.Reader & Lin.Shared, ctx: Context, slot: Nat, binding: M.Digest, book: K.Book, +first: H.Bytes, pending: Maybe<&2,Own.First>) -> IO(Trace):
+  (r,Lin.Shared{W.End{published,session,+seal,_},adopted}) = shared
+  Context{+cfg,profile,dir,table,_,Geometry{_,_,Codes.Finals{_,_,_,own}},_} = ctx
   stmt = H.cat([Item.item("the seal of an earlier chain",first),Item.item("the seal of an earlier chain",seal)])
   do IO<Trace>:
     # R14.10. Omega occupies place 1 in the split shared chain and keeps its
@@ -69,8 +86,9 @@ def second(shared: R.Reader & W.End, ctx: Context, slot: Nat, binding: M.Digest,
     omega : K.Root <- K.at(published,1n)
     plan : P.Plan <- P.load(O.digest_bytes(cfg),PT.RequestSecond{},dir)
     rb : R.Reader & H.Bytes <- R.take(r,32)
-    result : R.Reader & W.End <- W.begin(rb,1179798788n,plan,stmt,cfg,table,
+    traced : R.Reader & W.Traced <- W.begin_traced(rb,1179798788n,plan,stmt,cfg,table,
       List.append(&2,K.Root,book,[omega]),session,G.schedule(profile,PT.RequestSecond{}),[own])
+    result : R.Reader & W.End <- check_own(traced,adopted,pending)
     complete(result,slot,binding,first,seal)
 
 def slot_number(lo: U32, +hi: U32) -> IO(Nat):
@@ -83,31 +101,49 @@ def slot(raw: H.Bytes) -> IO(Nat):
     case [lo,hi]: slot_number(lo,hi)
     case _: IO.die(Nat,1,"NO: request-binding-slot")
 
-def shared(pair: R.Reader & H.Bytes, +ctx: Context, book: K.Book, session: O.Session, +seal: H.Bytes) -> IO(Trace):
+def shared(pair: R.Reader & H.Bytes, +ctx: Context, book: K.Book, session: O.Session, +seal: H.Bytes, pending: Maybe<&2,Own.First>) -> IO(Trace):
   (r,+path) = pair
-  Context{+cfg,profile,dir,table,st,Geometry{+depth,+salt,Codes.Finals{_,fold,omega,_}}} = ctx
+  Context{+cfg,profile,dir,+table,st,Geometry{+depth,+salt,Codes.Finals{_,fold,omega,_}},record} = ctx
   do IO<Trace>:
     +number : Nat <- slot(H.u32s(List.take(&2,U32,path,8n)))
     +root : M.Digest <- K.need(M.Digest,O.binding_root(depth,number,cfg,seal,
       List.take(&2,U32,List.drop(&2,U32,path,8n),salt),salt,
       O.digests(H.u32s(List.drop(&2,U32,path,Nat.add(8n,salt))))),"NO: request-binding-slot")
-    plan : P.Plan <- P.load(O.digest_bytes(cfg),PT.RequestShared{},dir)
-    result : R.Reader & W.End <- W.begin((r,O.digest_bytes(root)),1179798787n,plan,
+    +plan : P.Plan <- P.load(O.digest_bytes(cfg),PT.RequestShared{},dir)
+    trace : R.Reader & W.Traced <- W.begin_traced((r,O.digest_bytes(root)),1179798787n,plan,
       H.cat([st,Item.item("the binding tree's root",O.digest_bytes(root))]),cfg,table,[],session,
       G.schedule(profile,PT.RequestShared{}),[fold,omega])
-    second(result,ctx,number,root,book,seal)
+    result : R.Reader & Lin.Shared <- Lin.check(trace,plan,Leaf.Table{table,record},O.digest_bytes(cfg))
+    second(result,ctx,number,root,book,seal,pending)
 
-def binding(pair: R.Reader & W.End, +ctx: Context) -> IO(Trace):
+def binding_result(pair: R.Reader & W.End, +ctx: Context, pending: Maybe<&2,Own.First>) -> IO(Trace):
   (r,W.End{book,session,seal,_}) = pair
-  Context{_,_,_,_,_,Geometry{depth,salt,_}} = ctx
+  Context{_,_,_,_,_,Geometry{depth,salt,_},_} = ctx
   do IO<Trace>:
     path : R.Reader & H.Bytes <- R.take(r,U32.from_nat(Nat.add(8n,Nat.add(salt,Nat.mul(32n,depth)))))
-    shared(path,ctx,book,session,seal)
+    shared(path,ctx,book,session,seal,pending)
+
+# The transcript inspection entry point captures the second chain before its request equation is supplied.
+def binding(pair: R.Reader & W.End, ctx: Context) -> IO(Trace): binding_result(pair,ctx,None{})
+
+def binding_checked(pair: R.Reader & W.End, ctx: Context, first: Own.First) -> IO(Trace):
+  binding_result(pair,ctx,Some{first})
+
+def results(trace: Trace, forests: Seg.Groups) -> Trace:
+  Trace{slot,root,first,shared,rho,session,_} = trace
+  Trace{slot,root,first,shared,rho,session,forests}
+
+def model(pair: R.Reader & W.Traced, ctx: Context, profile: PT.Profile, tables: Tables.Tables) -> IO(Trace):
+  (r,W.Traced{end,events,_}) = pair
+  do IO<Trace>:
+    rows : Seg.Groups <- Seg.checks(SG.select(profile),events,0n,tables,[])
+    result : Trace <- binding((r,end),ctx)
+    return results(result,rows)
 
 def first(pair: R.Reader & H.Bytes, expected: U32, st: S.Statement, +plan: P.Plan, +ctx: Context, session: O.Session) -> IO(Trace):
   (r,header) = pair
-  S.Statement{words,req,y,_,_,_,_,lines} = st
-  Context{cfg,profile,_,table,table_item,Geometry{_,_,Codes.Finals{last,_,_,_}}} = ctx
+  S.Statement{words,req,y,tables,_,_,_,lines} = st
+  Context{cfg,+profile,_,table,table_item,Geometry{_,_,Codes.Finals{last,_,_,_}},_} = ctx
   do IO<Trace>:
     +copy : U32 <- Header.leaf_index(header)
     ok : Unit <- Header.require(U32.is_eq(copy,expected),"NO: request-stored-copy")
@@ -115,17 +151,17 @@ def first(pair: R.Reader & H.Bytes, expected: U32, st: S.Statement, +plan: P.Pla
     statement : H.Bytes = H.cat([table_item,Item.item("stored copy",H.word(copy)),
       Item.item("request",Item.blob(Config.word_bytes(words))),Item.item("the request file's words",Item.blob(Config.word_bytes(req)))])
     rb : R.Reader & H.Bytes <- R.take(r,32)
-    done : R.Reader & W.End <- RW.first(rb,plan,statement,cfg,table,session,G.schedule(profile,PT.RequestFirst{}),last,y,vocab)
-    binding(done,ctx)
+    done : R.Reader & W.Traced <- RW.first(rb,plan,statement,cfg,table,session,G.schedule(profile,PT.RequestFirst{}),last,y,vocab)
+    model(done,ctx,profile,tables)
 
 def inspect(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Configured,
     plans_dir: String, +leaf: Leaf.Table, session: O.Session) -> IO(Trace):
   Config.Configured{+bytes,+plan} = cfg
-  Leaf.Table{root,_} = leaf
+  Leaf.Table{root,record} = leaf
   do IO<Trace>:
     profile : PT.Profile <- K.need(PT.Profile,Catalog.select(H.u32s(bytes)),"NO: unsupported-configuration")
     digest : M.Digest <- K.digest(bytes)
     geom : Geometry <- geometry(Leaf.items(plan))
     r : R.Reader <- R.open_proof(path,4294967295)
     head : R.Reader & H.Bytes <- R.take(r,12)
-    first(head,expected_copy,st,plan,Context{digest,profile,plans_dir,root,Item.item("table",Leaf.table_bytes(leaf)),geom},session)
+    first(head,expected_copy,st,plan,Context{digest,profile,plans_dir,root,Item.item("table",Leaf.table_bytes(leaf)),geom,record},session)

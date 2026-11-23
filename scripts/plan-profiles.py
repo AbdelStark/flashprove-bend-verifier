@@ -2,6 +2,7 @@
 """Package, reproduce, or extract H821's configuration-only chain parameters."""
 import argparse
 import hashlib
+import os
 import shutil
 import struct
 import subprocess
@@ -120,6 +121,15 @@ def reproduce(work, check):
     source = work / "source.tar"
     subprocess.run(["git", "-C", UP, "archive", "-o", source, REV, *paths], check=True)
     subprocess.run(["tar", "-xf", source, "-C", work], check=True)
+    # Instrument the planner's private build copy, where the public padding counts
+    # are available before the verifier can open any proof or key.
+    segment = work / "verifier/src/vf_segments.inc"
+    source_text = segment.read_text()
+    anchor = "  const size_t NL = linksH.size();"
+    if source_text.count(anchor) != 1:
+        raise ValueError("segment geometry export hook changed")
+    instrument = "".join((ROOT / "scripts" / hook).read_text() for hook in ("segment-profile.inc","weight-profile.inc"))
+    segment.write_text(source_text.replace(anchor, instrument + anchor))
     flags = ["clang++", "-std=c++17", "-O1", "-pthread", "-Iverifier/src", "-Iblocks", "-Iprover",
              "-DBLK_FIELD=2", "-DDIGEST_WORDS=8", "-DSERVING_BUILD=1", "-DBLK_COUNT_HASH_CALLS=1"]
     subprocess.run([*flags, "-DCP_VERIFY_AS_A_UNIT", '-DVF_SOURCE_DIGEST="' + "0"*64 + '"',
@@ -130,8 +140,10 @@ def reproduce(work, check):
         dest = exports / fixture
         dest.mkdir(parents=True)
         subprocess.run([work / "pubtool", work / "examples" / fixture / "config", "128", dest],
-                       cwd=work, check=True, stdout=subprocess.DEVNULL)
-    for generator in ("key-geometry.py", "request-geometry.py"):
+                       cwd=work, check=True, stdout=subprocess.DEVNULL,
+                       env={**os.environ, "FLASHPROVE_SEGMENT_GEOMETRY": str(dest / "forests.tsv"),
+                            "FLASHPROVE_WEIGHT_LAYOUT": str(dest / "weights.tsv")})
+    for generator in ("key-geometry.py", "request-geometry.py", "segment-geometry.py", "weight-profile.py"):
         subprocess.run([sys.executable, ROOT / "scripts" / generator, exports,
                         *(["--check"] if check else [])], check=True)
     pack(exports, work / "examples", work, check)

@@ -119,3 +119,20 @@ stages-full: build/key-stage build/leaf-checked plans upstream  ## run the indep
 	@python3 scripts/test-key-stage.py --full
 	@python3 scripts/test-leaf-stage.py --full-size
 	@python3 scripts/test-request-stage.py --full-size
+
+.PHONY: standalone standalone-test standalone-full public-tables
+
+public-tables:  ## materialize the public tables that Bend authenticates
+	@python3 scripts/generate-tables.py --output build/tables
+
+build/verify-bend: $(STAGE_MODULES) toolchain.lock | bootstrap
+	@mkdir -p build
+	@.toolchain/bend/bin/bend src/standalone.bend -o $@
+
+standalone: build/verify-bend plans public-tables  ## build the native Bend verifier and its public data
+
+standalone-test: standalone upstream  ## exercise the native command without external verifier executables
+	@python3 scripts/standalone-test.py
+
+standalone-full: standalone upstream  ## exercise the native command on all four published proofs
+	@python3 scripts/standalone-test.py --full-size

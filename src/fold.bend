@@ -17,6 +17,27 @@ type Claim is Data:
 type Single is Data:
   Single{main: Form, old_mask: B.Elements, fresh_mask: B.Elements, target: Ext.E3}
 
+# The dense mask table of a real group can exceed the JS call stack.
+def count(~A: Data, xs: List<&2,A>, acc: Nat) -> Nat:
+  match xs:
+    case []: acc
+    case _ <> tail: count(A,tail,1n+acc)
+
+def take_into(~A: Data, xs: List<&2,A>, n: Nat, rev: List<&2,A>) -> List<&2,A>:
+  match xs n:
+    case Con{x,tail} 1n+k: take_into(A,tail,k,x <> rev)
+    case _ _: List.reverse(&2,A,rev)
+
+def take(~A: Data, xs: List<&2,A>, n: Nat) -> List<&2,A>: take_into(A,xs,n,[])
+
+def cat(~A: Data, xs: List<&2,A>, ys: List<&2,A>) -> List<&2,A>:
+  List.reverse.go(&2,A,List.reverse(&2,A,xs),ys)
+
+def fill(n: Nat, +x: Ext.E3, acc: B.Elements) -> B.Elements:
+  match n:
+    case 0n: acc
+    case 1n+k: fill(k,x,x <> acc)
+
 def zero() -> Ext.E3: Ext.E3{0,0,0,0,0,0}
 def one() -> Ext.E3: Ext.E3{0,1,0,0,0,0}
 def sub(a: Ext.E3, b: Ext.E3) -> Ext.E3: E.add(a,E.negate(b))
@@ -33,25 +54,32 @@ def fix(gs: B.Elements, fs: Factors, weight: Ext.E3) -> Term:
     case Con{g,tail} Con{Factor{lo,hi},rest}: fix(tail,rest,E.mul(weight,mix(lo,hi,g)))
     case _ _: Term{zero(),[]}
 
-def fixed(main: Form, +gs: B.Elements, +eps: Ext.E3) -> Form:
+def fixed_into(main: Form, +gs: B.Elements, +eps: Ext.E3, acc: Form) -> Form:
   match main:
-    case []: []
-    case Term{w,fs} <> more: fix(gs,fs,E.mul(w,eps)) <> fixed(more,gs,eps)
+    case []: List.reverse(&2,Term,acc)
+    case Term{w,fs} <> more: fixed_into(more,gs,eps,fix(gs,fs,E.mul(w,eps)) <> acc)
 
-def fits(main: Form, +bits: Nat) -> Bool:
-  match main:
-    case []: True{}
-    case Term{_,fs} <> rest: Nat.is_eq(List.length(&2,Factor,fs),bits) && fits(rest,bits)
+def fixed(main: Form, gs: B.Elements, eps: Ext.E3) -> Form: fixed_into(main,gs,eps,[])
+
+def fits_all(main: Form, +bits: Nat, good: Bool) -> Bool:
+  match main good:
+    case Nil{} b: b
+    case Con{Term{_,fs},rest} True{}: fits_all(rest,bits,Nat.is_eq(List.length(&2,Factor,fs),bits))
+    case _ _: False{}
+
+def fits(main: Form, bits: Nat) -> Bool: fits_all(main,bits,True{})
 
 def product(xs: B.Elements, acc: Ext.E3) -> Ext.E3:
   match xs:
     case []: acc
     case x <> tail: product(tail,E.mul(acc,x))
 
-def scaled(xs: B.Elements, +s: Ext.E3) -> B.Elements:
+def scale_into(xs: B.Elements, +s: Ext.E3, acc: B.Elements) -> B.Elements:
   match xs:
-    case []: []
-    case x <> tail: E.mul(s,x) <> scaled(tail,s)
+    case []: List.reverse(&2,Ext.E3,acc)
+    case x <> tail: scale_into(tail,s,E.mul(s,x) <> acc)
+
+def scaled(xs: B.Elements, s: Ext.E3) -> B.Elements: scale_into(xs,s,[])
 
 def pairs(xs: B.Elements, +g: Ext.E3, acc: B.Elements) -> B.Elements:
   match xs:
@@ -78,7 +106,7 @@ def fresh(+h: Nat, +gs: B.Elements, len: Nat) -> B.Elements:
   +s = product(high,one())
   extra = Bool.pick(B.Elements,List.is_empty(&2,Ext.E3,high),[],tail_weights(high,True{}))
   +used: B.Elements = s <> List.append(&2,Ext.E3,scaled(low,s),extra)
-  List.append(&2,Ext.E3,used,List.replicate(Ext.E3,Nat.sub(len,List.length(&2,Ext.E3,used)),zero()))
+  List.append(&2,Ext.E3,used,fill(Nat.sub(len,count(Ext.E3,used,0n)),zero(),[]))
 
 def finish(claim: Claim, +gamma: B.Elements, +h: Nat, mask_len: Nat, +eps: Ext.E3, target: Ext.E3) -> Single:
   Claim{main,old,_} = claim
@@ -86,10 +114,12 @@ def finish(claim: Claim, +gamma: B.Elements, +h: Nat, mask_len: Nat, +eps: Ext.E
   d = scaled(fold_low(List.take(&2,Ext.E3,gamma,h),old),old_scale)
   Single{fixed(main,gamma,eps),d,fresh(h,gamma,mask_len),target}
 
-def spread(+lo: Ext.E3, +hi: Ext.E3, xs: B.Elements) -> B.Elements:
+def spread_into(+lo: Ext.E3, +hi: Ext.E3, xs: B.Elements, acc: B.Elements) -> B.Elements:
   match xs:
-    case []: []
-    case +x <> tail: E.mul(lo,x) <> E.mul(hi,x) <> spread(lo,hi,tail)
+    case []: List.reverse(&2,Ext.E3,acc)
+    case +x <> tail: spread_into(lo,hi,tail,E.mul(hi,x) <> E.mul(lo,x) <> acc)
+
+def spread(lo: Ext.E3, hi: Ext.E3, xs: B.Elements) -> B.Elements: spread_into(lo,hi,xs,[])
 
 # Expand a small final form. Factors stay compressed through all preceding code switches.
 def factor_table(fs: Factors, weight: Ext.E3) -> B.Elements:
@@ -99,10 +129,12 @@ def factor_table(fs: Factors, weight: Ext.E3) -> B.Elements:
       rest = factor_table(tail,weight)
       spread(lo,hi,rest)
 
-def plus(xs: B.Elements, ys: B.Elements) -> B.Elements:
+def plus_into(xs: B.Elements, ys: B.Elements, acc: B.Elements) -> B.Elements:
   match xs ys:
-    case Con{x,rest} Con{y,more}: E.add(x,y) <> plus(rest,more)
-    case _ _: []
+    case Con{x,rest} Con{y,more}: plus_into(rest,more,E.add(x,y) <> acc)
+    case _ _: List.reverse(&2,Ext.E3,acc)
+
+def plus(xs: B.Elements, ys: B.Elements) -> B.Elements: plus_into(xs,ys,[])
 
 def expand(main: Form, acc: B.Elements) -> B.Elements:
   match main:

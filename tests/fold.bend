@@ -31,18 +31,28 @@ def d(+x: U32) -> CS.Draw: CS.Draw{U32.to_nat(x),e(U32.add(x,1)),e(U32.add(x,2))
 def main() -> IO(Unit):
   +g: B.Elements = [e(2),e(3),e(5)]
   form: F.Form = [F.Term{e(2),[F.Factor{e(1),e(3)},F.Factor{e(1),e(4)}]}]
-  old: F.Single = F.Single{form,[e(7),e(11)],[e(13),e(17)],e(11)}
-  stage: S.Stage = S.Stage{B.Code{5n,4n,2n},B.Code{4n,2n,1n},2,1}
-  next: S.Stage = S.Stage{B.Code{4n,2n,1n},B.Code{4n,8n,1n},1,1}
-  seed: CS.Seed = CS.Seed{[e(2),e(3),e(5),e(6),e(7)],e(8)}
+  +old: F.Single = F.Single{form,[e(7),e(11)],[e(13),e(17)],e(11)}
+  +stage: S.Stage = S.Stage{B.Code{5n,4n,2n},B.Code{4n,2n,1n},2,1}
+  +next: S.Stage = S.Stage{B.Code{4n,2n,1n},B.Code{4n,8n,1n},1,1}
+  +seed: CS.Seed = CS.Seed{[e(2),e(3),e(5),e(6),e(7)],e(8)}
   do IO<Unit>:
     IO.print(list(F.fresh(1n,g,8n)))
     IO.print(list(F.scaled(F.fold_low([e(2)],[e(1),e(4),e(6),e(2)]),e(45))))
     IO.print(show(F.round(e(101),e(3),e(5),e(7))))
     print_row(CS.switch(stage,next,old,e(3),[d(17),d(1),d(17)],seed,e(9)))
+    print_row(CS.switch(stage,next,old,e(3),[d(32)],seed,e(9)))
+    print_row(CS.switch(stage,next,old,e(3),[d(17)],CS.Seed{[e(2),e(3)],e(8)},e(9)))
+    print_row(CS.switch(stage,next,old,e(3),[d(17)],CS.Seed{[e(2),e(3),e(5),e(6),e(7)],e(0)},e(9)))
+    print_row(CS.switch(stage,S.Stage{B.Code{4n,4n,1n},B.Code{4n,8n,1n},1,1},old,e(3),[d(17)],seed,e(9)))
+    print_row(CS.switch(stage,next,F.Single{[],[e(2)],[e(3)],e(11)},e(3),[d(17)],seed,e(9)))
 #|0 15/0 30/0 45/0 5/0 25/0 1/0 0/0 0/
 #|0 315/4294967294 4294967207/
 #|0 878
 #|0 1686809
 #|0 1318636469/4294967157 1961279506/61619 1778969427/4267361797 2143397412/
 #|4294967294 4294825071/0 999842/4294967294 4294536831/0 3007070/0 5763/4294967294 4292024336/0 22014/0 58167/4294967294 4294966289/0 2016/0 1512/4294967294 4294964273/0 1260/4294967294 4294964777/4294967294 4294965407/0 24/
+#|refused
+#|refused
+#|refused
+#|refused
+#|refused
