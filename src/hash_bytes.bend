@@ -5,7 +5,11 @@ def Bytes() -> Data:
   List<&2, U32>
 
 def cat(parts: List<&2, Bytes>) -> Bytes:
-  List.concat(&2, U32, parts)
+  match parts:
+    case []: []
+    case [last]: last
+    case prefix <> rest:
+      List.reverse.go(&2,U32,List.reverse(&2,U32,prefix),cat(rest))
 
 def le(+x: U32) -> Bytes:
   [U32.and(x, 255), U32.and(U32.shrn(x, 8n), 255),
@@ -14,14 +18,34 @@ def le(+x: U32) -> Bytes:
 def word(x: U32) -> Bytes:
   cat([le(x), [0,0,0,0]])
 
-def u32s(xs: Bytes) -> List<&2, U32>:
+def length_go(bytes: Bytes, n: Nat) -> Nat:
+  match bytes:
+    case []: n
+    case _ <> rest: length_go(rest,1n+n)
+
+def length(bytes: Bytes) -> Nat:
+  length_go(bytes,0n)
+
+def take_rev(bytes: Bytes, n: Nat, acc: Bytes) -> Bytes:
+  match bytes n:
+    case Nil{} _: List.reverse(&2,U32,acc)
+    case _ 0n: List.reverse(&2,U32,acc)
+    case Con{x,rest} 1n+k: take_rev(rest,k,x <> acc)
+
+def take(bytes: Bytes, n: Nat) -> Bytes:
+  take_rev(bytes,n,[])
+
+def u32s_rev(xs: Bytes, acc: Bytes) -> Bytes:
   match xs:
     case a <> b <> c <> d <> tail:
-      (a + U32.shln(b, 8n) + U32.shln(c, 16n) + U32.shln(d, 24n) : U32) <> u32s(tail)
-    case [a,b,c]: [(a + U32.shln(b, 8n) + U32.shln(c, 16n) : U32)]
-    case [a,b]: [(a + U32.shln(b, 8n) : U32)]
-    case [a]: [a]
-    case []: []
+      u32s_rev(tail,(a + U32.shln(b,8n) + U32.shln(c,16n) + U32.shln(d,24n) : U32) <> acc)
+    case [a,b,c]: List.reverse(&2,U32,(a + U32.shln(b,8n) + U32.shln(c,16n) : U32) <> acc)
+    case [a,b]: List.reverse(&2,U32,(a + U32.shln(b,8n) : U32) <> acc)
+    case [a]: List.reverse(&2,U32,a <> acc)
+    case []: List.reverse(&2,U32,acc)
+
+def u32s(xs: Bytes) -> Bytes:
+  u32s_rev(xs,[])
 
 def initial(start: List<&2, U32>, n: U32) -> Kernel.H8:
   match start:
@@ -33,7 +57,8 @@ def initial(start: List<&2, U32>, n: U32) -> Kernel.H8:
     case _: Kernel.H8{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
 
 # B2b.compress expects the high limb first in both the state and message.
-def compress(block: List<&2, U32>, state: Kernel.H8, used: U32, +flag: U32) -> Kernel.H8:
+def compress_counter(block: List<&2, U32>, state: Kernel.H8, t0h: U32, t0l: U32,
+  t1h: U32, t1l: U32, +flag: U32) -> Kernel.H8:
   match block:
     case [m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15,
           m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31]:
@@ -45,8 +70,11 @@ def compress(block: List<&2, U32>, state: Kernel.H8, used: U32, +flag: U32) -> K
         m9, m8, m11, m10, m13, m12, m15, m14,
         m17, m16, m19, m18, m21, m20, m23, m22,
         m25, m24, m27, m26, m29, m28, m31, m30,
-        0, used, 0, 0, flag, flag)
+        t0h, t0l, t1h, t1l, flag, flag)
     case _: state
+
+def compress(block: List<&2, U32>, state: Kernel.H8, used: U32, flag: U32) -> Kernel.H8:
+  compress_counter(block, state, 0, used, 0, 0, flag)
 
 def output(state: Kernel.H8, n: U32) -> Bytes:
   Kernel.H8{h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15} = state
@@ -68,14 +96,17 @@ def absorb(count: Nat, state: Kernel.H8, +src: Bytes, +offset: U32) -> Context:
 def update(ctx: Context, bytes: Bytes) -> Context:
   Context{state, tail, offset} = ctx
   +src = cat([tail, bytes])
-  count = Nat.div(Nat.sub(List.length(&2, U32, src), 1n), 128n)
+  count = Nat.div(Nat.sub(length(src), 1n), 128n)
   absorb(count, state, src, offset)
 
-def finish(ctx: Context, n: U32) -> Bytes:
+def finish_state(ctx: Context) -> Kernel.H8:
   Context{state, +tail, offset} = ctx
-  +len = List.length(&2, U32, tail)
+  +len = length(tail)
   padded = cat([tail, List.replicate(U32, Nat.sub(128n, len), 0)])
-  output(compress(u32s(padded), state, U32.add(offset, U32.from_nat(len)), 4294967295), n)
+  compress(u32s(padded), state, U32.add(offset, U32.from_nat(len)), 4294967295)
+
+def finish(ctx: Context, n: U32) -> Bytes:
+  output(finish_state(ctx),n)
 
 # R2.1. The caller supplies the two-word domain label and the 32-byte start value.
 def digest(label: Bytes, start: Bytes, body: Bytes, +n: U32) -> Bytes:
@@ -99,4 +130,4 @@ def hex(xs: Bytes) -> String:
 
 def size(ctx: Context) -> Nat:
   Context{_, tail, offset} = ctx
-  Nat.add(U32.to_nat(offset), List.length(&2, U32, tail))
+  Nat.add(U32.to_nat(offset), length(tail))

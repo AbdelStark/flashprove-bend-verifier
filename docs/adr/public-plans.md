@@ -1,0 +1,11 @@
+# Configuration-bound public plans
+
+> Status: living
+
+H821 has seven chains per configuration. The chain schedule fixes message sizes, challenge counts, code parameters and proof-of-work difficulty. A verifier that lets the prover choose these bytes changes the statement it checks. R4.3 permits a second verifier to take the public parameters as an input. This implementation admits the exact and clipped-gap configurations for each of the two published model sizes. [H821 format](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/docs/format/FORMAT.md)
+
+The maintainer regenerates the plans from the pinned upstream source and public configuration. The generator archives the specified Git revision and passes only a configuration directory, security level 128 and an output directory to the upstream planner. It stores the canonical parameter bytes in four compressed bundles. The generated Bend catalog identifies each configuration by H169(2) and binds each of its seven named chains to its byte length, round count and H169(1). The model configuration determines membership. A key, expected ID, request, output or proof contributes no bytes to generation. [Generator](../../scripts/plan-profiles.py) · [Catalog](../../src/plan_catalog.bend)
+
+At runtime, Bend hashes the configuration bytes and selects the corresponding catalog entry. It reads a bounded parameter file, checks the configuration item and its position, parses the typed round and item sequence, and authenticates the same bytes through EOF before returning a plan. Unknown configurations and altered files fail. The runtime consumes the installed parameter files offline. [Plan reader](../../src/plan.bend) · [Bounded reader](../../src/wire_reader.bend)
+
+Run `make plans-reproduce` to recompile the planner and compare every exported byte with the checked-in distribution. Run `make plan-test` to authenticate all 28 files in native Bend and exercise changes to the schedule, configuration and file boundaries. A change to the protocol revision or the set of supported model configurations requires rerunning both commands and reviewing the catalog diff.

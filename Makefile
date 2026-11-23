@@ -28,7 +28,7 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
 	@sh research/spikes/run.sh
 
-ci: docs-check check test test-native e2e  ## what CI runs
+ci: docs-check check test test-native e2e plan-test public-input-test  ## what CI runs
 
 .PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
 
@@ -37,7 +37,7 @@ verifier: build/verify build/bend_verify.digest  ## build the whole verifier wit
 WORKER_MODULES := $(addprefix src/,hashlib.bend goldilocks.bend extension.bend merkle.bend chain.bend sumcheck.bend)
 WORKER_NATIVE := $(wildcard src/native/*.patch src/native/*.inc src/native/*.h) src/native/bridge.c src/native/entry.bend.in
 
-build/verify: src/verify.bend src/header.bend src/commitment.bend src/hash_bytes.bend src/record_seeds.bend src/hashlib.bend src/native/exec_verifier.c src/native/exec_verifier.js src/native/verify_main.c scripts/build-cli.sh toolchain.lock | bootstrap
+build/verify: $(wildcard src/policy*.bend src/layout*.bend) src/verify.bend src/header.bend src/commitment.bend src/hash_bytes.bend src/record_seeds.bend src/hashlib.bend src/native/exec_verifier.c src/native/exec_verifier.js src/native/verify_main.c scripts/build-cli.sh toolchain.lock | bootstrap
 	@sh scripts/build-cli.sh
 
 build/bend_verify: $(WORKER_NATIVE) $(WORKER_MODULES) scripts/build-verifier.sh upstream.lock toolchain.lock | bootstrap upstream
@@ -77,3 +77,23 @@ build/verify-on-bytes: scripts/onbytes-build.sh upstream.lock | upstream
 
 benchmark-lean: lean-baseline  ## time three Lean OnBytes calls per exact-match fixture
 	@python3 scripts/onbytes-test.py --samples 3
+
+.PHONY: plans plans-reproduce plan-test
+
+plans:  ## extract the four configuration-bound public plan bundles offline
+	@python3 scripts/plan-profiles.py install
+
+plans-reproduce: upstream  ## compare all bundled public plans with a fresh export from the pin
+	@python3 scripts/plan-profiles.py check
+
+build/inspect-plans: src/plan_cli.bend src/plan.bend src/plan_types.bend src/plan_catalog.bend src/wire_reader.bend src/header.bend src/commitment.bend src/hash_bytes.bend src/record_seeds.bend src/hashlib.bend toolchain.lock | bootstrap
+	@mkdir -p build
+	@.toolchain/bend/bin/bend src/plan_cli.bend -o $@
+
+plan-test: build/inspect-plans plans upstream  ## authenticate the schedules in Bend and check changed input rejection
+	@python3 scripts/test-plans.py
+
+.PHONY: public-input-test
+
+public-input-test: bootstrap plans upstream  ## reconstruct the public statement and layout on all four profiles
+	@python3 scripts/public-input-test.py

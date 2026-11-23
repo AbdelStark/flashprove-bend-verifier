@@ -2,7 +2,7 @@
 
 > Status: living
 
-Each issue has an acceptance test and a GitHub blocked-by relationship for each prerequisite. The [hybrid MVP](https://github.com/AbdelStark/fv-flashprove-bend-verifier/milestone/1) and [independent Bend verifier](https://github.com/AbdelStark/fv-flashprove-bend-verifier/milestone/2) milestones track delivery. This table records architecture and ordering. Requirement definitions live in the [verification contract](../spec/verifier.md).
+The [standalone release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12) groups the eight implementation and benchmark issues. Each issue has an acceptance test and a GitHub blocked-by relationship for each prerequisite. The [hybrid MVP](https://github.com/AbdelStark/fv-flashprove-bend-verifier/milestone/1) and [independent Bend verifier](https://github.com/AbdelStark/fv-flashprove-bend-verifier/milestone/2) milestones track delivery. This table records architecture and ordering. Requirement definitions live in the [verification contract](../spec/verifier.md).
 
 | Issue | Work | Requires | Exit evidence |
 |---|---|---|---|
@@ -10,9 +10,9 @@ Each issue has an acceptance test and a GitHub blocked-by relationship for each 
 | [#2](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/2) | Use Bend arithmetic in the whole call | #1 | Linked Bend primitive, known answers, independently identified build and reference parity |
 | [#3](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/3) | Bind public inputs and commitment in Bend | #1 | Checked bytes, expected ID/policy and stage intermediates |
 | [#4](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/4) | Implement arithmetic, transcript and authenticated openings | #2 | Field/hash known answers, round traces and authenticated paths |
-| [#5](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/5) | Establish checked plans and accounting | #3, #4 | Canonical plans/shapes for each supported configuration and rejection on mismatches |
-| [#6](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/6) | Verify key and leaf chains | #5 | Both independent stages agree with the reference and refuse altered inputs |
-| [#7](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/7) | Implement the common sub-proof checks | #5 | Reproducible intermediate claims and checked final equations |
+| [#5](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/5) | Establish checked plans and accounting | #3 | Canonical plans/shapes for each supported configuration and rejection on mismatches |
+| [#6](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/6) | Verify key and leaf chains | #4, #5 | Both independent stages agree with the reference and refuse altered inputs |
+| [#7](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/7) | Implement the common sub-proof checks | #4, #5 | Reproducible intermediate claims and checked final equations |
 | [#8](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/8) | Check each model segment | #7 | Feed-forward, attention and head constraints on real requests |
 | [#9](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/9) | Ship independent Bend verification | #6, #8 | Three stages and all closing guards under both policies, with all applicable altered-copy cases |
 | [#10](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/10) | Measure end-to-end performance | #9 | Same-host measurements with fixture ID, threads, memory method and output |

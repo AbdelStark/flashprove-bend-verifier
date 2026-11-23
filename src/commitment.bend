@@ -144,11 +144,17 @@ def record_hash(shape: Shape, pair: File & H.Bytes, +config: H.Bytes) -> IO(Stri
       Seeds.sample(name, coordinates), H.word(rows)]))), Nat.mod(length, 8192n), True{})
     return H.hex(H.finish(H.update(stream, H.word(0)), 32))
 
-def compute(+config: String, ivk: String) -> IO(String):
+# Build R4.11 from the same authenticated configuration snapshot consumed by
+# the independent statement and layout checks. ivk is the public key folder.
+def from_config(shape: Shape, digest: H.Bytes, ivk: String) -> IO(String):
   do IO<String>:
-    shape : Shape <- key_shape(config)
-    digest : H.Bytes <- configuration(config)
     f : File <- IO.try(File, File.open(ivk ++ "/key.bin", "r"))
     r : File & Result<&1, &1, U32 & String, H.Bytes> <- File.read_bytes(f, 40)
     head : File & H.Bytes <- unpack(H.Bytes, r)
     record_hash(shape, head, digest)
+
+def compute(+config: String, ivk: String) -> IO(String):
+  do IO<String>:
+    shape : Shape <- key_shape(config)
+    digest : H.Bytes <- configuration(config)
+    from_config(shape,digest,ivk)
