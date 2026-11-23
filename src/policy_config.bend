@@ -8,6 +8,7 @@ import ./plan_types.bend as PT
 import ./policy.bend as Policy
 import ./policy_frame.bend as Frame
 import ./policy_statement.bend as S
+import ./accounting.bend as Accounting
 
 type Snapshot is Data:
   Snapshot{digest: H.Bytes, layout: H.Bytes}
@@ -64,6 +65,7 @@ type Configured is Data:
 def authenticated(+st: S.Statement, +snap: Snapshot, plans_dir: String) -> IO(Configured):
   Snapshot{+digest,_} = snap
   do IO<Configured>:
+    held : Unit <- Accounting.check(digest)
     +plan : Plan.Plan <- Plan.load(digest,PT.RequestFirst{},plans_dir)
     ok : Unit <- verify_config(st,snap,plan)
     return Configured{digest,plan}

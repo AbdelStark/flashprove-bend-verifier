@@ -3,13 +3,16 @@
 import argparse
 from pathlib import Path
 import re
+import runpy
 import subprocess
 import sys
 import tempfile
+from compile_bend import native
 
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / ".upstream/FlashProve"
 BUILD = ROOT / "build"
+MODEL = runpy.run_path(str(ROOT / "scripts/model-projections.py"))
 
 
 def run(args, expected=0, diagnostic=None):
@@ -80,7 +83,7 @@ def main():
         binary = tmp / "request-stage"
         plans = BUILD / "plans"
         tables = tmp / "tables"
-        run([ROOT / ".toolchain/bend/bin/bend",ROOT / "scripts/probes/request_stage.bend","-o",binary])
+        native(ROOT / ".toolchain/bend/bin/bend",ROOT / "scripts/probes/request_stage.bend",binary)
         run([sys.executable,ROOT / "scripts/generate-tables.py","--output",tables])
         names = ["accepted-proof", "accepted-proof-clipped-gap"]
         if args.full_size:
@@ -96,7 +99,20 @@ def main():
             if name.endswith("-clipped-gap"):
                 cmd.append(re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())[1])
             output = run(cmd).splitlines()
-            projections = [line.removeprefix("forest ") for line in output[:-1]]
+            projections = [line.removeprefix("forest ") for line in output[:-1] if line.startswith("forest ")]
+            attention = [line.removeprefix("attention ") for line in output[:-1] if line.startswith("attention ")]
+            known_attention = [row.split("\t")[1] for row in (ROOT / "tests/data/segment-attention.tsv").read_text().splitlines()
+                               if row.split("\t")[0] == name]
+            if not known_attention or attention != known_attention:
+                raise ValueError(f"{name}: R11.3 row or evaluation-table projection mismatch")
+            batches = [line.removeprefix("model-batch ") for line in output[:-1] if line.startswith("model-batch ")]
+            all_batches = [row.split("\t")[1] for row in (ROOT / "tests/data/segment-batches.tsv").read_text().splitlines()
+                           if row.split("\t")[0] == name]
+            if batches != all_batches:
+                raise ValueError(f"{name}: placed model coefficient, target or mask differs")
+            expected_model = dict(line.split() for line in MODEL["VECTORS"].read_text().splitlines())
+            if MODEL["comparison"]("\n".join(output), name) != expected_model[name]:
+                raise ValueError(f"{name}: layer lookup join or output-head equation differs")
             known = [row.split("\t")[1] for row in (ROOT / "tests/data/segment-forests.tsv").read_text().splitlines()
                      if row.split("\t")[0] == name]
             if not known or projections != known:
@@ -105,7 +121,7 @@ def main():
             slot, root, first, shared, rho = output[-1].split()
             if (slot,root) != expected or not all(re.fullmatch(r"[0-9a-f]{64}",x) for x in (first,shared,rho)):
                 raise ValueError(f"{name}: transcript disagrees with the pinned Python walker")
-            print(f"{name}: {len(known)} forest projections, reached EOF, slot {slot}, binding root {root}",flush=True)
+            print(f"{name}: {len(known)} forest and {len(attention)} attention projections, {len(batches)} placed G/A/H batch equations, reached EOF, slot {slot}, binding root {root}",flush=True)
             if name == "accepted-proof":
                 mutate(tmp,cmd,proof,y,walk)
 

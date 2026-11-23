@@ -12,11 +12,11 @@ def add(a: Ext.E3, b: Ext.E3) -> Ext.E3:
   Ext.E3{y0, y1, y2, y3, y4, y5} = b
   Ext.pack(Ext.add(Field.Gl{x0, x1}, Field.Gl{y0, y1}), Ext.add(Field.Gl{x2, x3}, Field.Gl{y2, y3}), Ext.add(Field.Gl{x4, x5}, Field.Gl{y4, y5}))
 
-# Returns p - b, including the word p for zero; Ext.add reduces the sum.
+# Negation also feeds exported targets and direct equality checks, which require canonical zero.
 def negative(+bh: U32, +bl: U32) -> Field.Gl:
   +lo = U32.sub(1, bl)
   hi = U32.sub(U32.sub(4294967295, bh), Field.borrow(1, bl))
-  Field.Gl{hi, lo}
+  Bool.pick(Field.Gl,U32.is_zero(U32.or(bh,bl)),Field.Gl{0,0},Field.Gl{hi,lo})
 
 def negate(b: Ext.E3) -> Ext.E3:
   Ext.E3{y0, y1, y2, y3, y4, y5} = b

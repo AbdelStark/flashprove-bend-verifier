@@ -21,6 +21,9 @@ import ./opening_bytes.bend as O
 import ./merkle.bend as M
 import ./request_geometry.bend as G
 import ./request_walk.bend as RW
+import ./segment_inputs.bend as Inputs
+import ./segment_chain.bend as Chain
+import ./key_stage_trace.bend as Events
 import ./segment_stage.bend as Seg
 import ./segment_geometry.bend as SG
 import ./policy_tables.bend as Tables
@@ -133,18 +136,32 @@ def results(trace: Trace, forests: Seg.Groups) -> Trace:
   Trace{slot,root,first,shared,rho,session,_} = trace
   Trace{slot,root,first,shared,rho,session,forests}
 
-def model(pair: R.Reader & W.Traced, ctx: Context, profile: PT.Profile, tables: Tables.Tables) -> IO(Trace):
-  (r,W.Traced{end,events,_}) = pair
-  do IO<Trace>:
+type FirstData is Data:
+  FirstData{end: W.End, events: Events.Events, context: Context, forests: Seg.Groups, statement: S.Statement}
+
+def family_inputs(data: FirstData) -> IO(Inputs.Batches):
+  FirstData{_,events,Context{_,profile,_,_,_,_,_},rows,st} = data
+  Inputs.batches(Inputs.shapes(SG.select(profile)),rows,0n,st,events,[])
+
+def model(pair: R.Reader & W.Traced,+ctx: Context,+st: S.Statement) -> IO(R.Reader & FirstData):
+  (r,W.Traced{end,+events,_}) = pair
+  Context{_,profile,_,_,_,_,_} = ctx
+  S.Statement{_,_,_,tables,_,_,_,_} = st
+  do IO<R.Reader & FirstData>:
     rows : Seg.Groups <- Seg.checks(SG.select(profile),events,0n,tables,[])
+    return (r,FirstData{end,events,ctx,rows,st})
+
+def continue_first(pair: R.Reader & FirstData) -> IO(Trace):
+  (r,FirstData{end,_,ctx,rows,_}) = pair
+  do IO<Trace>:
     result : Trace <- binding((r,end),ctx)
     return results(result,rows)
 
-def first(pair: R.Reader & H.Bytes, expected: U32, st: S.Statement, +plan: P.Plan, +ctx: Context, session: O.Session) -> IO(Trace):
+def first(pair: R.Reader & H.Bytes, expected: U32, +st: S.Statement, +plan: P.Plan, +ctx: Context, session: O.Session) -> IO(R.Reader & FirstData):
   (r,header) = pair
   S.Statement{words,req,y,tables,_,_,_,lines} = st
   Context{cfg,+profile,_,table,table_item,Geometry{_,_,Codes.Finals{last,_,_,_}},_} = ctx
-  do IO<Trace>:
+  do IO<R.Reader & FirstData>:
     +copy : U32 <- Header.leaf_index(header)
     ok : Unit <- Header.require(U32.is_eq(copy,expected),"NO: request-stored-copy")
     vocab : U32 <- Policy.field(lines,"V")
@@ -152,16 +169,38 @@ def first(pair: R.Reader & H.Bytes, expected: U32, st: S.Statement, +plan: P.Pla
       Item.item("request",Item.blob(Config.word_bytes(words))),Item.item("the request file's words",Item.blob(Config.word_bytes(req)))])
     rb : R.Reader & H.Bytes <- R.take(r,32)
     done : R.Reader & W.Traced <- RW.first(rb,plan,statement,cfg,table,session,G.schedule(profile,PT.RequestFirst{}),last,y,vocab)
-    model(done,ctx,profile,tables)
+    model(done,ctx,st)
 
-def inspect(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Configured,
-    plans_dir: String, +leaf: Leaf.Table, session: O.Session) -> IO(Trace):
+def first_data(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Configured,
+    plans_dir: String, +leaf: Leaf.Table, session: O.Session) -> IO(R.Reader & FirstData):
   Config.Configured{+bytes,+plan} = cfg
   Leaf.Table{root,record} = leaf
-  do IO<Trace>:
+  do IO<R.Reader & FirstData>:
     profile : PT.Profile <- K.need(PT.Profile,Catalog.select(H.u32s(bytes)),"NO: unsupported-configuration")
     digest : M.Digest <- K.digest(bytes)
     geom : Geometry <- geometry(Leaf.items(plan))
     r : R.Reader <- R.open_proof(path,4294967295)
     head : R.Reader & H.Bytes <- R.take(r,12)
     first(head,expected_copy,st,plan,Context{digest,profile,plans_dir,root,Item.item("table",Leaf.table_bytes(leaf)),geom,record},session)
+
+def inspect(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Configured,
+    plans_dir: String, leaf: Leaf.Table, session: O.Session) -> IO(Trace):
+  do IO<Trace>:
+    saved : R.Reader & FirstData <- first_data(path,expected_copy,st,cfg,plans_dir,leaf,session)
+    continue_first(saved)
+
+def close_verified(pair: R.Reader & FirstData,items: List<&2,P.Item>) -> IO(Trace):
+  (reader,FirstData{end,+events,+ctx,+forests,st}) = pair
+  Context{_,+profile,_,_,_,_,_} = ctx
+  do IO<Trace>:
+    inputs : Inputs.Batches <- Inputs.batches(Inputs.shapes(SG.select(profile)),forests,0n,st,events,[])
+    claim : Own.First <- Chain.verify(inputs,events,items,profile)
+    result : Trace <- binding_checked((reader,end),ctx,claim)
+    return results(result,forests)
+
+def verify(path: String, expected_copy: U32, st: S.Statement, +cfg: Config.Configured,
+    plans_dir: String, leaf: Leaf.Table, session: O.Session) -> IO(Trace):
+  Config.Configured{_,plan} = cfg
+  do IO<Trace>:
+    saved : R.Reader & FirstData <- first_data(path,expected_copy,st,cfg,plans_dir,leaf,session)
+    close_verified(saved,Leaf.items(plan))

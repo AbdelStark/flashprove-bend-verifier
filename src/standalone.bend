@@ -7,6 +7,7 @@ import ./key_stage.bend as Key
 import ./leaf_stage.bend as Leaf
 import ./leaf_check.bend as Link
 import ./request_stage.bend as Req
+import ./result.bend as Result
 import ./hash_bytes.bend as H
 import ./opening_bytes.bend as O
 
@@ -19,27 +20,27 @@ def options(args: List<String>, opt: Options) -> Maybe<&2,Options>:
     case "-id" <> id <> tail Options{None{},p,d}: options(tail,Options{Some{id},p,d})
     case "-policy" <> policy <> tail Options{i,None{},d}: options(tail,Options{i,Some{policy},d})
     case "-data" <> folder <> tail Options{i,p,None{}}: options(tail,Options{i,p,Some{folder}})
+    case "-j" <> "1" <> tail state: options(tail,state)
     case "-q" <> tail state: options(tail,state)
     case _ _: None{}
 
 type Call is Data:
-  Call{ivk: String, proof: String, expected: String, plans: String, cfg: Config.Configured, statement: S.Statement}
+  Call{ivk: String, proof: String, expected: String, plans: String, build: String, cfg: Config.Configured, statement: S.Statement}
 
 def digest(cfg: Config.Configured) -> H.Bytes:
   Config.Configured{value,_} = cfg
   value
 
-def request(checked: Link.Checked, +call: Call, copy: U32) -> IO(Unit):
+def request(checked: Link.Checked, +call: Call, +copy: U32) -> IO(Unit):
   Link.Checked{leaf,session,_} = checked
-  Call{_,proof,_,plans,cfg,st} = call
+  Call{_,proof,id,plans,build,+cfg,+st} = call
   do IO<Unit>:
-    evidence : Req.Trace <- Req.inspect(proof,copy,st,cfg,plans,leaf,session)
-    # Only a complete check of the request relation may issue an inference verdict.
-    IO.die(Unit,3,"STAGES CHECKED: request equations incomplete")
+    evidence : Req.Trace <- Req.verify(proof,copy,st,cfg,plans,leaf,session)
+    Result.print(st,digest(cfg),String.to_lower(id),copy,build)
 
 def entry(key: Key.AttestedKey, +call: Call) -> IO(Unit):
   Key.AttestedKey{+root,+record,_,_,_,session} = key
-  Call{ivk,proof,expected,plans,+cfg,st} = call
+  Call{ivk,proof,expected,plans,_,+cfg,st} = call
   +hash = digest(cfg)
   do IO<Unit>:
     id : String <- Commitment.from_record(Config.key_shape(st),O.digest_bytes(root),record,hash)
@@ -50,7 +51,7 @@ def entry(key: Key.AttestedKey, +call: Call) -> IO(Unit):
     link : Link.Checked <- Link.algebra(trace,hash)
     request(link,call,copy)
 
-def run(+config: String, +ivk: String, req: String, y: String, proof: String, opt: Maybe<&2,Options>) -> IO(Unit):
+def run(+config: String, +ivk: String, req: String, y: String, proof: String, build: String, opt: Maybe<&2,Options>) -> IO(Unit):
   match opt:
     case Some{Options{Some{id},policy,dir}}:
       +public = Maybe.default(&2,String,dir,"build")
@@ -59,16 +60,16 @@ def run(+config: String, +ivk: String, req: String, y: String, proof: String, op
         +st : S.Statement <- S.load(config,req,y,public ++ "/tables",policy)
         +cfg : Config.Configured <- Config.load(st,config,plans)
         key : Key.AttestedKey <- Key.check_transcript(ivk ++ "/key.bin",digest(cfg),plans)
-        entry(key,Call{ivk,proof,id,plans,cfg,st})
+        entry(key,Call{ivk,proof,id,plans,build,cfg,st})
     case _: IO.die(Unit,2,"usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q]")
 
-def argv(args: List<String>) -> IO(Unit):
+def argv(args: List<String>,build: String) -> IO(Unit):
   match args:
     case _ <> config <> ivk <> req <> y <> proof <> tail:
-      run(config,ivk,req,y,proof,options(tail,Options{None{},None{},None{}}))
+      run(config,ivk,req,y,proof,build,options(tail,Options{None{},None{},None{}}))
     case _: IO.die(Unit,2,"usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q]")
 
-def main() -> IO(Unit):
+def run_build(build: String) -> IO(Unit):
   do IO<Unit>:
     args : List<String> <- IO.args()
-    argv(args)
+    argv(args,build)

@@ -1,5 +1,15 @@
 import Base
 import ./segment_projection.bend as Projection
+import ./attention_projection.bend as Attention
+import ./model_batch_projection.bend as Batch
+import ./ff_lookup_projection.bend as GJoin
+import ./ff_projection.bend as FeedForward
+import ./head_projection.bend as Head
+import ../../src/segment_local.bend as Local
+import ../../src/plan_types.bend as PT
+import ../../src/plan.bend as Plan
+import ../../src/segment_inputs.bend as Inputs
+import ../../src/wire_reader.bend as R
 import ../../src/request_stage.bend as Q
 import ../../src/policy_statement.bend as S
 import ../../src/policy_config.bend as C
@@ -15,10 +25,29 @@ def print_trace(trace: Q.Trace) -> IO(Unit):
     ok : Unit <- Projection.groups(forests)
     IO.print(Nat.show(slot) ++ " " ++ H.hex(O.digest_bytes(root)) ++ " " ++ H.hex(first) ++ " " ++ H.hex(shared) ++ " " ++ H.hex(rho))
 
-def proof(trace: Leaf.Trace, cfg: C.Configured, stmt: S.Statement, path: String, copy: U32, plans: String) -> IO(Unit):
+def profile(s: Q.FirstData) -> PT.Profile:
+  Q.FirstData{_,_,Q.Context{_,p,_,_,_,_,_},_,_} = s
+  p
+
+def models(r: R.Reader & Q.FirstData,cfg: C.Configured) -> IO(Q.Trace):
+  (reader,+first) = r
+  C.Configured{_,Plan.Plan{_,_,_,items}} = cfg
+  do IO<Q.Trace>:
+    checked : Q.Trace <- Q.continue_first((reader,first))
+    +batches : Inputs.Batches <- Q.family_inputs(first)
+    ctx : Local.Context <- Local.context(items,profile(first))
+    ok : Unit <- Attention.groups(batches)
+    done : Unit <- Batch.groups(batches,ctx)
+    joined : Unit <- GJoin.groups(batches,profile(first))
+    feed_forward : Unit <- FeedForward.groups(batches,profile(first))
+    head : Unit <- Head.groups(batches,profile(first))
+    return checked
+
+def proof(trace: Leaf.Trace, +cfg: C.Configured, stmt: S.Statement, path: String, copy: U32, plans: String) -> IO(Unit):
   Leaf.Trace{_,_,checked,_,session,_} = trace
   do IO<Unit>:
-    checked : Q.Trace <- Q.inspect(path,copy,stmt,cfg,plans,checked,session)
+    saved : R.Reader & Q.FirstData <- Q.first_data(path,copy,stmt,cfg,plans,checked,session)
+    checked : Q.Trace <- models(saved,cfg)
     print_trace(checked)
 
 def entry(key: Key.AttestedKey, +cfg: C.Configured, stmt: S.Statement, +ivk: String, +path: String, +plans: String) -> IO(Unit):

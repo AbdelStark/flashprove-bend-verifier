@@ -136,7 +136,50 @@ def plus_into(xs: B.Elements, ys: B.Elements, acc: B.Elements) -> B.Elements:
 
 def plus(xs: B.Elements, ys: B.Elements) -> B.Elements: plus_into(xs,ys,[])
 
-def expand(main: Form, acc: B.Elements) -> B.Elements:
+# The list operation also defines the result for inputs of unequal lengths.
+def expand_list(main: Form, acc: B.Elements) -> B.Elements:
   match main:
     case []: acc
-    case Term{w,fs} <> more: expand(more,plus(factor_table(fs,w),acc))
+    case Term{w,fs} <> more: expand_list(more,plus(factor_table(fs,w),acc))
+
+def summed(pair: Array<Ext.E3> & Ext.E3,i: U32,w: Ext.E3) -> Array<Ext.E3>:
+  (buf,old) = pair
+  Array.set(Ext.E3,buf,i,E.add(old,w))
+
+def deposit(fs: Factors,+i: U32,+w: Ext.E3,buf: Array<Ext.E3>) -> Array<Ext.E3>:
+  match fs:
+    case []: summed(Array.get(Ext.E3,buf,i),i,w)
+    case Factor{+a,+b} <> +tail:
+      +lo = U32.add(i,i)
+      +hi = U32.add(lo,1)
+      left = Bool.pick(Array<Ext.E3> -> Array<Ext.E3>,B.equal(a,zero()),
+        x => x,x => deposit(tail,lo,E.mul(w,a),x))
+      right = Bool.pick(Array<Ext.E3> -> Array<Ext.E3>,B.equal(b,zero()),
+        x => x,x => deposit(tail,hi,E.mul(w,b),x))
+      right(left(buf))
+
+def populate(main: Form,buf: Array<Ext.E3>) -> Array<Ext.E3>:
+  match main:
+    case []: buf
+    case Term{w,fs} <> rest: populate(rest,deposit(List.reverse(&2,Factor,fs),0,w,buf))
+
+def accumulate(xs: List<Ext.E3>,ys: B.Elements,acc: B.Elements) -> B.Elements:
+  match xs ys:
+    case Con{x,tail} Con{y,more}: accumulate(tail,more,E.add(x,y) <> acc)
+    case _ _: List.reverse(&2,Ext.E3,acc)
+
+def sized(main: Form,acc: B.Elements,k: Nat,good: Bool) -> B.Elements:
+  match good:
+    case True{}: accumulate(Array.to_list(Ext.E3,populate(main,Array.new(Ext.E3,k,zero()))),acc,[])
+    case False{}: expand_list(main,acc)
+
+# Walk only nonzero branches of each tensor. Sparse mask slots add one entry per term.
+def expand(main: Form,acc: B.Elements) -> B.Elements:
+  match main:
+    case []: acc
+    case Term{w,+fs} <> rest:
+      +terms : Form = Term{w,fs} <> rest
+      +k = List.length(&2,Factor,fs)
+      +ys = acc
+      good = Nat.is_lt(k,32n) && Nat.is_eq(count(Ext.E3,ys,0n),Nat.pow(2n,k)) && fits(terms,k)
+      sized(terms,ys,k,good)

@@ -1,76 +1,47 @@
 # FlashProve verification with Bend 2
 
-Verify a FlashProve H821 inference proof on a CPU using a native Bend command. The verifier reads the configuration, key, selected leaf, request, next token and proof. A successful whole call reports the commitment, verified token range, acceptance policy and security accounting.
+`build/verify-bend` verifies FlashProve H821 inference proofs on a CPU. The native Bend executable reads the caller’s configuration, verification key, selected leaf, request, next token and proof. It computes the commitment ID, verifies all three proof stages and emits the covered token range and policy. It runs with the packaged public data and an empty executable search path.
 
-**The MVP is a hybrid.** Bend independently checks public input headers and derives the commitment ID. Its native code also runs inside all three proof stages. The pinned C++ verifier supplies the remaining protocol checks, model constraints, accounting and final verdict. An unmodified C++ binary is built separately for differential testing. The [verification contract](docs/spec/verifier.md) and [issue plan](docs/plan/implementation.md) track the independent Bend implementation.
+## Verify a proof
 
-## Independent Bend stages
-
-The native `build/verify-bend` command authenticates the public inputs and seven plans, checks the entire key proof, derives the caller’s commitment ID from that key, and checks the selected leaf’s LINK proof against the authenticated table. It also verifies the request transcript, Merkle openings, lookup-forest reductions and shared LIN equations. Request model equations and their final proximity checks are still in development. The command exits with status 3 after these stages. [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12) · [Public plan contract](docs/adr/public-plans.md)
+Building requires the pinned Bend 2 compiler, clang, Python 3 and make. The upstream checkout supplies the examples and independent test oracles. The packaged plan and table data can be installed offline once the toolchain is available.
 
 ```sh
-make standalone-full stages-full plans-reproduce
-```
-
-The stage suite includes fixed-transcript algebra tests. Changing the range target, the Dot weight or the leaf LINK target leaves the genuine proof bytes intact and causes the corresponding final equation to reject. The request suite compares 120 forest projections from the four stored proofs with projections from the pinned C++ verifier.
-
-## Run a proof
-
-Use macOS or Linux with Git, Make, Python 3.10+, Clang, a C++17 standard library, curl, patch and tar. Building the reference verifier on Linux also uses GCC 13+ and GNU coreutils/findutils. Download and build requirements are pinned in [toolchain.lock](toolchain.lock) and [upstream.lock](upstream.lock).
-
-```sh
-make verifier
+make standalone upstream
 example=.upstream/FlashProve/examples/accepted-proof
-build/verify "$example/config" "$example/ivk" "$example/example.req" \
-  "$example/example.y" "$example/example.proof" -id "$(cat "$example/ID.txt")"
+build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
+  "$example/example.y" "$example/example.proof" -id "$(cat "$example/ID.txt")" -data build
 ```
 
-Expect exit 0 and a final line of `YES`. This example checks three request tokens and the next token for an eight-layer model with synthetic weights. Its bundled ID is the known answer for this demonstration. For a caller's own request, supply the independently trusted model commitment and the request and reply tokens you intend to check.
-
-The second small example checks a bounded-cost policy. Supply the policy explicitly.
+The small exact-match example covers tokens 61 through 63 and the requested next token. Its last line is `YES`. In an application, supply the model commitment and acceptable policy chosen by the caller. Verify the exit status, commitment, policy and coverage in the closing `result-v1` record. The build field identifies the transitive Bend sources and build inputs. [Verifier output contract](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/verifier/docs/output.md)
 
 ```sh
 example=.upstream/FlashProve/examples/accepted-proof-clipped-gap
-build/verify "$example/config" "$example/ivk" "$example/example.req" \
+build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
   "$example/example.y" "$example/example.proof" -id "$(cat "$example/ID.txt")" \
-  -policy clipped-gap,9244130,323343,1,16,8
+  -policy clipped-gap,9244130,323343,1,16,8 -data build
 ```
 
-Expect exit 0 and `WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8`. Check the exit status and the complete `result-v1` record. The two installed executables, `build/verify` and its sibling `build/bend_verify`, run together. File or child-process errors yield a non-accepting result. The `build=` field identifies the proof worker's source, including the Bend kernels.
+This proof covers tokens 16 through 47. Its next token lies outside the requested interval. A successful call ends with `WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8`.
 
-## What executes in Bend
+## Supported configurations
 
-| Component | Work performed |
-|---|---|
-| Public input | Decode the request interval and token, inspect file headers, select the leaf, hash the configuration files, expand the record seeds and compute the published commitment ID. The worker rechecks the binding on the bytes it actually verifies. |
-| Hashes and openings | Both FlashProve hash families call Bend BLAKE2b compression. Bend constructs and hashes the two-child messages used for Merkle vertices. The worker manages the multiproof traversal and records cross-opening consistency. |
-| Arithmetic and challenges | Bend implements Goldilocks product and reduction, cubic extension multiplication, work-bit tests, canonical field candidate tests and position extraction. |
-| Sub-proofs | Bend evaluates the masked sumcheck contributions and Horner steps. The worker supplies transcript values, enforces round order, checks final equations and applies the feed-forward, attention and output-head constraints. |
+The independent verifier admits the four H821 configurations bundled with FlashProve, the small and full-size models under exact match and clipped gap. It hashes the complete configuration, authenticates all seven chain plans and four public tables, and checks each stage’s largest dyadic error at each work factor against the 128-bit target. The release embeds public geometry. Key bytes, proof bytes, transcript challenges, layer equations and verdicts are computed at verification time. A new configuration requires reproducing and reviewing its public catalog entries. [Public plan contract](docs/adr/public-plans.md) · [Verification requirements](docs/spec/verifier.md)
 
-The [native integration decision](docs/adr/native-kernels.md) describes the trust boundary. The hot-path bindings are small patches applied to an archive of the pinned Git object in a temporary build directory. The build runs upstream arithmetic and transcript-vector tests against the linked Bend code before installing the worker. Pure Bend modules and the native adapter have distinct trust boundaries. [Native bindings](src/native) · [Bend implementation](src) · [Compiler notes](docs/agents/BEND_NOTES.md)
-
-## Whole-proof performance
-
-Median wall time over three fresh processes per executable and fixture, on one Apple M4 Max. Every call verified the published exact-match commitment and returned the expected coverage and accounting.
-
-| Verifier | Small proof | Full-size proof |
-|---|---:|---:|
-| Bend 2 hybrid, public CLI | 2.377 s | 47.225 s |
-| Lean OnBytes | 3.858 s | 59.567 s |
-| FlashProve C++ | 0.644 s | 8.144 s |
-
-Simplifying field multiplication in Bend reduced the full-size median from 74.196 s to 47.225 s. At full size the optimized hybrid took 20.7% less time than Lean OnBytes and 5.80 times as long as C++. The hybrid and C++ used one request-stage thread and could overlap stages. OnBytes ran them sequentially. FlashProve's theorem-linked Linux verifier is a separate executable with no timing in this comparison. [Optimized measurements](docs/research/field-performance.md) · [Original field profile](docs/research/whole-call.md) · [Lean measurements](docs/research/onbytes.md)
+The request stage checks the feed-forward, attention and output-head relations, their lookup forests and smallness constraints, the folded codewords, and the shared and request-specific linear claims that bind the model weights. The accounting includes proof of work and assumes the upstream theorem on codes. The formal theorem for the Lean verifier applies to the Lean implementation. [Protocol research and source map](docs/research/protocol.md) · [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12)
 
 ## Reproduce the evidence
 
-| Command | Coverage |
+| Command | What it checks |
 |---|---|
-| `make ci` | Documentation drift checks, generated source check, JS and native Bend tests, two small inference proof sets and rejection cases. |
-| `make e2e-full` | Small and full-size exact-match and clipped-gap proofs. Compares the worker's whole-call record with the pinned oracle and exercises the public Bend command. Allow at least 4 GiB free for a full-size worker. |
-| `make e2e-extended` | Compare the oracle and hybrid worker on 79 altered proof items and 23 altered stored-record cases from the upstream corpus. |
-| `make benchmark` | Three alternating single-thread exact-match measurements at each model size. Every measured call checks the expected verdict and closing record. |
-| `make benchmark-lean` | Fetch the optional pinned Lean toolchain, build the native OnBytes executable, measure exact-match proofs on the same inputs, and check a damaged proof. |
-| `make spikes` | The original isolated kernel and I/O measurements. |
-| `make help` | All command targets. |
+| `make ci` | Type and proof checks, JS and native unit tests, the small proof matrix and differential checks. |
+| `make standalone-full` | All four real proofs with the freestanding binary and caller-selected public inputs. Compares all four closing lines and the exit status. |
+| `make standalone-extended` | Compares both small altered-copy tables, 79 item mutations and 23 altered record sets with C++. Also substitutes a valid leaf from another commitment. |
+| `make stages-full` | Intermediate evidence against upstream, including all three model families and both model sizes. |
+| `make plans-reproduce` | Re-exports schedules, shapes and exact accounting from the pinned configuration-only planner and compares the packaged data. |
+| `make benchmark-lean` | Reproduces the native Lean OnBytes comparator. |
+| `make help` | Lists all build, test and benchmark targets. |
 
-The measurements establish behavior for the tested files. The Lean verifier's theorem belongs to its own implementation. The [research index](docs/research/protocol.md) distinguishes the theorem-linked runner from Lean's verifier on raw bytes and indexes the recovered protocol research. [Contribution workflow](AGENTS.md) · [License](LICENSE) · [Upstream notices](NOTICE)
+The original hybrid prototype remains available through `make verifier` as `build/verify`. It links Bend kernels into a C++ worker and has its own build identity. The standalone build, tests and verdicts are independent of that worker. Whole-call measurements identify the executable, hardware, fixture and concurrency. [Lucid benchmark results](docs/research/lucid.md) · [M4 hybrid benchmarks](docs/research/field-performance.md) · [Native integration decision](docs/adr/native-kernels.md)
+
+[Contribution workflow](AGENTS.md) · [Implementation plan](docs/plan/implementation.md) · [License](LICENSE) · [Upstream notices](NOTICE)

@@ -16,7 +16,7 @@ def run(binary, directory, args, status, expected):
     result = subprocess.run([binary, *args], cwd=directory, env=env, capture_output=True,
                             text=True, timeout=600)
     lines = (result.stdout + result.stderr).strip().splitlines()
-    if result.returncode != status or lines[-1:] != [expected]:
+    if result.returncode != status or lines != expected.splitlines():
         raise RuntimeError(f"expected {status} {expected!r}, got {result.returncode} {lines[-4:]!r}")
 
 
@@ -38,11 +38,13 @@ def main():
             policy = re.search(r" -policy (clipped-gap,[0-9,]+)", (case / "README.md").read_text())
             call = [case / p for p in ("config", "ivk", "example.req", "example.y", "example.proof")]
             options = ["-data", "data", *(["-policy", policy[1]] if policy else [])]
-            run(binary, work, [*call, "-id", expected_id, *options], 3,
-                "STAGES CHECKED: request equations incomplete")
+            expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+",
+                                 (case / "README.md").read_text(), re.M)[0]
+            expected = expected.replace("<64 hex digits>", (ROOT / "build/verify-bend.digest").read_text().strip())
+            run(binary, work, [*call, "-id", expected_id, *options], 0, expected)
             if name == fixtures[0]:
                 run(binary, work, [*call, "-id", "0" * 64, *options], 1, "NO: model-statement")
-            print(f"{name}: independently checked key, leaf, public statement and request stages", flush=True)
+            print(f"{name}: verified independently, {expected.splitlines()[-1]}", flush=True)
 
 
 if __name__ == "__main__":

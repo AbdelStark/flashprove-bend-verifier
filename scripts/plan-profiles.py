@@ -78,6 +78,49 @@ def bend_words(hex_digest):
     return "[" + ", ".join(map(str, struct.unpack("<8I", bytes.fromhex(hex_digest)))) + "]"
 
 
+def accounting_catalog(exports):
+    lines = ['# Configuration-only dyadic error bounds from scripts/plan-profiles.py.',
+             'import Base', 'import ./plan_types.bend as P', '',
+             'type Bound is Data:', '  Bound{work: Nat, denominator_bits: Nat, numerator: List<&2,U32>}', '',
+             'type Stage is Data:',
+             '  Stage{target: Nat, rounds: Nat, by_work: Nat, third: Nat, theorem: Nat, errors: List<&2,Bound>}', '']
+    display = []
+    for name, profile in PROFILES.items():
+        stages = {}
+        bits = []
+        for row in (exports / name / 'accounting.tsv').read_text().splitlines():
+            kind, *words = row.split()
+            values = list(map(int, words))
+            if kind == 'bound':
+                work, scale, *limbs = values
+                bounds.append(f'Bound{{{work}n,{scale}n,{limbs}}}')
+                numerator = sum(x << (32*i) for i, x in enumerate(limbs))
+                bare = scale * 100 - (numerator**100 - 1).bit_length()
+                bits.append((work, bare, bare + 100*work))
+            else:
+                bounds = []
+                stages[kind] = (values, bounds)
+        if list(stages) != ['key', 'leaf', 'request']:
+            raise ValueError(f'incomplete stage accounting for {name}')
+        def hundredths(value):
+            return f'{value // 100}.{value % 100:02}'
+        work_bits = max(w for w, _, _ in bits)
+        by_work = sum(values[2] for values, _ in stages.values())
+        assumed = sum(stages[k][0][4] for k in ('key', 'leaf'))
+        with_work = hundredths(min(charged for _, _, charged in bits))
+        bare = hundredths(min(unworked for _, unworked, _ in bits))
+        display.append(f'    case P.{profile}{{}}: Report{{"{work_bits}","{by_work}","{with_work}","{bare}","{assumed}"}}')
+        lines += [f'def {profile.lower()}() -> List<&2,Stage>:', '  [' +
+                  ',\n   '.join('Stage{' + ','.join(f'{v}n' for v in values) + ',[' +
+                             ','.join(bounds) + ']}' for values, bounds in stages.values()) + ']', '']
+    lines += ['def stages(profile: P.Profile) -> List<&2,Stage>:', '  match profile:']
+    lines += [f'    case P.{p}{{}}: {p.lower()}()' for p in PROFILES.values()]
+    lines += ['', 'type Report is Data:',
+              '  Report{work: String, rounds: String, least: String, bare: String, theorem: String}', '',
+              'def report(profile: P.Profile) -> Report:', '  match profile:', *display]
+    return '\n'.join(lines) + '\n'
+
+
 def pack(exports, configs, out, check):
     catalog = ["# Generated from pinned, configuration-only H821 plans by scripts/plan-profiles.py.",
                "import Base", "import ./plan_types.bend as P", "",
@@ -128,8 +171,19 @@ def reproduce(work, check):
     anchor = "  const size_t NL = linksH.size();"
     if source_text.count(anchor) != 1:
         raise ValueError("segment geometry export hook changed")
-    instrument = "".join((ROOT / "scripts" / hook).read_text() for hook in ("segment-profile.inc","weight-profile.inc"))
-    segment.write_text(source_text.replace(anchor, instrument + anchor))
+    instrument = "".join((ROOT / "scripts" / hook).read_text() for hook in ("segment-profile.inc", "weight-profile.inc", "head-profile.inc", "ff-profile.inc"))
+    source_text = source_text.replace(anchor, instrument + anchor)
+    smallness_hook = "  subH.open_rows.assign(NL, 1);"
+    if source_text.count(smallness_hook) != 1:
+        raise ValueError("smallness layout export hook changed")
+    segment.write_text(source_text.replace(smallness_hook, (ROOT / "scripts/smallness-profile.inc").read_text() + smallness_hook))
+    public = work / "tools/audit/pubtool.cpp"
+    source_text = public.read_text()
+    anchor = "    const blk::IndexName none"
+    if source_text.count(anchor) != 1:
+        raise ValueError("accounting export hook changed")
+    public.write_text('#include "numbers/accounting.h"\n' + source_text.replace(
+        anchor, (ROOT / "scripts/accounting-profile.inc").read_text() + "\n" + anchor))
     flags = ["clang++", "-std=c++17", "-O1", "-pthread", "-Iverifier/src", "-Iblocks", "-Iprover",
              "-DBLK_FIELD=2", "-DDIGEST_WORDS=8", "-DSERVING_BUILD=1", "-DBLK_COUNT_HASH_CALLS=1"]
     subprocess.run([*flags, "-DCP_VERIFY_AS_A_UNIT", '-DVF_SOURCE_DIGEST="' + "0"*64 + '"',
@@ -142,10 +196,19 @@ def reproduce(work, check):
         subprocess.run([work / "pubtool", work / "examples" / fixture / "config", "128", dest],
                        cwd=work, check=True, stdout=subprocess.DEVNULL,
                        env={**os.environ, "FLASHPROVE_SEGMENT_GEOMETRY": str(dest / "forests.tsv"),
-                            "FLASHPROVE_WEIGHT_LAYOUT": str(dest / "weights.tsv")})
-    for generator in ("key-geometry.py", "request-geometry.py", "segment-geometry.py", "weight-profile.py"):
+                            "FLASHPROVE_SMALLNESS_LAYOUT": str(dest / "smallness.tsv"),
+                            "FLASHPROVE_WEIGHT_LAYOUT": str(dest / "weights.tsv"),
+                            "FLASHPROVE_HEAD_LAYOUT": str(dest / "head.tsv"),
+                            "FLASHPROVE_FF_LAYOUT": str(dest / "ff.tsv")})
+    for generator in ("key-geometry.py", "request-geometry.py", "segment-geometry.py", "weight-profile.py", "head-profile.py", "smallness-geometry.py", "ff-profile.py"):
         subprocess.run([sys.executable, ROOT / "scripts" / generator, exports,
                         *(["--check"] if check else [])], check=True)
+    account = ROOT / "src/accounting_catalog.bend"
+    content = accounting_catalog(exports)
+    if check and content != account.read_text():
+        raise ValueError("stage accounting differs from the pinned source")
+    if not check:
+        account.write_text(content)
     pack(exports, work / "examples", work, check)
 
 

@@ -28,7 +28,7 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
 	@sh research/spikes/run.sh
 
-ci: docs-check check test test-native e2e plan-test public-input-test stages-test  ## what CI runs
+ci: docs-check check test test-native e2e plan-test public-input-test stages-test standalone-test standalone-rejections  ## what CI runs
 
 .PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
 
@@ -125,14 +125,27 @@ stages-full: build/key-stage build/leaf-checked plans upstream  ## run the indep
 public-tables:  ## materialize the public tables that Bend authenticates
 	@python3 scripts/generate-tables.py --output build/tables
 
-build/verify-bend: $(STAGE_MODULES) toolchain.lock | bootstrap
-	@mkdir -p build
-	@.toolchain/bend/bin/bend src/standalone.bend -o $@
+build/verify-bend: $(STAGE_MODULES) scripts/build-standalone.py scripts/compile_bend.py toolchain.lock | bootstrap
+	@python3 scripts/build-standalone.py
 
-standalone: build/verify-bend plans public-tables  ## build the native Bend verifier and its public data
+build/verify-bend.digest: | build/verify-bend
+	@test -s $@ || python3 scripts/build-standalone.py
+
+standalone: build/verify-bend build/verify-bend.digest plans public-tables  ## build the native Bend verifier and its public data
 
 standalone-test: standalone upstream  ## exercise the native command without external verifier executables
 	@python3 scripts/standalone-test.py
 
 standalone-full: standalone upstream  ## exercise the native command on all four published proofs
 	@python3 scripts/standalone-test.py --full-size
+
+.PHONY: standalone-rejections standalone-extended
+standalone-rejections: standalone oracle  ## compare standalone and reference refusals on both small examples
+	@python3 -B scripts/standalone-rejections.py
+
+standalone-extended: standalone oracle  ## compare 122 altered sets and a cross-commitment leaf
+	@python3 -B scripts/standalone-rejections.py --extended
+
+.PHONY: benchmark-standalone
+benchmark-standalone: standalone oracle  ## measure validated standalone and C++ whole calls on both exact fixtures
+	@python3 -B scripts/benchmark-standalone.py
