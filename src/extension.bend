@@ -9,10 +9,10 @@ def add(a: Field.Gl, b: Field.Gl) -> Field.Gl:
   Field.Gl{+ah, +al} = a
   Field.Gl{+bh, +bl} = b
   +lo = U32.add(al, bl)
-  +c = Field.carry(al, bl, lo)
+  +c = Field.carry(al, lo)
   +h = U32.add(ah, bh)
   +hi = U32.add(h, c)
-  +overflow = U32.or(Field.carry(ah, bh, h), Field.carry(h, c, hi))
+  +overflow = U32.or(Field.carry(ah, h), Field.carry(h, hi))
   Field.Gl.reduce(0, overflow, hi, lo)
 
 def product(a: Field.Gl, b: Field.Gl) -> Field.Gl:

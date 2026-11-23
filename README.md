@@ -41,7 +41,7 @@ The [native integration decision](docs/adr/native-kernels.md) describes the trus
 
 ## Whole-proof performance
 
-Median wall time over three fresh processes per executable and fixture, on one Apple M4 Max. Every call verified the published exact-match commitment and returned the expected coverage and accounting.
+Baseline at revision `c1b975e`. The table gives median wall time over three fresh processes per executable and fixture, on one Apple M4 Max. Every call verified the published exact-match commitment and returned the expected coverage and accounting.
 
 | Verifier | Small proof | Full-size proof |
 |---|---:|---:|

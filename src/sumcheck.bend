@@ -15,7 +15,7 @@ def add(a: Ext.E3, b: Ext.E3) -> Ext.E3:
 # Returns p - b, including the word p for zero; Ext.add reduces the sum.
 def negative(+bh: U32, +bl: U32) -> Field.Gl:
   +lo = U32.sub(1, bl)
-  hi = U32.sub(U32.sub(4294967295, bh), Field.borrow(1, bl, lo))
+  hi = U32.sub(U32.sub(4294967295, bh), Field.borrow(1, bl))
   Field.Gl{hi, lo}
 
 def negate(b: Ext.E3) -> Ext.E3:
