@@ -1,0 +1,31 @@
+# Slurm job 7683, Linux x86_64 CPU only, 2026-11-23 UTC
+# Node h100-sxm-8-0, Intel Xeon Platinum 8480CL, Ubuntu 24.04.4 LTS, Linux-6.8.0-147-generic-x86_64-with-glibc2.39
+# Nonexclusive allocation: 1 task, 4 CPUs, 160 GiB, 0 GPUs, one verification process at a time.
+# Verifier checkout f82965b0f7dd2f8c1bece480381c03025273f404
+# Upstream FlashProve 9e2bdd8ff5bf9c62f18263d7dac189b0400b260c, Bend 2.0.40
+# cp_verify GCC 13.3.0 -std=c++17 -O2 -fno-ipa-modref plus pinned verifier/build.sh hardening, runtime -q -j 1
+# verify-bend generated C, Clang 18.1.3 -std=c11 -O3 -lpthread -lm, runtime -q -data data BEND_THREADS=1
+# cp_verify ELF 7f9efc1e86a848a3715c6cc870e465ac2a1c5e8fd1eac09e4809023de7604394, source 93afdaf592393a54ebd17b681d1c03295eb883f0161ff0e6ab872a3b39939595
+# verify-bend ELF ac8feeee3e0f15dec6ef753e6667e8f47b74faea95a40e10b8119f2fc38a0560, source 4bc6ecdd34e1c59e5b65518a3752a1a8b8797f6024bc5cefd5bb906a59f67df5
+# harness SHA-256 b755aa0eeec0a7c0e523063e71c691f2738dbbeaaf600ee781e8885e762b1a6f
+# Inputs pre-read for SHA-256, verified full-process warmups per binary/size discarded. Warm page cache, fresh measured processes.
+# Measured sample order per fixture: C++/Bend, Bend/C++, C++/Bend. Each row matched commitment, proof-of-work counts, result-v1 and YES.
+# accepted-proof proof bytes 4145300, SHA-256 5ed47fd101093e826a5bc833e57633e5a9237b49213c8f37cf518a3c1c8d9d99, SHA256SUMS digest da8f5562eaa27e177b3b8aa39366d913befdfdc3114786907750ed5c0c18ecea
+# full-size proof bytes 18779540, SHA-256 efa762e20f72b64e183ad6f688eccf5b2b79649928d8e3a2a96645645dd08af9, SHA256SUMS digest 50e8f55509a516389b54893caf80bef9a42f36faf1fb4259875c758eb3cda760
+fixture	phase	call	program	wall_s	max_rss_kib	exit
+accepted-proof	warmup	1	cp_verify	1.689769249	154328	0
+accepted-proof	warmup	1	verify-bend	14.731934676	822528	0
+accepted-proof	measured	1	cp_verify	1.454455612	155500	0
+accepted-proof	measured	1	verify-bend	14.657491046	820736	0
+accepted-proof	measured	2	verify-bend	14.784441095	820736	0
+accepted-proof	measured	2	cp_verify	1.508883651	154856	0
+accepted-proof	measured	3	cp_verify	1.370834493	154856	0
+accepted-proof	measured	3	verify-bend	14.726655959	822528	0
+full-size	warmup	1	cp_verify	19.095650170	3440524	0
+full-size	warmup	1	verify-bend	659.976073717	11366656	0
+full-size	measured	1	cp_verify	19.114748927	3442064	0
+full-size	measured	1	verify-bend	665.120285540	11364864	0
+full-size	measured	2	verify-bend	666.086570637	11366656	0
+full-size	measured	2	cp_verify	19.097732866	3441912	0
+full-size	measured	3	cp_verify	19.076612164	3440996	0
+full-size	measured	3	verify-bend	659.952126207	11363072	0

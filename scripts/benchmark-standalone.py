@@ -96,6 +96,7 @@ def markdown(data):
     host = data["host"]
     lines = ["# Native standalone whole calls", "",
              f"{host['os']} on {host['cpu']} ({host['arch']}). Checkout `{host['git']}`.", "",
+             "Each binary completed one verified warmup at each size before the measured fresh processes.", "",
              "Each sample matched all four closing lines from the fixture and exited zero.", "",
              "| Exact fixture | Program | Ordered wall times (s) | Median (s) | Peak RSS range (KiB) |",
              "| --- | --- | --- | ---: | ---: |"]
@@ -132,7 +133,10 @@ def main():
     digests["verify-bend"] = (BUILD / "verify-bend.digest").read_text().strip()
     if not re.fullmatch(SHA, digests["verify-bend"]) or digests["verify-bend"] == digests["cp_verify"]:
         raise ValueError("unauthenticated standalone source identity")
-    data = {"host": machine(), "binaries": {}, "fixtures": {}, "samples": []}
+    data = {"host": machine(), "harness_sha256": sha256(Path(__file__)), "binaries": {}, "fixtures": {},
+            "warmups": [], "samples": []}
+    warmup_logs = logs / "warmups"
+    warmup_logs.mkdir()
     with tempfile.TemporaryDirectory(dir=BUILD) as temp:
         work = Path(temp)
         (work / "empty-path").mkdir()
@@ -144,6 +148,9 @@ def main():
         for fixture in ("accepted-proof", "full-size"):
             case = EXAMPLES / fixture
             data["fixtures"][fixture] = check_inputs(case)
+            print(f"Verified warmups on {fixture} (excluded from reported samples)", flush=True)
+            for name, digest in digests.items():
+                data["warmups"].append(measure(work / name, case, digest, 1, work, warmup_logs))
             for i in range(args.samples):
                 order = list(digests) if i % 2 == 0 else list(reversed(digests))
                 for name in order:

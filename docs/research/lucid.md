@@ -57,7 +57,7 @@ Both compiled comparators receive `-j 1` for the request stage. OnBytes runs seq
 
 ## Independent Bend verification
 
-The standalone comparison builds the native `verify-bend` CLI and the pinned C++ oracle before timing. It copies the executables and public parameters into an isolated directory, checks every file listed in the fixture's `SHA256SUMS`, and alternates three fresh processes per executable at each exact fixture size. Each process starts with an empty executable search path. The complete command reads the caller's files and verifies the public statement, key, leaf and request. Every sample must return the four published closing lines with its own source identity and exit 0. [Measurement harness](../../scripts/benchmark-standalone.py) · [Slurm job](../../scripts/cluster/standalone-benchmark.sh)
+The standalone comparison builds the native `verify-bend` CLI and the pinned C++ oracle before timing. It copies the executables and public parameters into an isolated directory and checks every file listed in each fixture's `SHA256SUMS`. At each exact fixture size, both programs complete one verified warmup, then run three measured calls each in alternating order. This exercises a warm filesystem cache. Each call starts a fresh process with an empty executable search path, reads the caller's files and verifies the public statement, key, leaf and request. Every warmup and measured sample must return the four published closing lines with its own source identity and exit 0. [Measurement harness](../../scripts/benchmark-standalone.py) · [Slurm job](../../scripts/cluster/standalone-benchmark.sh)
 
 ```sh
 make benchmark-standalone
@@ -66,4 +66,23 @@ job=$(sbatch --parsable --nodelist=h100-sxm-8-0 scripts/cluster/standalone-bench
 sacct -j "$job" --format=JobID,State,Elapsed,ExitCode
 ```
 
-Each result directory contains per-process stdout, stderr and time output, `results.json` with source and binary identities, and `report.md` with the measured wall times and peak RSS. The worker uses `BEND_THREADS=1` for Bend and `-j 1` for C++. [Benchmark target](../../Makefile)
+The wall timer surrounds the entire invocation of GNU time and its verifier process. GNU time reports maximum resident set size in KiB. Each result directory contains per-process stdout, stderr and time output, `results.json` with source and binary identities, and `report.md` with the measured wall times and peak RSS. The worker uses `BEND_THREADS=1` for Bend and `-j 1` for C++. [Benchmark target](../../Makefile)
+
+The Linux and macOS builds of verifier checkout `f82965b0f7dd2f8c1bece480381c03025273f404` produced the same source identity, `4bc6ecdd34e1c59e5b65518a3752a1a8b8797f6024bc5cefd5bb906a59f67df5`. It hashes the transitive Bend imports, C entry, compiler lock, and build scripts with their repository-relative names. [Source identity](../../scripts/build-standalone.py)
+
+The Linux ELF SHA-256 was `ac8feeee3e0f15dec6ef753e6667e8f47b74faea95a40e10b8119f2fc38a0560`. Bend 2.0.40 generated C, and Ubuntu Clang 18.1.3 compiled it with `-std=c11 -O3 -lpthread -lm`. The reference used GCC 13.3.0 with the flags from the pinned verifier build. [Native build](../../scripts/compile_bend.py) · [Reference build flags](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/verifier/build.sh#L328-L353)
+
+Slurm job 7685 checked the same Linux binary against all four published proofs on a separate CPU node and completed with exit `0:0`. All four commands matched the fixture's closing records and exited 0. Both exact proofs printed `YES`. The small clipped proof printed `WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8`. The full clipped proof printed `WITHIN LIMITS: clipped-gap C=25856 theta=512 cap=1 s=15 sh=8`. Run `make standalone-full` to exercise these four inputs. [Standalone conformance harness](../../scripts/standalone-test.py)
+
+The standalone timing allocation used the same Xeon host as the earlier baselines. It requested four CPU slots, 160 GiB of RAM and zero GPUs. The verifier used one worker. The allocation was shared with other cluster users. Our other jobs on this host finished or stopped before the warmups, and the GPU proof-generation job waited for the timings to finish. The hybrid and OnBytes figures above came from the earlier run that shared the host with the ProgramGuard build. The theorem-linked driver includes its per-call parser build and helper link. These differences apply to comparisons across jobs.
+
+Slurm job 7683 completed with exit `0:0` in 52 min 20 s including setup. All four warmups and twelve measured calls exited 0 and matched the expected four lines. The full-size standalone median was **665.120 seconds** (11 min 5 s), with a measured peak resident set of **10.84 GiB**. [Individual samples, warmups, fixture checksums and binary identities](notes/lucid-standalone.tsv)
+
+| Exact fixture | Executable | Wall seconds in sample order | Median (s) | Peak RSS range (MiB) |
+| --- | --- | --- | ---: | ---: |
+| accepted-proof | C++ | 1.454, 1.509, 1.371 | 1.454 | 151.2–151.9 |
+| accepted-proof | Standalone Bend | 14.657, 14.784, 14.727 | 14.727 | 801.5–803.2 |
+| full-size | C++ | 19.115, 19.098, 19.077 | 19.098 | 3,360.3–3,361.4 |
+| full-size | Standalone Bend | 665.120, 666.087, 659.952 | 665.120 | 11,096.8–11,100.2 |
+
+On the small proof the standalone median was 10.125 times C++, 3.260 times the hybrid and 2.533 times Lean OnBytes. On the full-size proof those ratios were 34.827, 7.281 and 6.966. The full-size theorem-linked command took 1.716 times the standalone Bend median (1,141.27 s versus 665.120 s). [Theorem-linked measurements](#theorem-linked-verifier) · [Hybrid and OnBytes measurements](#compiled-baselines)
