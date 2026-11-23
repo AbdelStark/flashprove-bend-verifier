@@ -52,7 +52,7 @@ def main():
                 if name == fixtures[0]:
                     run(binary, work, [*call, "-id", "0" * 64, *options], 1, "NO: model-statement")
                     run(binary, work, [*call, "+RTS", "--help"], 2,
-                        "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q]")
+                        "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-timing]")
             print(f"{name}: verified independently, {expected.splitlines()[-1]}", flush=True)
 
 
