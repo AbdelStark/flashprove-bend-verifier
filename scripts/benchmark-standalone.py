@@ -22,10 +22,15 @@ def sha256(path):
 
 
 def check_inputs(case):
+    hashes = {}
     for line in (case / "SHA256SUMS").read_text().splitlines():
         digest, name = line.split(maxsplit=1)
-        if sha256(case / name.removeprefix("*")) != digest:
+        name = name.removeprefix("*")
+        if sha256(case / name) != digest:
             raise ValueError(f"{case.name}/{name}: fixture SHA-256 mismatch")
+        hashes[name] = digest
+    return {"proof_bytes": (case / "example.proof").stat().st_size, "proof_sha256": hashes["example.proof"],
+            "manifest_sha256": sha256(case / "SHA256SUMS")}
 
 
 def expected(case, digest):
@@ -87,6 +92,31 @@ def report(data):
         print(f"{name} standalone/C++ median ratio {times['verify-bend'] / times['cp_verify']:.3f}")
 
 
+def markdown(data):
+    host = data["host"]
+    lines = ["# Native standalone whole calls", "",
+             f"{host['os']} on {host['cpu']} ({host['arch']}). Checkout `{host['git']}`.", "",
+             "Each sample matched all four closing lines from the fixture and exited zero.", "",
+             "| Exact fixture | Program | Ordered wall times (s) | Median (s) | Peak RSS range (KiB) |",
+             "| --- | --- | --- | ---: | ---: |"]
+    ratios = []
+    for name in ("accepted-proof", "full-size"):
+        medians = {}
+        for binary in ("cp_verify", "verify-bend"):
+            rows = [r for r in data["samples"] if (r["fixture"], r["program"]) == (name, binary)]
+            times = [r["wall_s"] for r in rows]
+            memory = [r["rss_kib"] for r in rows]
+            medians[binary] = median(times)
+            wall = ", ".join(f"{v:.3f}" for v in times)
+            lines.append(f"| {name} | `{binary}` | {wall} | {median(times):.3f} | {min(memory):,}–{max(memory):,} |")
+        ratios.append(f"On {name}, the standalone/C++ median ratio was {medians['verify-bend'] / medians['cp_verify']:.3f}.")
+    lines.extend(["", " ".join(ratios), "", "| Program | Executable SHA-256 | Reported source digest |",
+                  "| --- | --- | --- |"])
+    for name, ids in data["binaries"].items():
+        lines.append(f"| `{name}` | `{ids['sha256']}` | `{ids['source_digest']}` |")
+    return "\n".join(lines) + "\n"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--samples", type=int, default=3)
@@ -102,7 +132,7 @@ def main():
     digests["verify-bend"] = (BUILD / "verify-bend.digest").read_text().strip()
     if not re.fullmatch(SHA, digests["verify-bend"]) or digests["verify-bend"] == digests["cp_verify"]:
         raise ValueError("unauthenticated standalone source identity")
-    data = {"host": machine(), "binaries": {}, "samples": []}
+    data = {"host": machine(), "binaries": {}, "fixtures": {}, "samples": []}
     with tempfile.TemporaryDirectory(dir=BUILD) as temp:
         work = Path(temp)
         (work / "empty-path").mkdir()
@@ -113,12 +143,13 @@ def main():
             data["binaries"][name] = {"sha256": sha256(binary), "source_digest": digest}
         for fixture in ("accepted-proof", "full-size"):
             case = EXAMPLES / fixture
-            check_inputs(case)
+            data["fixtures"][fixture] = check_inputs(case)
             for i in range(args.samples):
                 order = list(digests) if i % 2 == 0 else list(reversed(digests))
                 for name in order:
                     data["samples"].append(measure(work / name, case, digests[name], i+1, work, logs))
                     (logs / "results.json").write_text(json.dumps(data, indent=2) + "\n")
+    (logs / "report.md").write_text(markdown(data))
     report(data["samples"])
 
 

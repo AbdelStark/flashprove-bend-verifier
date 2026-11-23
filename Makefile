@@ -28,7 +28,7 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
 	@sh research/spikes/run.sh
 
-ci: docs-check check test test-native e2e plan-test public-input-test stages-test standalone-test standalone-rejections  ## what CI runs
+ci: docs-check check test test-native e2e plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## what CI runs
 
 .PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
 
@@ -145,6 +145,10 @@ standalone-rejections: standalone oracle  ## compare standalone and reference re
 
 standalone-extended: standalone oracle  ## compare 122 altered sets and a cross-commitment leaf
 	@python3 -B scripts/standalone-rejections.py --extended
+
+.PHONY: request-claims-test
+request-claims-test: bootstrap upstream plans public-tables  ## check local, carried and deferred equations at a fixed genuine transcript
+	@python3 -B scripts/test-request-claims.py
 
 .PHONY: benchmark-standalone
 benchmark-standalone: standalone oracle  ## measure validated standalone and C++ whole calls on both exact fixtures

@@ -168,6 +168,15 @@ def accumulate(xs: List<Ext.E3>,ys: B.Elements,acc: B.Elements) -> B.Elements:
     case Con{x,tail} Con{y,more}: accumulate(tail,more,E.add(x,y) <> acc)
     case _ _: List.reverse(&2,Ext.E3,acc)
 
+def values(xs: List<Ext.E3>,rev: B.Elements) -> B.Elements:
+  match xs:
+    case []: List.reverse(&2,Ext.E3,rev)
+    case x <> tail: values(tail,x <> rev)
+
+# A placement that already checked factor widths can scatter into the zero vector directly.
+def materialize(main: Form,k: Nat) -> B.Elements:
+  values(Array.to_list(Ext.E3,populate(main,Array.new(Ext.E3,k,zero()))),[])
+
 def sized(main: Form,acc: B.Elements,k: Nat,good: Bool) -> B.Elements:
   match good:
     case True{}: accumulate(Array.to_list(Ext.E3,populate(main,Array.new(Ext.E3,k,zero()))),acc,[])

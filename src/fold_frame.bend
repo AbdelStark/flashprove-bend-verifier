@@ -108,5 +108,5 @@ type Closed is Data:
 # FOLD scales every kept main table by epsilon times the product of (1 - gamma_i).
 def close(row: Group, +gamma: B.Elements, +h: Nat, +mask_len: Nat, +eps: E.E3, target: E.E3) -> Closed:
   Group{m,mask,keep,_} = row
-  initial: F.Claim = F.Claim{m,F.expand(mask,C.zeros(Nat.mul(mask_len,C.size(h)))),F.zero()}
+  initial: F.Claim = F.Claim{m,F.materialize(mask,Nat.add(C.bits(mask_len),h)),F.zero()}
   Closed{F.finish(initial,gamma,h,mask_len,eps,target),scale(keep,C.front(gamma,eps),[])}

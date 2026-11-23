@@ -68,7 +68,7 @@ def prepare(+ns: Q.Notices, +c: B.Code, +m: B.Code, rows: Local, prev: Past, +fi
     run_batch(ns,c,m,rows,transfer,sample,t,n,after)
 
 def cursor(done: W.Fold, ns: Q.Notices, stage: L.Stage, keep: C.Keeps, alive: Q.Notices) -> Cursor:
-  W.Fold{form,gs,tail} = done
+  W.Fold{form,gs,tail,_} = done
   Cursor{tail,Past{ns,stage,form,gs,keep},alive}
 
 def close(group: Group, +ns: Q.Notices) -> IO(Cursor):

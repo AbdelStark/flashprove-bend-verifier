@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Checks (types, termination, proofs) every .bend file under the given directories with
-`bend <file> --check-only`. Usage: scripts/bend-check.py [DIR ...]   (default: src)
+`bend <file> --check-only`. Usage: scripts/bend-check.py [-j N] [FILE_OR_DIR ...]
 
 Pure sources must pass the pinned checker. The native CLI's single execv host effect
 has one audited diagnostic below. Exit status: 0 if all checks pass, 1 otherwise.
 """
+import argparse
 import os
 import subprocess
 import sys
@@ -35,9 +36,25 @@ def main() -> int:
     if not BEND.exists():
         print(f"bend-check: {BEND} not found; run `make bootstrap`", file=sys.stderr)
         return 1
-    dirs = [Path(a) for a in sys.argv[1:]] or [ROOT / "src"]
-    files = sorted(f for d in dirs for f in d.rglob("*.bend"))
-    with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("-j", type=int, default=min(os.cpu_count() or 1, 4))
+    parser.add_argument("paths", nargs="*", type=Path, default=[ROOT / "src"])
+    args = parser.parse_args()
+    if args.j < 1:
+        parser.error("the job count must be positive")
+    files = set()
+    for path in args.paths:
+        if path.is_dir():
+            found = list(path.rglob("*.bend"))
+        elif path.is_file() and path.suffix == ".bend":
+            found = [path]
+        else:
+            parser.error(f"expected a Bend source file or directory at {path}")
+        if not found:
+            parser.error(f"no Bend sources at {path}")
+        files.update(found)
+    files = sorted(files)
+    with ThreadPoolExecutor(max_workers=args.j) as pool:
         results = list(pool.map(check, files))
     failed = [(f, out) for f, (ok, out) in zip(files, results) if not ok]
     for f, out in failed:

@@ -54,3 +54,16 @@ sacct -j "$job" --format=JobID,State,ExitCode,Elapsed,AllocCPUS,MaxRSS
 On 2026-11-23 the live scheduler listed `main` for batch jobs on the H100 SXM server. The documented `cpu` partition was absent. The allocation requested CPUs and memory with zero GPUs. The host reported Intel Xeon Platinum 8480CL, Ubuntu 24.04.4 LTS, Linux 6.8.0-147-generic and g++ 13.3.0. The verifier baseline source was `f42bacff28aa1a1684e2465a59e7dd4d6f905879`. The upstream revision is in [upstream.lock](../../upstream.lock). [Cluster overview](https://docs.vcf.lucidcomputing.ai/)
 
 Both compiled comparators receive `-j 1` for the request stage. OnBytes runs sequentially. Each process reads identical fixture bytes, including the named ID. The C++ and hybrid harness checks all four closing output lines against the published fixture, including the source build digest. The OnBytes harness checks both final lines. All three report per-process wall time and Linux GNU time maximum RSS in KiB, converted to MiB. The theorem-linked command always compiles the parser's plan tool and links a new helper library inside its whole call. Package setup, the `Johnson.PVR.ProgramGuard` build and creation of reusable native objects happen before its timer starts. Its Lean evaluation runs with `-j1`. [C++ and hybrid harness](../../scripts/e2e.py) · [OnBytes harness](../../scripts/onbytes-test.py) · [Theorem-linked driver](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/tools/lean-verify/lean_verify.sh)
+
+## Independent Bend verification
+
+The standalone comparison builds the native `verify-bend` CLI and the pinned C++ oracle before timing. It copies the executables and public parameters into an isolated directory, checks every file listed in the fixture's `SHA256SUMS`, and alternates three fresh processes per executable at each exact fixture size. Each process starts with an empty executable search path. The complete command reads the caller's files and verifies the public statement, key, leaf and request. Every sample must return the four published closing lines with its own source identity and exit 0. [Measurement harness](../../scripts/benchmark-standalone.py) · [Slurm job](../../scripts/cluster/standalone-benchmark.sh)
+
+```sh
+make benchmark-standalone
+# On the Lucid login node, submit the same measurement on the H100 SXM CPU.
+job=$(sbatch --parsable --nodelist=h100-sxm-8-0 scripts/cluster/standalone-benchmark.sh)
+sacct -j "$job" --format=JobID,State,Elapsed,ExitCode
+```
+
+Each result directory contains per-process stdout, stderr and time output, `results.json` with source and binary identities, and `report.md` with the measured wall times and peak RSS. The worker uses `BEND_THREADS=1` for Bend and `-j 1` for C++. [Benchmark target](../../Makefile)

@@ -87,13 +87,13 @@ def sampled(ss: List<&2,Send>, +ns: Q.Notices, +moment: Nat, +ell: Nat, +mask_le
         sampled(tail,ns,1n+moment,ell,mask_len,first,st)
 
 type Fold is Data:
-  Fold{closed: R.Closed, gamma: B.Elements, after: Tr.Events}
+  Fold{closed: R.Closed, gamma: B.Elements, after: Tr.Events, epsilon: E.E3}
 
 def rounds(n: Nat, events: Tr.Events, +row: R.Group, +eps: E.E3, target: E.E3, gs: B.Elements, +h: Nat, +len: Nat) -> IO(Fold):
   match n events:
     case 0n rest:
       +gamma = List.reverse(&2,E.E3,gs)
-      IO.pure(Fold,Fold{R.close(row,gamma,h,len,eps,target),gamma,rest})
+      IO.pure(Fold,Fold{R.close(row,gamma,h,len,eps,target),gamma,rest,eps})
     case 1n+k Con{Tr.Observed{P.Round{name,_,_,_,_,_,_,_,_,_,_,_},raw,stream,_,_},tail}:
       +g = V.first(stream)
       do IO<Fold>:

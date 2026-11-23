@@ -3,6 +3,7 @@ import ../../src/request_stage.bend as Req
 import ../../src/segment_local.bend as L
 import ../../src/segment_chain.bend as Chain
 import ../../src/segment_inputs.bend as Inputs
+import ../../src/segment_transport.bend as Transport
 import ../../src/segment_model.bend as M
 import ../../src/fold_request_shape.bend as Q
 import ../../src/fold_request.bend as Fold
@@ -52,9 +53,9 @@ def change(mode: Mode,local: L.Local) -> L.Local:
 
 def folded(mode: Mode,state: Chain.State) -> Chain.State:
   match mode state:
-    case Folded{} Chain.State{Fold.Cursor{events,Fold.Past{ms,stage,Fm.Closed{F.Single{terms,d,f,y},ks},g,k},alive},ps}:
+    case Folded{} Chain.State{Transport.State{Fold.Cursor{events,Fold.Past{ms,stage,Fm.Closed{F.Single{terms,d,f,y},ks},g,k},alive},basis,columns},ps}:
       after: Fm.Closed = Fm.Closed{F.Single{terms,d,f,E.add(y,F.one())},ks}
-      Chain.State{Fold.Cursor{events,Fold.Past{ms,stage,after,g,k},alive},ps}
+      Chain.State{Transport.State{Fold.Cursor{events,Fold.Past{ms,stage,after,g,k},alive},basis,columns},ps}
     case _ s: s
 
 def finish(own: Own.First,pair: R.Reader & Req.FirstData) -> IO(Unit):
@@ -71,7 +72,8 @@ def start(ctx: L.Context,ms: Inputs.Batches,events: Tr.Events,items: List<&2,P.I
       do IO<Own.First>:
         row : L.Logical <- L.at_feed(g,context)
         raw : L.Local <- L.physical(0n,context,row)
-        one : Chain.State <- Chain.step(link,change(mode,raw),c,m,Chain.State{Fold.Cursor{ev,Fold.Start{},[]},[]},True{})
+        initial : Transport.State <- Transport.begin(ev,c,later)
+        one : Chain.State <- Chain.step(link,change(mode,raw),c,m,Chain.State{initial,[]},True{})
         st : Chain.State <- Chain.walk(rest,links,context,c,m,folded(mode,one),1n)
         Chain.finish(st,c,m,later,ev,items)
     case _ _: IO.die(Own.First,1,"fixture needs a first G segment")

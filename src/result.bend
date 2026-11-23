@@ -5,6 +5,7 @@ import ./plan_types.bend as PT
 import ./plan_catalog.bend as Catalog
 import ./accounting_catalog.bend as C
 import ./hash_bytes.bend as H
+import ./header.bend as Header
 
 type Range is Data:
   Range{r: Nat,e: Nat,t: Nat,last: Nat,count: Nat}
@@ -15,7 +16,9 @@ def coverage(rs: List<&2,U32>,+t: Nat) -> IO(Range):
       +first = U32.to_nat(r)
       +end = U32.to_nat(e)
       +last = Nat.min(end,Nat.sub(t,1n))
-      IO.pure(Range,Range{first,end,t,last,Nat.sub(last,first)})
+      do IO<Range>:
+        ok : Unit <- Header.require(Nat.is_lt(first,end) && Nat.is_le(end,t),"NO: statement-range")
+        return Range{first,end,t,last,Nat.sub(last,first)}
     case _: IO.die(Range,1,"NO: statement-range")
 
 def above(c: Nat,theta: Nat,+cap: Nat,+n: Nat,+unit: Nat) -> Nat:

@@ -38,7 +38,9 @@ The request stage checks the feed-forward, attention and output-head relations, 
 | `make standalone-full` | All four real proofs with the freestanding binary and caller-selected public inputs. Compares all four closing lines and the exit status. |
 | `make standalone-extended` | Compares both small altered-copy tables, 79 item mutations and 23 altered record sets with C++. Also substitutes a valid leaf from another commitment. |
 | `make stages-full` | Intermediate evidence against upstream, including all three model families and both model sizes. |
+| `make request-claims-test` | Independently change a real BAT target, carried FOLD target, weight-merge target and weight coefficient. Each must reach and fail its final equation. |
 | `make plans-reproduce` | Re-exports schedules, shapes and exact accounting from the pinned configuration-only planner and compares the packaged data. |
+| `make benchmark-standalone` | Three alternating single-thread native Bend and upstream C++ calls at each model size, recording identity, timing, peak memory and validated output. |
 | `make benchmark-lean` | Reproduces the native Lean OnBytes comparator. |
 | `make help` | Lists all build, test and benchmark targets. |
 

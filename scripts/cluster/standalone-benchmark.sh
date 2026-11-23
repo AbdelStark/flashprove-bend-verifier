@@ -22,5 +22,16 @@ cd "$work"
 uname -srm
 lscpu | grep -E '^Model name:|^Architecture:'
 g++ --version | head -1
+if ! command -v clang >/dev/null; then
+    # Lucid's current Ubuntu image includes the LLVM runtime but omits the compiler driver.
+    mkdir -p build/clang-18
+    cd build/clang-18
+    apt-get download clang-18 libclang-common-18-dev
+    for package in *.deb; do dpkg-deb -x "$package" .; done
+    ln -s clang-18 usr/bin/clang
+    export PATH="$PWD/usr/bin:$PATH"
+    cd "$work"
+fi
+clang --version | head -1
 make bootstrap upstream standalone oracle > "$out/build.log" 2>&1
 python3 -B scripts/benchmark-standalone.py --output "$out/measurements" | tee "$out/samples.log"

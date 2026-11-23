@@ -20,6 +20,8 @@ def main() -> IO(Unit):
     IO.print(Bool.show(same(F.expand(forms,base),[e(1),e(1),e(1),e(1),e(31),e(68),e(41),e(81)])))
     IO.print(Bool.show(same(F.expand(forms,base),F.expand_list(forms,base))))
     IO.print(Bool.show(same(F.expand(forms,[e(11)]),[e(11)])))
+    IO.print(Bool.show(same(F.materialize(forms,3n),[e(0),e(0),e(0),e(0),e(30),e(67),e(40),e(80)])))
+#|True
 #|True
 #|True
 #|True

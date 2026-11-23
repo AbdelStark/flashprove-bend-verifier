@@ -2,6 +2,7 @@
 """Differentially check the Bend public statement and rejection boundaries against pinned H821."""
 from pathlib import Path
 import hashlib
+import runpy
 import struct
 import re
 import shutil
@@ -23,6 +24,46 @@ def check_call(args, code, expected):
         raise RuntimeError(f"exit {result.returncode} for {args}\n{actual[:2000]}\nexpected {expected[:2000]}")
 
 
+def coverage_boundaries(work, driver, tables):
+    oracle = runpy.run_path(str(UPSTREAM / "verifier/tests/call_accounting_test.py"))
+    req, y = work / "coverage.req", work / "coverage.y"
+    for name in ("accepted-proof", "accepted-proof-clipped-gap"):
+        example = UPSTREAM / "examples" / name
+        config = example / "config"
+        policy = (config / "policy.txt").read_text()
+        identifier = (example / "ID.txt").read_text().strip()
+        named = re.search(r" -policy (clipped-gap,[0-9,]+)",(example / "README.md").read_text())
+        token_bytes = (example / "example.req").read_bytes()[:-8]
+        tokens = struct.unpack("<64I",token_bytes)
+        for first, end in ((63,64), (62,64), (62,63), (0,1)):
+            tail = struct.pack("<II",first,end)
+            req.write_bytes(token_bytes + tail)
+            actual_y = 237 if end == 64 else 0
+            y.write_bytes(struct.pack("<I",actual_y))
+            args = [driver,"coverage",config,req,y,tables,identifier,"a"*64]
+            winner = list(tokens[first+1:end+1]) + ([actual_y] if end == 64 else [])
+            names = [named[1]] if named else ["-"]
+            if named and first == 63:
+                names.append("-")  # A next-token-only claim may omit the clipped policy.
+            for option in names:
+                data = subprocess.run([*args,option],check=True,capture_output=True,text=True,timeout=60)
+                lines = data.stdout.splitlines()
+                assert lines[0] == "winners " + struct.pack(f"<{len(winner)}I",*winner).hex()
+                pattern = oracle["result_pattern"](req.read_bytes(),policy,bytes(12),0,identifier)
+                if len(lines) != 5 or not re.fullmatch(pattern,lines[-2]):
+                    raise ValueError(f"{name} [{first},{end}): output differs from pinned coverage rules")
+                label = lines[-2].split(" policy=",1)[1].split(" sT=",1)[0]
+                ending = "WITHIN LIMITS: " + label if named and first < 63 else "YES"
+                if lines[-1] != ending:
+                    raise ValueError(f"{name} [{first},{end}): wrong closing verdict")
+            if named and first < 63:
+                check_call([*args,"-"],1,"NO: policy")
+        for first,end in ((63,63),(64,64),(63,65)):
+            req.write_bytes(token_bytes+struct.pack("<II",first,end))
+            check_call([*args,named[1] if named else "-"],1,"NO: statement-range")
+    print("Next-token, boundary winner, clipped-gap and report fields match the upstream coverage oracle.")
+
+
 def main():
     build = ROOT / "build"
     build.mkdir(exist_ok=True)
@@ -38,6 +79,7 @@ def main():
         subprocess.run([ROOT / ".toolchain/bend/bin/bend", ROOT / "scripts/probes/public_statement.bend",
                         "-o", driver], check=True)
         subprocess.run([sys.executable, ROOT / "scripts/generate-tables.py", "--output", tables], check=True)
+        coverage_boundaries(work, driver, tables)
         for name in ("accepted-proof", "accepted-proof-clipped-gap", "full-size", "full-size-clipped-gap"):
             example = UPSTREAM / "examples" / name
             config = example / "config"

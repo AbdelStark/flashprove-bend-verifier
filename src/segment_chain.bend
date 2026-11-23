@@ -1,5 +1,6 @@
 import Base
 import ./segment_local.bend as Local
+import ./segment_transport.bend as Transport
 import ./segment_model.bend as M
 import ./segment_inputs.bend as Inputs
 import ./fold.bend as F
@@ -18,7 +19,7 @@ import ./header.bend as Header
 # Consume one physical group at a time. Only folded obligations, surviving
 # member samples and the separate G/H matrix claims cross a segment boundary.
 type State is Data:
-  State{cursor: Fold.Cursor, pending_rev: Batt.Pending}
+  State{carry: Transport.State, pending_rev: Batt.Pending}
 
 def family(+model: M.Inputs,+ctx: Local.Context,last: Bool) -> IO(Local.Logical):
   choose = Bool.pick(Unit -> IO(Local.Logical),last,
@@ -36,7 +37,7 @@ def step(link: Q.Link,placed: Local.Local,c: B.Code,m: B.Code,state: State,first
   Local.Local{row,maybe} = placed
   State{cur,ps} = state
   do IO<State>:
-    next : Fold.Cursor <- Fold.visit([link],[[row]],c,m,cur,first)
+    next : Transport.State <- Transport.advance(link,row,c,m,cur,first)
     return State{next,pending(maybe,ps)}
 
 def walk(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c: B.Code,+m: B.Code,state: State,i: Nat) -> IO(State):
@@ -55,7 +56,7 @@ def walk(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c: B
 def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
   State{cur,rows} = st
   do IO<Own.First>:
-    after : Trace.Events <- Fold.finish(cur,c,m,later)
+    after : Trace.Events <- Fold.finish(Transport.restore(cur),c,m,later)
     Batt.checked(events,after,List.reverse(&2,Own.Pending,rows),items)
 
 def closed(ctx: Local.Context,models: Inputs.Batches,+events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
@@ -63,7 +64,8 @@ def closed(ctx: Local.Context,models: Inputs.Batches,+events: Trace.Events,items
     case Local.Context{book,Q.Shape{+c,+m,+links,+later},geometry,profile}:
       context: Local.Context = Local.Context{book,Q.Shape{c,m,links,later},geometry,profile}
       do IO<Own.First>:
-        done : State <- walk(models,links,context,c,m,State{Fold.Cursor{events,Fold.Start{},[]},[]},0n)
+        initial : Transport.State <- Transport.begin(events,c,later)
+        done : State <- walk(models,links,context,c,m,State{initial,[]},0n)
         finish(done,c,m,later,events,items)
 
 def verify(models: Inputs.Batches,events: Trace.Events,+items: List<&2,Plan.Item>,profile: PT.Profile) -> IO(Own.First):
