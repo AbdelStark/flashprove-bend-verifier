@@ -28,6 +28,13 @@ echo "bend (1 thread):"; t "$w/mul" +RTS --threads 1
 echo "C, native u64/u128:"; t "$w/gl_ref" 20000000
 echo "python reference:"; python3 "$here/goldilocks/ref.py" 20000000
 
+echo "== Cubic-extension multiplication, 20,000,000 chained calls =="
+cp "$root/src/extension.bend" "$w/extension.bend"
+sed 's/NNN/20000000/' "$here/extension/mul.bend.in" > "$w/emul.bend" && "$bend" "$w/emul.bend" -o "$w/emul"
+clang -O2 -o "$w/e3_ref" "$here/extension/ref.c"
+echo "bend (1 thread):"; t "$w/emul" +RTS --threads 1
+echo "C, native u64/u128:"; t "$w/e3_ref" 20000000
+
 echo "== Read and parse the full-size proof (18.8 MB) as 64-bit words =="
 "$bend" "$here/parse/parse.bend" -o "$w/parse"
 echo "bend (1 thread):"; t "$w/parse" "$proof" +RTS --threads 1

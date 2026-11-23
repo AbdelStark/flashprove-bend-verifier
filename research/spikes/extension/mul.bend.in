@@ -1,0 +1,19 @@
+import Base
+import ./extension.bend as Ext
+
+# x <- x * y in F_p[X]/(X^3 - 2), NNN times.
+def chain(n: Nat, x: Ext.E3, +y0h: U32, +y0l: U32, +y1h: U32, +y1l: U32, +y2h: U32, +y2l: U32) -> Ext.E3:
+  match n:
+    case 0n:
+      x
+    case 1n+p:
+      Ext.E3{a, b, c, d, e, f} = x
+      chain(p, Ext.E3.mul(a, b, c, d, e, f, y0h, y0l, y1h, y1l, y2h, y2l), y0h, y0l, y1h, y1l, y2h, y2l)
+
+def show(value: Ext.E3) -> String:
+  Ext.E3{a, b, c, d, e, f} = value
+  U32.show(a) ++ " " ++ U32.show(b) ++ " " ++ U32.show(c) ++ " " ++ U32.show(d) ++ " " ++ U32.show(e) ++ " " ++ U32.show(f)
+
+def main() -> IO(Unit):
+  do IO<Unit>:
+    IO.print(show(chain(NNNn, Ext.E3{305419896, 2596069104, 19088743, 2309737967, 4275878552, 1985229328}, 2616525818, 2952618119, 1109109337, 1539779615, 507698712, 958177034)))
