@@ -151,8 +151,8 @@ request-claims-test: bootstrap upstream plans public-tables  ## check local, car
 	@python3 -B scripts/test-request-claims.py
 
 .PHONY: fuzz
-fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend must never accept where C++ refuses
-	@python3 -B scripts/fuzz-differential.py
+fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend must never accept where C++ refuses (FUZZ_ARGS="-n N --seed S")
+	@python3 -B scripts/fuzz-differential.py $(FUZZ_ARGS)
 
 .PHONY: benchmark-standalone
 benchmark-standalone: standalone oracle  ## measure validated standalone and C++ whole calls on both exact fixtures
