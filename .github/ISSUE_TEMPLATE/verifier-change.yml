@@ -1,0 +1,22 @@
+name: Verifier change
+description: Implement a protocol rule or resolve a conformance mismatch.
+body:
+  - type: textarea
+    id: rule
+    attributes:
+      label: Behavior and scope
+      description: Identify the stage, the pinned format rule or source function, and the applicable requirement in docs/spec/verifier.md.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Link prerequisites and add their blocked-by relationship on GitHub.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: Give the input, command, expected verdict or intermediate value, and a case that should fail. For a performance change, identify the baseline and measurement conditions.
+    validations:
+      required: true

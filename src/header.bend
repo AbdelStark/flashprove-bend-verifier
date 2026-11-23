@@ -94,8 +94,9 @@ def policy_fields(lines: List<&2, String>) -> IO(U32 & U32):
       do IO<U32 & U32>:
         checked : Unit <- require(String.eq(first, "version H821"), "version-unknown (policy)")
         +lt : U32 <- field(List.find(String, line => String.starts_with(line, "lt "), tail), 3n)
-        vocab : U32 <- field(List.find(String, line => String.starts_with(line, "V "), tail), 2n)
-        checked : Unit <- require(U32.is_le(lt, 20), "policy-lt")
+        +vocab : U32 <- field(List.find(String, line => String.starts_with(line, "V "), tail), 2n)
+        checked : Unit <- require(U32.is_ge(lt, 4) && U32.is_le(lt, 16), "NO: shape-words")
+        checked : Unit <- require(U32.is_ge(vocab, 2) && U32.is_le(vocab, 16777216), "NO: shape-V")
         IO.pure(U32 & U32, (U32.shln(1, U32.to_nat(lt)), vocab))
     case _: IO.die(U32 & U32, 1, "policy-empty")
 

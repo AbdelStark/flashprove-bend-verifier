@@ -29,13 +29,13 @@ def build_digests(reference_only):
     return digests
 
 
-def honest(binary, example, digest, benchmark=False):
+def honest(binary, example, digest, benchmark=False, threads=1):
     # Test expectations are published alongside each fixture in the pinned repository.
     readme = (example / "README.md").read_text()
     expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+", readme, re.M)[0]
     model_id = re.search(r"\bid=(" + SHA + r")\b", expected)[1]
     args = [binary, example / "config", example / "ivk", example / "example.req",
-            example / "example.y", example / "example.proof", "-id", model_id, "-q", "-j", "1"]
+            example / "example.y", example / "example.proof", "-id", model_id, "-q", "-j", str(threads)]
     policy = re.search(r" -policy (clipped-gap,[0-9,]+)", readme)
     if policy:
         args.extend(["-policy", policy[1]])
@@ -88,12 +88,12 @@ def altered(binary, fixture):
     print(f"{binary.name} {fixture}  {result.stdout.splitlines()[-1]}", flush=True)
 
 
-def benchmark(count, full_size):
+def benchmark(count, full_size, threads):
     # The public CLI execs a worker beside itself. Snapshot both and the oracle so an
     # atomic concurrent rebuild cannot change the programs midway through the samples.
     digests = build_digests(False)
     expected = {"cp_verify": digests["cp_verify"], "verify": digests["bend_verify"]}
-    print(f"{platform.platform()} {platform.machine()}, {count} whole calls per binary, -j 1", flush=True)
+    print(f"{platform.platform()} {platform.machine()}, {count} whole calls per binary, -j {threads}", flush=True)
     with tempfile.TemporaryDirectory(dir=BUILD) as tmp:
         binaries = Path(tmp)
         for name in ["cp_verify", "bend_verify", "verify"]:
@@ -104,7 +104,7 @@ def benchmark(count, full_size):
             times = {name: [] for name in expected}
             for index in range(count):
                 for name in expected if index % 2 == 0 else reversed(expected):
-                    _, elapsed = honest(binaries / name, EXAMPLES / fixture, expected[name], benchmark=True)
+                    _, elapsed = honest(binaries / name, EXAMPLES / fixture, expected[name], benchmark=True, threads=threads)
                     times[name].append(elapsed)
             for name, samples in times.items():
                 print(f"{fixture} {name} median {median(samples):.3f}s (range {min(samples):.3f}–{max(samples):.3f}s)")
@@ -117,11 +117,14 @@ def main():
     parser.add_argument("--full-size", action="store_true", help="also run the two full-size examples (4 GiB each)")
     parser.add_argument("--reference-only", action="store_true", help="exercise the unchanged C++ verifier alone")
     parser.add_argument("--benchmark", type=int, metavar="SAMPLES", help="alternate exact-match whole calls and report medians")
+    parser.add_argument("--threads", type=int, metavar="N", default=1, help="worker thread count for benchmarking (1 to 256)")
     args = parser.parse_args()
+    if not 1 <= args.threads <= 256 or (args.benchmark is None and args.threads != 1):
+        parser.error("--threads requires benchmarking and an integer from 1 to 256")
     if args.benchmark is not None:
         if args.benchmark < 1 or args.reference_only:
             parser.error("--benchmark requires a positive sample count and both verifiers")
-        benchmark(args.benchmark, args.full_size)
+        benchmark(args.benchmark, args.full_size, args.threads)
         return
     digests = build_digests(args.reference_only)
     fixtures = ["accepted-proof", "accepted-proof-clipped-gap"]

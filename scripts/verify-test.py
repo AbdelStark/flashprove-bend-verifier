@@ -3,8 +3,12 @@
 import argparse
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
+
+sys.dont_write_bytecode = True
+from e2e import build_digests, honest
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / ".upstream" / "FlashProve" / "examples"
@@ -35,25 +39,37 @@ def main():
     options = parser.parse_args()
     fixtures = ["accepted-proof", "accepted-proof-clipped-gap"]
     if options.full_size:
-        fixtures.extend(["full-size", "full-size-clipped-gap"])
+        fixtures = ["full-size-clipped-gap", "full-size", *fixtures]
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         # Resolution uses the installed binary, even when called via this symlink.
         verify = work / "verifier with spaces"
         verify.symlink_to(ROOT / "build" / "verify")
+        worker_digest = build_digests(False)["bend_verify"]
         for name in fixtures:
-            example = EXAMPLES / name
-            args = example_args(verify, example)
-            last = re.search(r"^(YES|WITHIN LIMITS:[^\n]*)$", (example / "README.md").read_text(), re.M)[0]
-            output = call([*args[:6], "-q", "-j", "1", *args[6:]], 0, last)
-            result = next(line for line in output.splitlines() if line.startswith("result-v1 "))
-            assert f"id={args[7]} " in result and " stages=key,leaf,request " in result
-            print(f"verify {name}: {last}", flush=True)
+            honest(verify, EXAMPLES / name, worker_digest)
         clipped = example_args(verify, EXAMPLES / "accepted-proof-clipped-gap")
         call(clipped[:-2], 1, "NO: policy")
         call(clipped[:-1] + ["clipped-gap,9244130,323343,0,16,8"], 1, "NO: policy")
         args = example_args(verify, EXAMPLES / "accepted-proof")
-        call(args[:-1] + ["0" * 64], 1, "NO: model-statement")
+        call([*args[:6], "-q", "-j", "1", "-id", "0" * 64], 1, "NO: model-statement")
+        config = work / "invalid config"
+        config.mkdir()
+        original = (args[1] / "policy.txt").read_text()
+        for old, new, rejection in [
+            ("lt 6", "lt 3", "NO: shape-words"),
+            ("lt 6", "lt 17", "NO: shape-words"),
+            ("V 512", "V 1", "NO: shape-V"),
+            ("V 512", "V 16777217", "NO: shape-V"),
+            ("table 8 23", "table 21 23", "NO: parameter-table-shape"),
+            ("524288 65535 0 11", "8388607 1 0 11", "NO: parameter-table-shape"),
+            ("65535 0 11", "65535 1 11", "NO: parameter-table-shape"),
+            ("65535 0 11", "65535 0 7", "NO: parameter-table-shape"),
+        ]:
+            if original.count(old) != 1:
+                raise RuntimeError(f"fixture does not contain a unique {old!r}")
+            (config / "policy.txt").write_text(original.replace(old, new))
+            call([verify, config, *args[2:]], 1, rejection)
         bad_request = work / "truncated request"
         bad_request.write_bytes(args[3].read_bytes()[:-1])
         call([*args[:3], bad_request, *args[4:]], 1, "NO: statement-range")
@@ -64,7 +80,7 @@ def main():
             raise RuntimeError(f"altered proof returned {run.returncode}\n{run.stdout[-1000:]}")
         call([*args[:-2], "+RTS", "--help"], 2, "usage: verify CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-j N] [-q]")
         call(args[:-2], 2, "usage: verify CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-j N] [-q]")
-        print("verify rejected wrong ID, truncated request, altered proof, missing ID and omitted/mismatched clipped-gap policy")
+        print("verify rejected wrong ID, malformed shapes, truncated request, altered proof, missing ID and omitted/mismatched clipped-gap policy")
 
 
 if __name__ == "__main__":

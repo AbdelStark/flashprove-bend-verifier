@@ -84,6 +84,9 @@ def digest(label: Bytes, start: Bytes, body: Bytes, +n: U32) -> Bytes:
 def zero(n: Nat) -> Bytes:
   List.replicate(U32, n, 0)
 
+def start(number: U32, index: U32) -> Context:
+  Context{initial(u32s(zero(32n)), 32), cat([word(number), word(index)]), 0}
+
 def plain(number: U32, index: U32, body: Bytes) -> Bytes:
   digest(cat([word(number), word(index)]), zero(32n), body, 32)
 

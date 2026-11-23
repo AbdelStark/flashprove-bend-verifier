@@ -9,18 +9,32 @@ def unpack(-A: Type, pair: File & Result<&1, &1, U32 & String, A>) -> IO(File & 
     value : A <- IO.pass(A, res)
     return (f, value)
 
-def read_chunk(pair: File & H.Bytes, ctx: H.Context, wanted: Nat) -> IO(File & H.Context):
+def canonical(xs: List<&2, U32>) -> Bool:
+  match xs:
+    case []: True{}
+    case 0 <> 4294967295 <> tail: canonical(tail)
+    case lo <> 4294967295 <> tail: False{}
+    case lo <> hi <> tail: canonical(tail)
+    case _: False{}
+
+def record_chunk(record: Bool, xs: H.Bytes) -> Bool:
+  match record:
+    case True{}: canonical(H.u32s(xs))
+    case False{}: True{}
+
+def read_chunk(pair: File & H.Bytes, ctx: H.Context, wanted: Nat, record: Bool) -> IO(File & H.Context):
   (f, +xs) = pair
   do IO<File & H.Context>:
-    checked : Unit <- Header.require(Nat.is_eq(List.length(&2, U32, xs), wanted), "short configuration file")
+    checked : Unit <- Header.require(Nat.is_eq(List.length(&2, U32, xs), wanted), "short file")
+    checked : Unit <- Header.require(record_chunk(record, xs), "NO: key-refused")
     return (f, H.update(ctx, xs))
 
-def next_chunk(pair: File & H.Context, +wanted: Nat) -> IO(File & H.Context):
+def next_chunk(pair: File & H.Context, +wanted: Nat, record: Bool) -> IO(File & H.Context):
   (f, ctx) = pair
   do IO<File & H.Context>:
     r : File & Result<&1, &1, U32 & String, H.Bytes> <- File.read_bytes(f, U32.from_nat(wanted))
     xs : File & H.Bytes <- unpack(H.Bytes, r)
-    read_chunk(xs, ctx, wanted)
+    read_chunk(xs, ctx, wanted, record)
 
 def end_file(pair: File & H.Context) -> IO(H.Context):
   (f, ctx) = pair
@@ -28,16 +42,16 @@ def end_file(pair: File & H.Context) -> IO(H.Context):
     done : Unit <- File.close(f)
     return ctx
 
-def chunks(count: Nat, pair: File & H.Context, last: Nat) -> IO(H.Context):
+def chunks(count: Nat, pair: File & H.Context, last: Nat, +record: Bool) -> IO(H.Context):
   match count:
     case 0n:
       do IO<H.Context>:
-        end : File & H.Context <- next_chunk(pair, last)
+        end : File & H.Context <- next_chunk(pair, last, record)
         end_file(end)
     case 1n+p:
       do IO<H.Context>:
-        next : File & H.Context <- next_chunk(pair, 8192n)
-        chunks(p, next, last)
+        next : File & H.Context <- next_chunk(pair, 8192n, record)
+        chunks(p, next, last, record)
 
 def sized_file(pair: File & U32, +ctx: H.Context) -> IO(H.Context):
   (f, +length) = pair
@@ -46,7 +60,7 @@ def sized_file(pair: File & U32, +ctx: H.Context) -> IO(H.Context):
     # R2.3 bound includes all file lengths and data; H.size already includes the label.
     checked : Unit <- Header.require(
       Nat.is_le(Nat.add(H.size(ctx), Nat.add(8n, n)), 4294967168n), "configuration too long")
-    chunks(Nat.div(n, 8192n), (f, H.update(ctx, H.word(length))), Nat.mod(n, 8192n))
+    chunks(Nat.div(n, 8192n), (f, H.update(ctx, H.word(length))), Nat.mod(n, 8192n), False{})
 
 def add_file(path: String, ctx: H.Context) -> IO(H.Context):
   do IO<H.Context>:
@@ -56,8 +70,7 @@ def add_file(path: String, ctx: H.Context) -> IO(H.Context):
     sized_file(sized, ctx)
 
 def config_start() -> H.Context:
-  label = H.cat([H.word(169), H.word(2), H.word(3)])
-  H.Context{H.initial(H.u32s(H.zero(32n)), 32), label, 0}
+  H.update(H.start(169, 2), H.word(3))
 
 def configuration(+config: String) -> IO(H.Bytes):
   do IO<H.Bytes>:
@@ -81,15 +94,22 @@ def shape(values: List<&2, String>, salt: U32) -> IO(Shape):
         +rows : U32 <- Header.decimal(Nat.read(b))
         +bits : U32 <- Header.decimal(Nat.read(n))
         +message : U32 <- Header.decimal(Nat.read(i))
-        random : U32 <- Header.decimal(Nat.read(m))
+        +random : U32 <- Header.decimal(Nat.read(m))
+        entry : U32 <- Header.decimal(Nat.read(e))
+        +block : U32 <- Header.decimal(Nat.read(w))
         checked : Unit <- Header.require(
-          U32.is_le(rows, 20) && U32.is_le(bits, 32) && U32.is_ne(message, 0), "policy-table")
+          U32.is_le(rows, 20) && U32.is_le(bits, 32) && U32.is_ne(message, 0) &&
+          U32.is_zero(entry) && U32.is_le(rows, block) && U32.is_le(block, 40), "NO: parameter-table-shape")
+        checked : Unit <- Header.require(
+          Nat.is_lt(Nat.add(U32.to_nat(message), U32.to_nat(random)), Nat.pow(2n, U32.to_nat(bits))),
+          "NO: parameter-table-shape")
         return Shape{rows, bits, message, random, salt}
     case _: IO.die(Shape, 1, "policy-table")
 
 def parse_shape(+lines: List<&2, String>) -> IO(Shape):
   do IO<Shape>:
-    salt : U32 <- Header.field(List.find(String, line => String.starts_with(line, "salt "), lines), 5n)
+    +salt : U32 <- Header.field(List.find(String, line => String.starts_with(line, "salt "), lines), 5n)
+    check : Unit <- Header.require(U32.is_ge(salt, 40) && U32.is_le(salt, 64) && U32.is_zero(U32.and(salt, 7)), "NO: parameter-range")
     answers : U32 <- Header.field(List.find(String, line => String.starts_with(line, "answers "), lines), 8n)
     check : Unit <- Header.require(U32.is_eq(answers, 1), "policy-answers")
     values : List<&2, String> <- table(List.find(String, line => String.starts_with(line, "table "), lines))
@@ -102,42 +122,33 @@ def key_shape(config: String) -> IO(Shape):
     text : String <- Header.closed(String, r)
     parse_shape(String.lines(text))
 
-def canonical(xs: List<&2, U32>) -> Bool:
-  match xs:
-    case []: True{}
-    case 0 <> 4294967295 <> tail: canonical(tail)
-    case lo <> 4294967295 <> tail: False{}
-    case lo <> hi <> tail: canonical(tail)
-    case _: False{}
-
 def variables(+message: U32) -> Nat:
   match message:
     case 1: 0n
     case _: Nat.add(U32.log2(U32.sub(message, 1)), 1n)
 
-def published(shape: Shape, +key: H.Bytes, +config: H.Bytes) -> IO(String):
+def record_hash(shape: Shape, pair: File & H.Bytes, +config: H.Bytes) -> IO(String):
   Shape{+b,n,+i,m,salt} = shape
+  (f, +head) = pair
   +rows = U32.shln(1, U32.to_nat(b))
-  +record = List.drop(&2, U32, key, 40n)
-  root = List.take(&2, U32, List.drop(&2, U32, key, 8n), 32n)
+  +length = Nat.mul(24n, U32.to_nat(rows))
+  root = List.drop(&2, U32, head, 8n)
   +name = H.cat([root, config, H.word(n), H.word(i), H.word(m), H.word(b), H.word(1), H.word(salt)])
   +coordinates = variables(i)
+  ctx = H.start(179, 0)
   do IO<String>:
-    check : Unit <- Header.require(Header.key_head(List.take(&2, U32, key, 8n)), "cp-key-head")
-    check : Unit <- Header.require(
-      Nat.is_eq(List.length(&2, U32, record), Nat.mul(24n, U32.to_nat(rows))) &&
-      canonical(H.u32s(record)), "invalid anchor record")
-    return H.hex(H.plain(179, 0, H.cat([config, H.word(112), name,
-      H.word(U32.from_nat(Nat.add(coordinates, 1n))), Seeds.sample(name, coordinates),
-      H.word(rows), record, H.word(0)])))
-
-def prefix_length(shape: Shape) -> U32:
-  Shape{b,_,_,_,_} = shape
-  U32.add(40, U32.mul(24, U32.shln(1, U32.to_nat(b))))
+    check : Unit <- Header.require(Nat.is_eq(List.length(&2, U32, head), 40n) &&
+      Header.key_head(List.take(&2, U32, head, 8n)), "NO: key-refused")
+    stream : H.Context <- chunks(Nat.div(length, 8192n),
+      (f, H.update(ctx, H.cat([config, H.word(112), name, H.word(U32.from_nat(Nat.add(coordinates, 1n))),
+      Seeds.sample(name, coordinates), H.word(rows)]))), Nat.mod(length, 8192n), True{})
+    return H.hex(H.finish(H.update(stream, H.word(0)), 32))
 
 def compute(+config: String, ivk: String) -> IO(String):
   do IO<String>:
-    +shape : Shape <- key_shape(config)
+    shape : Shape <- key_shape(config)
     digest : H.Bytes <- configuration(config)
-    key : H.Bytes <- Header.bytes(ivk ++ "/key.bin", prefix_length(shape))
-    published(shape, key, digest)
+    f : File <- IO.try(File, File.open(ivk ++ "/key.bin", "r"))
+    r : File & Result<&1, &1, U32 & String, H.Bytes> <- File.read_bytes(f, 40)
+    head : File & H.Bytes <- unpack(H.Bytes, r)
+    record_hash(shape, head, digest)
