@@ -78,14 +78,35 @@ def claim_options(binary):
     print(f"{binary.name} withheld ID, omitted policy and mismatched policy: all refused", flush=True)
 
 
-def altered(binary, fixture):
+def mutation_result(command, expected):
+    result = subprocess.run(command, text=True, capture_output=True, timeout=1200)
+    if result.returncode or result.stdout.splitlines()[-1:] != [expected]:
+        raise SystemExit(f"Mutation suite exited {result.returncode}\n{result.stdout}\n{result.stderr}")
+
+
+def altered(binary, fixture, table=None):
+    folder = EXAMPLES / "rejected-proofs"
+    count = 79 if table is not None else 10
+    expected = f"{count} altered sets: all rejected"
     with tempfile.TemporaryDirectory() as work:
-        command = [sys.executable, "-I", "-B", EXAMPLES / "rejected-proofs/try_altered_copies.py",
-                   binary, Path(work) / "copies", "--example", fixture]
-        result = subprocess.run(command, text=True, capture_output=True, timeout=1200)
-    if result.returncode != 0:
-        raise SystemExit(result.stdout + result.stderr)
-    print(f"{binary.name} {fixture}  {result.stdout.splitlines()[-1]}", flush=True)
+        command = [sys.executable, "-I", "-B", folder / "try_altered_copies.py", binary, Path(work) / "copies"]
+        if table is not None:
+            command.append(folder / table)
+        mutation_result([*command, "--example", fixture], expected)
+    print(f"{binary.name} {table or fixture}  {expected}", flush=True)
+
+
+def extended(binary):
+    example = EXAMPLES / "accepted-proof"
+    altered(binary, example.name, "every_kind_of_item.tsv")
+    runner = EXAMPLES.parent / "verifier/tests/record_altered_sets_test.py"
+    model_id = (example / "ID.txt").read_text().strip()
+    expected = f"{runner.name}: 7 calls on the honest set and its unaltered copy, 23 altered sets: all as expected"
+    with tempfile.TemporaryDirectory() as work:
+        mutation_result([sys.executable, "-I", "-B", runner, binary, example / "config", example / "ivk",
+                         example / "example.req", example / "example.y", example / "example.proof",
+                         model_id, Path(work) / "copies"], expected)
+    print(f"{binary.name} {expected}", flush=True)
 
 
 def benchmark(count, full_size, threads):
@@ -117,10 +138,18 @@ def main():
     parser.add_argument("--full-size", action="store_true", help="also run the two full-size examples (4 GiB each)")
     parser.add_argument("--reference-only", action="store_true", help="exercise the unchanged C++ verifier alone")
     parser.add_argument("--benchmark", type=int, metavar="SAMPLES", help="alternate exact-match whole calls and report medians")
+    parser.add_argument("--extended", action="store_true", help="run the 79 item and 23 record alteration cases only")
     parser.add_argument("--threads", type=int, metavar="N", default=1, help="worker thread count for benchmarking (1 to 256)")
     args = parser.parse_args()
     if not 1 <= args.threads <= 256 or (args.benchmark is None and args.threads != 1):
         parser.error("--threads requires benchmarking and an integer from 1 to 256")
+    if args.extended:
+        if args.benchmark is not None or args.full_size:
+            parser.error("--extended runs its own small fixture and cannot be combined with --benchmark or --full-size")
+        extended(BUILD / "cp_verify")
+        if not args.reference_only:
+            extended(BUILD / "bend_verify")
+        return
     if args.benchmark is not None:
         if args.benchmark < 1 or args.reference_only:
             parser.error("--benchmark requires a positive sample count and both verifiers")

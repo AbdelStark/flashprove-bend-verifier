@@ -30,7 +30,7 @@ spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/re
 
 ci: docs-check check test test-native e2e  ## what CI runs
 
-.PHONY: benchmark verifier oracle e2e e2e-full generated-check
+.PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
 
 verifier: build/verify build/bend_verify.digest  ## build the whole verifier with native Bend kernels
 
@@ -59,8 +59,21 @@ e2e-full: verifier oracle  ## compare all four proof sets and the rejection suit
 	@python3 scripts/e2e.py --full-size
 	@python3 scripts/verify-test.py --full-size
 
+e2e-extended: verifier oracle  ## run 102 additional item and record rejection cases per worker
+	@python3 scripts/e2e.py --extended
+
 generated-check:  ## compare the checked-in hash kernel to the generator
 	@python3 research/spikes/blake2b/gen.py kernel | cmp - src/hashlib.bend
 
 benchmark: verifier oracle  ## time three alternating exact-match runs at each model size
 	@python3 scripts/e2e.py --benchmark 3 --full-size
+
+.PHONY: lean-baseline benchmark-lean
+
+lean-baseline: build/verify-on-bytes  ## build the optional pinned native Lean OnBytes comparator
+
+build/verify-on-bytes: scripts/onbytes-build.sh upstream.lock | upstream
+	@bash scripts/onbytes-build.sh
+
+benchmark-lean: lean-baseline  ## time three Lean OnBytes calls per exact-match fixture
+	@python3 scripts/onbytes-test.py --samples 3

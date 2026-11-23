@@ -37,7 +37,19 @@ Expect exit 0 and `WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 
 | Arithmetic and challenges | Bend implements Goldilocks product and reduction, cubic extension multiplication, work-bit tests, canonical field candidate tests and position extraction. |
 | Sub-proofs | Bend evaluates the masked sumcheck contributions and Horner steps. The worker supplies transcript values, enforces round order, checks final equations and applies the feed-forward, attention and output-head constraints. |
 
-The hot-path bindings are small patches applied to an archive of the pinned Git object in a temporary build directory. The build runs upstream arithmetic and transcript-vector tests against the linked Bend code before installing the worker. Pure Bend modules and the native adapter have distinct trust boundaries. [Native bindings](src/native) · [Bend implementation](src) · [Compiler notes](docs/agents/BEND_NOTES.md)
+The [native integration decision](docs/adr/native-kernels.md) describes the trust boundary. The hot-path bindings are small patches applied to an archive of the pinned Git object in a temporary build directory. The build runs upstream arithmetic and transcript-vector tests against the linked Bend code before installing the worker. Pure Bend modules and the native adapter have distinct trust boundaries. [Native bindings](src/native) · [Bend implementation](src) · [Compiler notes](docs/agents/BEND_NOTES.md)
+
+## Whole-proof performance
+
+Median wall time over three fresh processes per executable and fixture, on one Apple M4 Max. Every call verified the published exact-match commitment and returned the expected coverage and accounting.
+
+| Verifier | Small proof | Full-size proof |
+|---|---:|---:|
+| Bend 2 hybrid, public CLI | 3.484 s | 74.196 s |
+| Lean OnBytes | 3.858 s | 59.567 s |
+| FlashProve C++ | 0.644 s | 8.077 s |
+
+At full size the hybrid took 24.6% longer than Lean OnBytes and 9.19 times as long as C++. Field multiplication dominated a sample of the hybrid request stage. The hybrid and C++ used one request-stage thread and could overlap stages. OnBytes ran them sequentially. FlashProve's theorem-linked Linux verifier is a separate executable with no timing in this comparison. [Bend and C++ measurements](docs/research/whole-call.md) · [Lean measurements](docs/research/onbytes.md)
 
 ## Reproduce the evidence
 
@@ -45,7 +57,9 @@ The hot-path bindings are small patches applied to an archive of the pinned Git 
 |---|---|
 | `make ci` | Documentation drift checks, generated source check, JS and native Bend tests, two small inference proof sets and rejection cases. |
 | `make e2e-full` | Small and full-size exact-match and clipped-gap proofs. Compares the worker's whole-call record with the pinned oracle and exercises the public Bend command. Allow at least 4 GiB free for a full-size worker. |
+| `make e2e-extended` | Compare the oracle and hybrid worker on 79 altered proof items and 23 altered stored-record cases from the upstream corpus. |
 | `make benchmark` | Three alternating single-thread exact-match measurements at each model size. Every measured call checks the expected verdict and closing record. |
+| `make benchmark-lean` | Fetch the optional pinned Lean toolchain, build the native OnBytes executable, measure exact-match proofs on the same inputs, and check a damaged proof. |
 | `make spikes` | The original isolated kernel and I/O measurements. |
 | `make help` | All command targets. |
 

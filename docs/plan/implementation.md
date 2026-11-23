@@ -2,7 +2,7 @@
 
 > Status: living
 
-Each row links to an issue with an acceptance test and a native GitHub blocked-by relationship for each prerequisite. Issue state tracks delivery. This table records architecture and ordering. Requirement definitions live in the [verification contract](../spec/verifier.md).
+Each issue has an acceptance test and a GitHub blocked-by relationship for each prerequisite. The [hybrid MVP](https://github.com/AbdelStark/fv-flashprove-bend-verifier/milestone/1) and [independent Bend verifier](https://github.com/AbdelStark/fv-flashprove-bend-verifier/milestone/2) milestones track delivery. This table records architecture and ordering. Requirement definitions live in the [verification contract](../spec/verifier.md).
 
 | Issue | Work | Requires | Exit evidence |
 |---|---|---|---|
@@ -16,6 +16,7 @@ Each row links to an issue with an acceptance test and a native GitHub blocked-b
 | [#8](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/8) | Check each model segment | #7 | Feed-forward, attention and head constraints on real requests |
 | [#9](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/9) | Ship independent Bend verification | #6, #8 | Three stages and all closing guards under both policies, with all applicable altered-copy cases |
 | [#10](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/10) | Measure end-to-end performance | #9 | Same-host measurements with fixture ID, threads, memory method and output |
+| [#11](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/11) | Reduce the measured field multiplication cost | #2 | Same-host whole-call improvement with field and proof conformance retained |
 
 For the first independent implementation, a finite set of supported model configurations is acceptable. It must verify any conforming key, leaf and request proof within the declared scope. Configuration-specific constants may encode public geometry and authenticated tables. Only the caller can select a trusted commitment. A proof digest, fixture path or stored verdict must never decide verification.
 
