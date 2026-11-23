@@ -1,8 +1,7 @@
 import Base
 import ./merkle.bend as Tree
 
-# Positions and opened leaf digests come from the verifier. Only the siblings
-# are supplied by the opening (R7.9–10). Positions are already deduplicated.
+# R7.8-10. Positions come from the verifier and siblings are in level order.
 type Node is Data:
   Node{place: Nat, value: Tree.Digest}
 
@@ -10,10 +9,6 @@ def Nodes() -> Data:
   List<&2, Node>
 def Siblings() -> Data:
   List<&2, Tree.Digest>
-
-type Level is Data:
-  Level{current: Nodes, given: Siblings, parents: Nodes}
-  Invalid{}
 
 def digest_equal(a: Tree.Digest, b: Tree.Digest) -> Bool:
   Tree.Digest{a0,a1,a2,a3,a4,a5,a6,a7} = a
@@ -30,63 +25,102 @@ def ordered(xs: Nodes) -> Bool:
     case []: False{}
     case Node{i,_} <> rest: ordered_after(rest, i)
 
-def parent(tag: U32, config: Tree.Digest, i: Nat, left: Tree.Digest, right: Tree.Digest) -> Node:
-  Node{Nat.div(i, 2n), Tree.parent(0, tag, 0, 0, config, left, right)}
+# R7.14. The outer caller shares one vertex record per root across the session.
+# The pair depth/place also names vertices past Bend Nat's largest immediate.
+def Value() -> Data:
+  Maybe<&2, Tree.Digest>
+def Record() -> Data:
+  Map<&2, Value>
 
-def with_sibling(tag: U32, config: Tree.Digest, +i: Nat, v: Tree.Digest, xs: Nodes, given: Siblings, parents: Nodes, odd: Bool) -> Level:
+type Tracking is Data:
+  Skip{}
+  Track{record: Record}
+  Conflict{}
+
+def merging(record: Record, key: String, +v: Tree.Digest, found: Value) -> Tracking:
+  match found:
+    case None{}: Track{Map.set(&2,Value,record,key,Some{v})}
+    case Some{old}: Bool.pick(Tracking,digest_equal(v,old),Track{record},Conflict{})
+
+def insert(key: String, v: Tree.Digest, entry: Record & Value) -> Tracking:
+  (r,found) = entry
+  merging(r,key,v,found)
+
+def remember(book: Tracking, depth: Nat, i: Nat, v: Tree.Digest) -> Tracking:
+  match book:
+    case Skip{}: Skip{}
+    case Conflict{}: Conflict{}
+    case Track{r}:
+      +key = Nat.show(depth) ++ "/" ++ Nat.show(i)
+      insert(key,v,Map.get(Value,None{},r,key))
+
+type Level is Data:
+  Level{current: Nodes, given: Siblings, parents: Nodes, book: Tracking}
+  Invalid{}
+
+def pair(+depth: Nat, tag: U32, config: Tree.Digest, +left_pos: Nat, +left: Tree.Digest, +right: Tree.Digest,
+         rest: Nodes, given: Siblings, parents: Nodes, book: Tracking) -> Level:
+  seen = remember(remember(book,depth,left_pos,left),depth,Nat.add(left_pos,1n),right)
+  node: Node = Node{Nat.div(left_pos,2n),Tree.parent(0,tag,0,0,config,left,right)}
+  Level{rest,given,node <> parents,seen}
+
+def with_sibling(depth: Nat, tag: U32, config: Tree.Digest, +i: Nat, v: Tree.Digest,
+                 xs: Nodes, given: Siblings, parents: Nodes, book: Tracking, odd: Bool) -> Level:
   match given odd:
     case [] _: Invalid{}
-    case other <> rest True{}:
-      Level{xs, rest, parent(tag, config, i, other, v) <> parents}
-    case other <> rest False{}:
-      Level{xs, rest, parent(tag, config, i, v, other) <> parents}
+    case other <> rest True{}: pair(depth,tag,config,Nat.sub(i,1n),other,v,xs,rest,parents,book)
+    case other <> rest False{}: pair(depth,tag,config,i,v,other,xs,rest,parents,book)
 
-def neighboring(tag: U32, config: Tree.Digest, +i: Nat, v: Tree.Digest, +j: Nat, w: Tree.Digest,
-                rest: Nodes, given: Siblings, parents: Nodes, paired: Bool) -> Level:
+def neighboring(depth: Nat, tag: U32, config: Tree.Digest, +i: Nat, v: Tree.Digest, j: Nat, w: Tree.Digest,
+                rest: Nodes, given: Siblings, parents: Nodes, book: Tracking, paired: Bool) -> Level:
   match paired:
-    case True{}:
-      Level{rest, given, parent(tag, config, i, v, w) <> parents}
-    case False{}:
-      with_sibling(tag, config, i, v, Node{j,w} <> rest, given, parents, Nat.is_eq(Nat.mod(i, 2n), 1n))
+    case True{}: pair(depth,tag,config,i,v,w,rest,given,parents,book)
+    case False{}: with_sibling(depth,tag,config,i,v,Node{j,w} <> rest,given,parents,book,Nat.is_eq(Nat.mod(i,2n),1n))
 
-def advance(tag: U32, config: Tree.Digest, state: Level) -> Level:
+def advance(depth: Nat, tag: U32, config: Tree.Digest, state: Level) -> Level:
   match state:
     case Invalid{}: Invalid{}
-    case Level{[], g, ps}: Level{[], g, ps}
-    case Level{Node{+i,v} <> [], g, ps}:
-      with_sibling(tag, config, i, v, [], g, ps, Nat.is_eq(Nat.mod(i, 2n), 1n))
-    case Level{Node{+i,v} <> Node{+j,w} <> rest, g, ps}:
-      neighboring(tag, config, i, v, j, w, rest, g, ps, Nat.is_eq(Nat.div(i, 2n), Nat.div(j, 2n)))
+    case Level{[],g,ps,b}: Level{[],g,ps,b}
+    case Level{Node{+i,v} <> [],g,ps,b}:
+      with_sibling(depth,tag,config,i,v,[],g,ps,b,Nat.is_eq(Nat.mod(i,2n),1n))
+    case Level{Node{+i,v} <> Node{+j,w} <> rest,g,ps,b}:
+      neighboring(depth,tag,config,i,v,j,w,rest,g,ps,b,Nat.is_eq(Nat.div(i,2n),Nat.div(j,2n)))
 
-def scan(fuel: Nat, +tag: U32, +config: Tree.Digest, state: Level) -> Level:
+def scan(fuel: Nat, +depth: Nat, +tag: U32, +config: Tree.Digest, state: Level) -> Level:
   match fuel state:
     case _ Invalid{}: Invalid{}
-    case _ Level{[], g, ps}: Level{List.reverse(&2, Node, ps), g, []}
+    case _ Level{[],g,ps,b}: Level{List.reverse(&2,Node,ps),g,[],b}
     case 0n _: Invalid{}
-    case 1n+p Level{xs,g,ps}:
-      scan(p, tag, config, advance(tag, config, Level{xs,g,ps}))
+    case 1n+p Level{xs,g,ps,b}: scan(p,depth,tag,config,advance(depth,tag,config,Level{xs,g,ps,b}))
 
-def scan_level(tag: U32, config: Tree.Digest, state: Level) -> Level:
+def scan_level(depth: Nat, tag: U32, config: Tree.Digest, state: Level) -> Level:
   match state:
     case Invalid{}: Invalid{}
-    case Level{+xs,g,ps}: scan(List.length(&2, Node, xs), tag, config, Level{xs,g,ps})
+    case Level{+xs,g,ps,b}: scan(List.length(&2,Node,xs),depth,tag,config,Level{xs,g,ps,b})
 
-def walk(depth: Nat, +tag: U32, +config: Tree.Digest, state: Level) -> Level:
+def walk(+depth: Nat, +tag: U32, +config: Tree.Digest, state: Level) -> Level:
   match depth:
     case 0n: state
-    case 1n+p: walk(p, tag, config, scan_level(tag, config, state))
+    case 1n+p: walk(p,tag,config,scan_level(Nat.add(p,1n),tag,config,state))
 
-def matches(state: Level, expected: Tree.Digest) -> Bool:
+def matches(state: Level, expected: Tree.Digest) -> Tracking:
   match state:
-    case Level{Node{0n, value} <> [], [], []}: digest_equal(value, expected)
-    case _: False{}
+    case Level{Node{0n,v} <> [],[],[],b}: Bool.pick(Tracking,digest_equal(v,expected),b,Conflict{})
+    case _: Conflict{}
 
-def checked(valid: Bool, depth: Nat, binding: Bool, config: Tree.Digest, leaves: Nodes, given: Siblings, root: Tree.Digest) -> Bool:
+def checked(valid: Bool, depth: Nat, binding: Bool, config: Tree.Digest, leaves: Nodes, given: Siblings, root: Tree.Digest, book: Tracking) -> Tracking:
   match valid:
-    case False{}: False{}
-    case True{}:
-      matches(walk(depth, Bool.pick(U32, binding, 178, 166), config, Level{leaves, given, []}), root)
+    case False{}: Conflict{}
+    case True{}: matches(walk(depth,Bool.pick(U32,binding,178,166),config,Level{leaves,given,[],book}),root)
 
-def check(+depth: Nat, binding: Bool, +config: Tree.Digest, +leaves: Nodes, given: Siblings, root: Tree.Digest) -> Bool:
-  no_start = digest_equal(config, Tree.Digest{0,0,0,0,0,0,0,0})
-  checked(Nat.is_le(depth, 48n) && ordered(leaves) && Bool.not(no_start), depth, binding, config, leaves, given, root)
+def authenticate(+depth: Nat, binding: Bool, +config: Tree.Digest, +leaves: Nodes, given: Siblings, root: Tree.Digest, book: Tracking) -> Tracking:
+  no_start = digest_equal(config,Tree.Digest{0,0,0,0,0,0,0,0})
+  checked(Nat.is_le(depth,48n) && ordered(leaves) && Bool.not(no_start),depth,binding,config,leaves,given,root,book)
+
+def ok(result: Tracking) -> Bool:
+  match result:
+    case Conflict{}: False{}
+    case _: True{}
+
+def check(depth: Nat, binding: Bool, config: Tree.Digest, leaves: Nodes, given: Siblings, root: Tree.Digest) -> Bool:
+  ok(authenticate(depth,binding,config,leaves,given,root,Skip{}))

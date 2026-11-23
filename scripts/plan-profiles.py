@@ -131,8 +131,9 @@ def reproduce(work, check):
         dest.mkdir(parents=True)
         subprocess.run([work / "pubtool", work / "examples" / fixture / "config", "128", dest],
                        cwd=work, check=True, stdout=subprocess.DEVNULL)
-    subprocess.run([sys.executable, ROOT / "scripts/key-geometry.py", exports,
-                    *(["--check"] if check else [])], check=True)
+    for generator in ("key-geometry.py", "request-geometry.py"):
+        subprocess.run([sys.executable, ROOT / "scripts" / generator, exports,
+                        *(["--check"] if check else [])], check=True)
     pack(exports, work / "examples", work, check)
 
 

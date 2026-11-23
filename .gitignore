@@ -5,3 +5,6 @@
 /build/
 # OS / editor
 .DS_Store
+
+# Python fixture and profile tooling
+__pycache__/

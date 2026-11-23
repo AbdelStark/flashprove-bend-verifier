@@ -4,6 +4,14 @@ Verify a FlashProve H821 inference proof on a CPU using a native Bend command. T
 
 **The MVP is a hybrid.** Bend independently checks public input headers and derives the commitment ID. Its native code also runs inside all three proof stages. The pinned C++ verifier supplies the remaining protocol checks, model constraints, accounting and final verdict. An unmodified C++ binary is built separately for differential testing. The [verification contract](docs/spec/verifier.md) and [issue plan](docs/plan/implementation.md) track the independent Bend implementation.
 
+## Independent Bend stages
+
+The standalone stage tests reconstruct the public statement, authenticate the seven configuration-bound plans and consume the genuine key, leaf and request proof bytes. The leaf checker implements the full LINK relation given the anchor table. It derives both tables’ record and column claims, compares the folded messages before their padding, and follows the batched claim through each code switch to the final BASE equality. The key and request probes currently report transcript evidence and authenticated final symbols. The independent whole-call verdict depends on completing the remaining key and request equations. [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12) · [Public plan contract](docs/adr/public-plans.md)
+
+```sh
+make public-input-test plans-reproduce stages-full
+```
+
 ## Run a proof
 
 Use macOS or Linux with Git, Make, Python 3.10+, Clang, a C++17 standard library, curl, patch and tar. Building the reference verifier on Linux also uses GCC 13+ and GNU coreutils/findutils. Download and build requirements are pinned in [toolchain.lock](toolchain.lock) and [upstream.lock](upstream.lock).

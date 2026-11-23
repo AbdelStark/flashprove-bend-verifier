@@ -28,7 +28,7 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
 	@sh research/spikes/run.sh
 
-ci: docs-check check test test-native e2e plan-test public-input-test  ## what CI runs
+ci: docs-check check test test-native e2e plan-test public-input-test stages-test  ## what CI runs
 
 .PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
 
@@ -97,3 +97,25 @@ plan-test: build/inspect-plans plans upstream  ## authenticate the schedules in 
 
 public-input-test: bootstrap plans upstream  ## reconstruct the public statement and layout on all four profiles
 	@python3 scripts/public-input-test.py
+
+.PHONY: stages-test stages-full
+
+STAGE_MODULES := $(wildcard src/*.bend)
+
+build/key-stage: $(STAGE_MODULES) scripts/probes/key-stage.bend toolchain.lock | bootstrap
+	@mkdir -p build
+	@.toolchain/bend/bin/bend scripts/probes/key-stage.bend -o $@
+
+build/leaf-checked: $(STAGE_MODULES) scripts/probes/leaf-stage.bend toolchain.lock | bootstrap
+	@mkdir -p build
+	@.toolchain/bend/bin/bend scripts/probes/leaf-stage.bend -o $@
+
+stages-test: build/key-stage build/leaf-checked plans upstream  ## compare standalone stage evidence and test the final LINK equation
+	@python3 scripts/test-key-stage.py
+	@python3 scripts/test-leaf-stage.py
+	@python3 scripts/test-request-stage.py
+
+stages-full: build/key-stage build/leaf-checked plans upstream  ## run the independent stage checks at both model sizes
+	@python3 scripts/test-key-stage.py --full
+	@python3 scripts/test-leaf-stage.py --full-size
+	@python3 scripts/test-request-stage.py --full-size
