@@ -1,0 +1,15 @@
+# Working with the pinned Bend compiler
+
+> Status: living
+
+Start with `make bootstrap`. The compiler lives inside the checkout and writes native CPU binaries using Clang. Run `make check` for type and proof checks, `make test` for small interpreter expectations and `make test-native` for their compiled counterparts. Native end-to-end tests must also exercise any generated C or build integration used by the verifier.
+
+Model 64-bit words with two U32 limbs in this toolchain. Include boundary cases for low-word carry, high-word wraparound, a value equal to the field prime, final-block handling and indices crossing 2³². Match on parameters or pattern-bound values and define helpers before callers. Use the existing spike references to cross-check arithmetic. [Compiler assessment](../research/bend2-assessment.md)
+
+A type check, the checker’s proof status and a known-answer test answer different questions. Report which was run and which property it covered. For changes to FFI or generated-C bindings, record the compiler pin and prove the symbol on the real verifier path was exercised. Recheck bindings after a toolchain change.
+
+The Fiat–Shamir predicates in `src/chain.bend` implement the low-work-bits test (R5.5), canonical field candidate test (R6.3), and position extraction (R6.6). The native adapter calls them with high/low U32 limbs. The host obtains the next hash word, enforces width bounds, retries field draws and advances the stream. The pinned upstream chain border test supplies otherwise rare field rejections. Its format vector test exercises position draws and nonce checking against published vectors. [Bend boundary cases](../../tests/chain.bend)
+
+The standalone multi-opening checker takes a trusted depth, tree kind, configuration digest, root and sorted unique positions paired with leaf digests. It consumes siblings in level order and requires exact exhaustion at the root. The regression vectors include the published eight-leaf tree and the maximum position at depth 48. The native whole call uses upstream orchestration and preserves its cross-opening vertex record. Before replacing that path, implement and test R7.14's per-root record and rollback on rejection. [Opening checker](../../src/opening.bend) · [Regression vectors](../../tests/opening.bend)
+
+The public CLI has one host effect, `Backend.exec`. After Bend checks the request and commitment, this effect resolves the executable's real installation directory and replaces its process with the sibling proof worker. The native entry forwards every user argument through the verifier grammar, including Bend runtime option spellings. The worker independently checks the ID and request on its own input snapshot. The pinned checker reports the host effect and its exact transitive callers as foreign. The source check admits only that diagnostic for the CLI and checks every other module normally. [Bend entry point](../../src/verify.bend) · [Native handoff](../../src/native/exec_verifier.c) · [Checker](../../scripts/bend-check.py)

@@ -1,0 +1,6 @@
+# Pinned upstream protocol source. Single source of truth for the FlashProve revision this
+# verifier conforms to; read by scripts/fetch-upstream.sh and scripts/check-docs.py.
+# Change it only through an ADR-referencing PR (see AGENTS.md).
+FLASHPROVE_REPO=https://github.com/anthropics/FlashProve.git
+FLASHPROVE_COMMIT=9e2bdd8ff5bf9c62f18263d7dac189b0400b260c
+FLASHPROVE_VERSION=0.16.0-rc.26

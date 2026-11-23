@@ -1,0 +1,66 @@
+# The command surface of the repo. Every command an agent or CI needs is a target here;
+# docs name commands only as `make <target>` (scripts/check-docs.py enforces it).
+export BEND_NO_TELEMETRY := 1
+
+.PHONY: help bootstrap upstream check test test-native docs-check spikes ci
+
+help:  ## list the targets
+	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 14
+
+bootstrap:  ## install the pinned Bend toolchain into .toolchain/ (see toolchain.lock)
+	@sh scripts/bootstrap.sh
+
+upstream:  ## fetch the pinned FlashProve revision into .upstream/ (see upstream.lock)
+	@sh scripts/fetch-upstream.sh
+
+check: bootstrap generated-check  ## type-check and proof-check every Bend source file under src/
+	@python3 scripts/bend-check.py src
+
+test: bootstrap  ## run the expectation tests on the JS lane (fast)
+	@python3 scripts/bend-test.py tests
+
+test-native: bootstrap  ## run the expectation tests as native binaries (the lane that is benchmarked)
+	@python3 scripts/bend-test.py --native tests
+
+docs-check:  ## mechanical anti-drift checks over the Markdown
+	@python3 scripts/check-docs.py
+
+spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
+	@sh research/spikes/run.sh
+
+ci: docs-check check test test-native e2e  ## what CI runs
+
+.PHONY: benchmark verifier oracle e2e e2e-full generated-check
+
+verifier: build/verify build/bend_verify.digest  ## build the whole verifier with native Bend kernels
+
+WORKER_MODULES := $(addprefix src/,hashlib.bend goldilocks.bend extension.bend merkle.bend chain.bend sumcheck.bend)
+WORKER_NATIVE := $(wildcard src/native/*.patch src/native/*.inc src/native/*.h) src/native/bridge.c src/native/entry.bend.in
+
+build/verify: src/verify.bend src/header.bend src/commitment.bend src/hash_bytes.bend src/record_seeds.bend src/hashlib.bend src/native/exec_verifier.c src/native/exec_verifier.js src/native/verify_main.c scripts/build-cli.sh toolchain.lock | bootstrap
+	@sh scripts/build-cli.sh
+
+build/bend_verify: $(WORKER_NATIVE) $(WORKER_MODULES) scripts/build-verifier.sh upstream.lock toolchain.lock | bootstrap upstream
+	@sh scripts/build-verifier.sh
+
+build/bend_verify.digest: | build/bend_verify
+	@test -s $@ || sh scripts/build-verifier.sh
+
+oracle: build/cp_verify  ## build the unmodified pinned C++ verifier
+
+build/cp_verify: scripts/oracle-build.sh upstream.lock | upstream
+	@sh scripts/oracle-build.sh
+
+e2e: verifier oracle  ## compare the two small proof sets and their rejection suites
+	@python3 scripts/e2e.py
+	@python3 scripts/verify-test.py
+
+e2e-full: verifier oracle  ## compare all four proof sets and the rejection suites
+	@python3 scripts/e2e.py --full-size
+	@python3 scripts/verify-test.py --full-size
+
+generated-check:  ## compare the checked-in hash kernel to the generator
+	@python3 research/spikes/blake2b/gen.py kernel | cmp - src/hashlib.bend
+
+benchmark: verifier oracle  ## time three alternating exact-match runs at each model size
+	@python3 scripts/e2e.py --benchmark 3 --full-size

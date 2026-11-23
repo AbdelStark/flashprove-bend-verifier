@@ -1,0 +1,36 @@
+import Base
+import ./hashlib.bend as Hash
+import ./chain.bend as Chain
+import ./sumcheck.bend as Psc
+import ./merkle.bend as Merkle
+import ./extension.bend as Ext
+import ./goldilocks.bend as Field
+
+def first(state: Hash.H8) -> U32:
+  Hash.H8{word, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _} = state
+  word
+
+def low(value: Field.Gl) -> U32:
+  Field.Gl{_, word} = value
+  word
+
+def ext_low(value: Ext.E3) -> U32:
+  Ext.E3{_, word, _, _, _, _} = value
+  word
+
+def head(d: Merkle.Digest) -> U32:
+  Merkle.Digest{w,_,_,_,_,_,_,_} = d
+  w
+
+def main() -> U32:
+  x = first(Hash.chain(2n, Hash.H8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+  y = low(Field.Gl.mul(x, 2, 3, 4))
+  p = Chain.has_work(y, 2, 3n)
+  q = Chain.has_work(p, 1, 4n)
+  r = Chain.field_candidate(q, 4)
+  s = Bool.to_u32(Chain.zero(Chain.position(0, r, 10n)))
+  +v = Ext.E3.mul(s, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
+  +w = Psc.known(v, v, v)
+  z = ext_low(Psc.horner(Psc.horner(v, v, w), w, Psc.known(w, v, v)))
+  +d: Merkle.Digest = Merkle.Digest{z,0,0,0,0,0,0,0}
+  head(Merkle.parent(0,166,0,0,d,d,d))

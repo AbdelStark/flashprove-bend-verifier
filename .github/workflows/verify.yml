@@ -1,0 +1,13 @@
+name: Verify FlashProve proofs
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - run: make ci
+      - if: github.event_name == 'workflow_dispatch'
+        run: make e2e-full

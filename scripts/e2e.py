@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+"""Compare the closing records of whole verification calls to pinned upstream examples."""
+import argparse
+import hashlib
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+from statistics import median
+
+ROOT = Path(__file__).resolve().parents[1]
+EXAMPLES = ROOT / ".upstream/FlashProve/examples"
+BUILD = ROOT / "build"
+SHA = r"[0-9a-f]{64}"
+
+
+def build_digests(reference_only):
+    reference = re.search(r"prints `build=(" + SHA + r")`", (EXAMPLES / "README.md").read_text())[1]
+    digests = {"cp_verify": reference}
+    if not reference_only:
+        candidate = (BUILD / "bend_verify.digest").read_text().strip()
+        if not re.fullmatch(SHA, candidate) or candidate == reference:
+            raise SystemExit(f"Invalid hybrid build digest {candidate!r}")
+        digests["bend_verify"] = candidate
+    return digests
+
+
+def honest(binary, example, digest, benchmark=False):
+    # Test expectations are published alongside each fixture in the pinned repository.
+    readme = (example / "README.md").read_text()
+    expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+", readme, re.M)[0]
+    model_id = re.search(r"\bid=(" + SHA + r")\b", expected)[1]
+    args = [binary, example / "config", example / "ivk", example / "example.req",
+            example / "example.y", example / "example.proof", "-id", model_id, "-q", "-j", "1"]
+    policy = re.search(r" -policy (clipped-gap,[0-9,]+)", readme)
+    if policy:
+        args.extend(["-policy", policy[1]])
+
+    if benchmark and Path("/usr/bin/time").is_file():
+        # Each call gets its own measurement (RUSAGE_CHILDREN in this process is cumulative).
+        time_args = ["-l"] if sys.platform == "darwin" else ["-f", "%M peak-kib"]
+        args = ["/usr/bin/time", *time_args, *args]
+    start = time.monotonic()
+    result = subprocess.run(args, capture_output=True, text=True, timeout=600)
+    elapsed = time.monotonic() - start
+    record = "\n".join(result.stdout.splitlines()[-4:])
+    if result.returncode != 0 or record != expected.replace("<64 hex digits>", digest):
+        raise SystemExit(f"{binary.name} {example.name} exit {result.returncode}\n{record}\n{result.stderr}")
+    rss = re.search(r"^\s*(\d+)\s+(maximum resident set size|peak-kib)$", result.stderr, re.M) if benchmark else None
+    memory = ""
+    if rss:
+        unit = 1024 * 1024 if sys.platform == "darwin" else 1024
+        memory = f"  max-rss={int(rss[1]) / unit:.1f} MiB"
+    print(f"{binary.name} {example.name} {elapsed:.3f}s{memory}  {record.splitlines()[-1]}", flush=True)
+    return re.sub(r" build=" + SHA, "", record), elapsed
+
+
+def claim_options(binary):
+    for fixture, extra, code, verdict in [
+        ("accepted-proof", [], 14, "NOT-A-VERIFICATION"),
+        ("accepted-proof-clipped-gap", ["-id"], 1, "NO: policy"),
+        ("accepted-proof-clipped-gap", ["-id", "-policy", "clipped-gap,9244130,323343,0,16,8"], 1, "NO: policy"),
+    ]:
+        example = EXAMPLES / fixture
+        if "-id" in extra:
+            extra.insert(1, (example / "ID.txt").read_text().strip())
+        result = subprocess.run(
+            [binary, example / "config", example / "ivk", example / "example.req",
+             example / "example.y", example / "example.proof", "-q", *extra],
+            capture_output=True, text=True, timeout=600,
+        )
+        if result.returncode != code or result.stdout.splitlines()[-1:] != [verdict]:
+            raise SystemExit(f"{binary.name} {fixture} {extra} returned {result.returncode}\n{result.stdout}")
+    print(f"{binary.name} withheld ID, omitted policy and mismatched policy: all refused", flush=True)
+
+
+def altered(binary, fixture):
+    with tempfile.TemporaryDirectory() as work:
+        command = [sys.executable, "-I", "-B", EXAMPLES / "rejected-proofs/try_altered_copies.py",
+                   binary, Path(work) / "copies", "--example", fixture]
+        result = subprocess.run(command, text=True, capture_output=True, timeout=1200)
+    if result.returncode != 0:
+        raise SystemExit(result.stdout + result.stderr)
+    print(f"{binary.name} {fixture}  {result.stdout.splitlines()[-1]}", flush=True)
+
+
+def benchmark(count, full_size):
+    # The public CLI execs a worker beside itself. Snapshot both and the oracle so an
+    # atomic concurrent rebuild cannot change the programs midway through the samples.
+    digests = build_digests(False)
+    expected = {"cp_verify": digests["cp_verify"], "verify": digests["bend_verify"]}
+    print(f"{platform.platform()} {platform.machine()}, {count} whole calls per binary, -j 1", flush=True)
+    with tempfile.TemporaryDirectory(dir=BUILD) as tmp:
+        binaries = Path(tmp)
+        for name in ["cp_verify", "bend_verify", "verify"]:
+            path = binaries / name
+            shutil.copy2(BUILD / name, path)
+            print(f"{name} executable SHA256 {hashlib.sha256(path.read_bytes()).hexdigest()}", flush=True)
+        for fixture in ["accepted-proof", "full-size"] if full_size else ["accepted-proof"]:
+            times = {name: [] for name in expected}
+            for index in range(count):
+                for name in expected if index % 2 == 0 else reversed(expected):
+                    _, elapsed = honest(binaries / name, EXAMPLES / fixture, expected[name], benchmark=True)
+                    times[name].append(elapsed)
+            for name, samples in times.items():
+                print(f"{fixture} {name} median {median(samples):.3f}s (range {min(samples):.3f}–{max(samples):.3f}s)")
+            ratio = median(times["verify"]) / median(times["cp_verify"])
+            print(f"{fixture} Bend/C++ median wall-time ratio {ratio:.2f}", flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--full-size", action="store_true", help="also run the two full-size examples (4 GiB each)")
+    parser.add_argument("--reference-only", action="store_true", help="exercise the unchanged C++ verifier alone")
+    parser.add_argument("--benchmark", type=int, metavar="SAMPLES", help="alternate exact-match whole calls and report medians")
+    args = parser.parse_args()
+    if args.benchmark is not None:
+        if args.benchmark < 1 or args.reference_only:
+            parser.error("--benchmark requires a positive sample count and both verifiers")
+        benchmark(args.benchmark, args.full_size)
+        return
+    digests = build_digests(args.reference_only)
+    fixtures = ["accepted-proof", "accepted-proof-clipped-gap"]
+    if args.full_size:
+        fixtures += ["full-size", "full-size-clipped-gap"]
+    for fixture in fixtures:
+        reference_record, _ = honest(BUILD / "cp_verify", EXAMPLES / fixture, digests["cp_verify"])
+        if not args.reference_only:
+            candidate_record, _ = honest(BUILD / "bend_verify", EXAMPLES / fixture, digests["bend_verify"])
+            if reference_record != candidate_record:
+                raise SystemExit(f"{fixture} differential closing records disagree")
+    for name in digests:
+        claim_options(BUILD / name)
+        for fixture in fixtures[:2]:
+            altered(BUILD / name, fixture)
+
+
+if __name__ == "__main__":
+    main()

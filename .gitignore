@@ -1,0 +1,7 @@
+# Local, reproducible from the lock files (make bootstrap / make upstream)
+/.toolchain/
+/.upstream/
+# Build and test outputs
+/build/
+# OS / editor
+.DS_Store

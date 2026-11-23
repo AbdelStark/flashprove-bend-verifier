@@ -1,0 +1,18 @@
+import Base
+import ./goldilocks.bend as Field
+
+def chain(n: Nat, x: Field.Gl, +y1: U32, +y0: U32) -> Field.Gl:
+  match n:
+    case 0n:
+      x
+    case 1n+p:
+      Field.Gl{+x1, +x0} = x
+      chain(p, Field.Gl.mul(x1, x0, y1, y0), y1, y0)
+
+def Gl.show(x: Field.Gl) -> String:
+  Field.Gl{hi, lo} = x
+  U32.show(hi) ++ " " ++ U32.show(lo)
+
+def main() -> IO(Unit):
+  do IO<Unit>:
+    IO.print(Gl.show(chain(NNNn, Field.Gl{305419896, 2596069104}, 4275878552, 1985229328)))

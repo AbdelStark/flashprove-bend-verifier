@@ -1,0 +1,36 @@
+--- a/blocks/hash/hash.h
++++ b/blocks/hash/hash.h
+@@ -607,7 +607,7 @@
+ // Whether the low 'bits' bits of a word are 0. bits = 0: every word passes. At most 64.
+ BLK_FN bool work_test(u64 word, unsigned bits) {
+   BLK_HASH_REQUIRE(bits <= 64, "the work test takes 0 to 64 bits");
+-  return bits == 0 || (word << (64 - bits)) == 0;
++  return bend_has_work(word, bits);
+ }
+ 
+ // The work test of a round, on one word of call 0: the first word of the round's first answer
+--- a/blocks/chain/chain.h
++++ b/blocks/chain/chain.h
+@@ -279,7 +279,7 @@
+   }
+   BLK_FN u64 draw_position(unsigned log_n) {
+     BLK_HASH_REQUIRE(log_n < 64, "chain: positions lie below 2^63");
+-    return next_word() & (((u64)1 << log_n) - 1);
++    return bend_position(next_word(), log_n);
+   }
+ 
+   // Advances the chain by one round, given the round's query and its hash call 0. It does not check
+--- a/blocks/field/gl64.h
++++ b/blocks/field/gl64.h
+@@ -117,8 +117,9 @@
+   // uniform. A word is never reduced modulo p here: that would give the residues below 2^32 - 1
+   // twice the weight of the others.
+   static BLK_HD bool from_word(u64 w, u64 &out) {
+-    out = w < P ? w : 0;
+-    return w < P;
++    const bool canonical = bend_field_candidate(w);
++    out = canonical ? w : 0;
++    return canonical;
+   }
+ };
+ } // namespace blk
