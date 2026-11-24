@@ -44,7 +44,7 @@ def context(+items: List<&2,P.Item>,+profile: PT.Profile) -> IO(Context):
     return Context{layout,shape,G.select(profile),profile}
 
 def width(table: Layout.Matrix) -> IO(Nat):
-  Layout.Matrix{_,rows,n,_} = table
+  Layout.Matrix{_,rows,n,_,_} = table
   do IO<Nat>:
     ok : Unit <- Header.require(Nat.is_eq(rows,1n),"NO: segment-U3-rows")
     return n

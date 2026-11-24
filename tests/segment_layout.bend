@@ -44,7 +44,29 @@ def kept() -> Bool:
   right = Maybe.default(&2,F.Term,List.head(&2,F.Term,rs),F.Term{F.zero(),[]})
   Nat.is_eq(F.count(F.Term,rs,0n),1n) && B.equal(entry(right,3n),K.small(23n))
 
+# Two logical column intervals of eight cells, with their row and column
+# bits split differently in the destination. Compare all destination entries,
+# including outside the intervals, against direct R12.17 tile evaluation.
+def total(ts: F.Form,+i: Nat,acc: X.E3) -> X.E3:
+  match ts:
+    case []: acc
+    case t <> rest: total(rest,i,E.add(acc,entry(t,i)))
+
+def same_entries(+a: F.Form,+b: F.Form,n: Nat) -> Bool:
+  match n:
+    case 0n: True{}
+    case 1n+k:
+      +i = k
+      B.equal(total(a,i,F.zero()),total(b,i,F.zero())) && same_entries(a,b,i)
+
+def indexed() -> Bool:
+  +bs : List<&2,L.Block> = [L.Block{0n,8n,4n,0n,0n,3n,1n,2n,False{}},
+    L.Block{0n,0n,0n,2n,0n,3n,2n,1n,True{}}]
+  +terms : F.Form = [source(),F.Term{K.small(13n),V.choice(4n,12n)},F.Term{F.one(),[]}]
+  +res = L.translate_matrix(L.column_index(1n,16n,bs),terms,bs,1n,16n,3n,2n)
+  same_entries(res,L.translate(terms,bs,0n,3n,2n,[]),32n)
+
 def main() -> IO(Unit):
-  IO.print(Bool.show(check(True{}) && check(False{}) && kept()))
+  IO.print(Bool.show(check(True{}) && check(False{}) && kept() && indexed()))
 
 #|True

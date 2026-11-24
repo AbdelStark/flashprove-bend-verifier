@@ -16,8 +16,64 @@ import ./oracle_sample.bend as Sample
 # the admitted text by Layout.check. Each logical block is one dyadic tile.
 type Block is Data:
   Block{i: Nat, c: Nat, r: Nat, p: Nat, bi: Nat, bc: Nat, br: Nat, bp: Nat, i_low: Bool}
+# A matrix with one logical row partitions its columns into aligned dyadic
+# intervals. Index these by their high bits so a selector visits only the
+# intervals on which it can be nonzero. Other matrices use the general layout.
+type Columns is Data:
+  Empty{}
+  Leaf{block: Block}
+  Fork{lo: Columns, hi: Columns}
+  General{}
+
+def fork(lo: Columns, hi: Columns) -> Columns:
+  match lo hi:
+    case General{} _: General{}
+    case _ General{}: General{}
+    case a b: Fork{a,b}
+
+def add_column(tree: Columns,path: Nat,+interval: Nat,+b: Block) -> Columns:
+  match tree path:
+    case Empty{} 0n: Leaf{b}
+    case _ 0n: General{}
+    case General{} 1n+_: General{}
+    case Leaf{_} 1n+_: General{}
+    case Empty{} 1n+m:
+      +k = m
+      +half = Nat.pow(2n,k)
+      +pre = Nat.mod(interval,half)
+      go = Bool.pick(Unit -> Columns,Nat.is_lt(interval,half),
+        _ => Fork{add_column(Empty{},k,pre,b),Empty{}},_ => Fork{Empty{},add_column(Empty{},k,pre,b)})
+      go(Unit{})
+    case Fork{+lo,+hi} 1n+m:
+      +k = m
+      +half = Nat.pow(2n,k)
+      +pre = Nat.mod(interval,half)
+      go = Bool.pick(Unit -> Columns,Nat.is_lt(interval,half),
+        _ => fork(add_column(lo,k,pre,b),hi),_ => fork(lo,add_column(hi,k,pre,b)))
+      go(Unit{})
+
+def insert_column(+tree: Columns,+bits: Nat,b: Block) -> Columns:
+  match b:
+    case Block{0n,+c,r,p,0n,+k,br,bp,dir}:
+      +size = Nat.pow(2n,k)
+      go = Bool.pick(Unit -> Columns,Nat.is_le(k,bits) && Nat.is_lt(c,Nat.pow(2n,bits)) && Nat.is_eq(Nat.mod(c,size),0n),
+        _ => add_column(tree,Nat.sub(bits,k),Nat.div(c,size),Block{0n,c,r,p,0n,k,br,bp,dir}),_ => General{})
+      go(Unit{})
+    case _: General{}
+
+def column_blocks(bs: List<&2,Block>,+width: Nat,tree: Columns) -> Columns:
+  match bs tree:
+    case _ General{}: General{}
+    case Nil{} t: t
+    case Con{b,tail} t: column_blocks(tail,width,insert_column(t,width,b))
+
+def column_index(rows: Nat,cols: Nat,bs: List<&2,Block>) -> Columns:
+  match rows:
+    case 1n: column_blocks(bs,Sample.row_bits(cols),Empty{})
+    case _: General{}
+
 type Matrix is Data:
-  Matrix{message: Nat, rows: Nat, columns: Nat, blocks: List<&2,Block>}
+  Matrix{message: Nat, rows: Nat, columns: Nat, blocks: List<&2,Block>, index: Columns}
 def Book() -> Data: Map<&2,Maybe<&2,Matrix>>
 type Cut<-A: Data> is Data:
   Cut{value: A, tail: H.Bytes}
@@ -40,11 +96,11 @@ def block_list(n: Nat, xs: List<&2,Nat>, acc: List<&2,Block>) -> IO(List<&2,Bloc
       block_list(k,rest,Block{i,c,r,p,bi,bc,br,bp,Nat.is_eq(low,1n)} <> acc)
     case _ _: IO.die(List<&2,Block>,1,"NO: segment-layout-block")
 
-def placed(k: String, book: Book, m: Nat, rows: Nat, cols: Nat, n: Nat, cut: Cut<List<&2,Nat>>) -> IO(Cut<Book>):
+def placed(k: String, book: Book, m: Nat, +rows: Nat, +cols: Nat, n: Nat, cut: Cut<List<&2,Nat>>) -> IO(Cut<Book>):
   Cut{data,tail} = cut
   do IO<Cut<Book>>:
-    pieces : List<&2,Block> <- block_list(n,data,[])
-    return Cut{Map.set(&2,Maybe<&2,Matrix>,book,k,Some{Matrix{m,rows,cols,pieces}}),tail}
+    +pieces : List<&2,Block> <- block_list(n,data,[])
+    return Cut{Map.set(&2,Maybe<&2,Matrix>,book,k,Some{Matrix{m,rows,cols,pieces,column_index(rows,cols,pieces)}}),tail}
 
 def metadata(k: String, book: Book, cut: Cut<List<&2,Nat>>) -> IO(Cut<Book>):
   match cut:
@@ -105,6 +161,7 @@ def cat(xs: F.Factors, ys: F.Factors) -> F.Factors:
 # coordinate disagrees, before allocating its destination factor list.
 def multiply(p:X.E3,w:X.E3) -> X.E3:
   match p:
+    case X.E3{0,0,0,0,0,0}: F.zero()
     case X.E3{0,1,0,0,0,0}: w
     case +v: E.mul(w,v)
 
@@ -162,10 +219,40 @@ def translate(ts:F.Form,+bs:List<&2,Block>,+src:Nat,+dr:Nat,+dc:Nat,acc:F.Form) 
     case []: acc
     case t <> tail: translate(tail,bs,src,dr,dc,tiles(bs,axes(t,src),dr,dc,acc))
 
+# At a leaf the free low source coordinates are exactly the remaining ones.
+# The prefix weight already includes every fixed high source coordinate.
+def descend(tree: Columns,rev: F.Factors,w: X.E3,dr: Nat,dc: Nat,acc: F.Form) -> F.Form:
+  match tree rev w:
+    case _ _ X.E3{0,0,0,0,0,0}: acc
+    case Fork{a,b} Con{F.Factor{l,h},+tail} +v:
+      +r = dr
+      +c = dc
+      left = descend(a,tail,multiply(l,v),r,c,acc)
+      descend(b,tail,multiply(h,v),r,c,left)
+    case Leaf{b} xs +v: project(b,Axes{v,[],List.reverse(&2,F.Factor,xs)},dr,dc,v) <> acc
+    case _ _ _: acc
+
+def indexed_term(valid: Bool,tree: Columns,bs: List<&2,Block>,+dr: Nat,+dc: Nat,w: X.E3,fs: F.Factors,acc: F.Form) -> F.Form:
+  match valid:
+    case True{}: descend(tree,List.reverse(&2,F.Factor,fs),w,dr,dc,acc)
+    case False{}: tiles(bs,Axes{w,[],fs},dr,dc,acc)
+
+def indexed_terms(ts: F.Form,+tree: Columns,+bs: List<&2,Block>,+width: Nat,+dr: Nat,+dc: Nat,acc: F.Form) -> F.Form:
+  match ts:
+    case []: acc
+    case F.Term{w,+fs} <> tail:
+      valid = Nat.is_eq(width,List.length(&2,F.Factor,fs))
+      indexed_terms(tail,tree,bs,width,dr,dc,indexed_term(valid,tree,bs,dr,dc,w,fs,acc))
+
+def translate_matrix(tree: Columns,ts: F.Form,bs: List<&2,Block>,rows: Nat,cols: Nat,dr: Nat,dc: Nat) -> F.Form:
+  match tree:
+    case General{}: translate(ts,bs,Sample.row_bits(rows),dr,dc,[])
+    case t: indexed_terms(ts,t,bs,Sample.row_bits(cols),dr,dc,[])
+
 def addressed(m: Matrix, link: Nat, terms: F.Form, width: Nat, member: Frame.Member) -> Frame.On:
-  Matrix{msg,n,_,bs} = m
+  Matrix{msg,n,cols,bs,tree} = m
   Frame.Member{_,rows,_,_,_} = member
-  Frame.On{Q.label(link,msg),False{},translate(terms,bs,Sample.row_bits(n),Sample.row_bits(rows),width,[])}
+  Frame.On{Q.label(link,msg),False{},translate_matrix(tree,terms,bs,n,cols,Sample.row_bits(rows),width)}
 
 def lookup(found: Book & Maybe<&2,Matrix>) -> IO(Matrix):
   (_,m) = found
@@ -186,7 +273,7 @@ def columns(c: B.Code) -> Nat:
 
 def on_member(q: Q.Shape, +mat: Matrix, +link: Nat, terms: F.Form) -> IO(Frame.On):
   Q.Shape{code,_,links,_} = q
-  Matrix{msg,_,_,_} = mat
+  Matrix{msg,_,_,_,_} = mat
   do IO<Frame.On>:
     shape : Q.Link <- K.need(Q.Link,List.get(&2,Q.Link,links,link),"NO: segment-layout-link")
     message : Frame.Member <- member(shape,msg)
