@@ -49,6 +49,8 @@ In the same allocation, two additional experiments paired Bend with the C++ refe
 | 1 | 88.696 | 18.666 | 4.75× | [Sample records](notes/lucid-cpp-one-worker.json) |
 | 16 | 45.736 | 18.751 | 2.44× | [Sample records](notes/lucid-cpp-16-workers.json) |
 
+A separate 16-vCPU Lucid node measured the same executable at 1, 2, 4, 8 and 16 workers. The fastest median there was 61.284 s at eight workers. At 16 workers it took 61.865 s and used 124.16 s of CPU time. Those samples belong to a different host from the paired C++ experiment above. [Five worker counts, stage times and raw data](lucid-workers.md)
+
 The small exact-match proof exercises the same verifier with a different model size. In job 7731 on the same Xeon host, all three executables shared a single logical CPU. The earlier Bend took 13.332 s, optimized Bend took 5.687 s and upstream C++ took 1.855 s. Bend’s peak RSS fell from 805 MiB to 219 MiB. These are three-run medians after a warmup per binary, using the 4,145,300-byte proof. To repeat this comparison with the earlier worktree shown below, run `make benchmark-standalone BENCH_ARGS="--fixture accepted-proof --before $scratch/before/build/verify-bend"`. [Small sample records](notes/lucid-small-before-after.json)
 
 ## Conformance on the measured builds
