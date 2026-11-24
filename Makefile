@@ -158,9 +158,12 @@ profile: standalone upstream  ## sample one call's stacks and print where its ti
 fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend must never accept where C++ refuses (FUZZ_ARGS="-n N --seed S")
 	@python3 -B scripts/fuzz-differential.py $(FUZZ_ARGS)
 
-.PHONY: benchmark-standalone
+.PHONY: benchmark-standalone benchmark-onbytes
 benchmark-standalone: standalone oracle  ## compare standalone Bend with C++ on both exact-match proofs
-	@python3 -B scripts/benchmark-standalone.py
+	@python3 -B scripts/benchmark-standalone.py $(BENCH_ARGS)
+
+benchmark-onbytes: standalone lean-baseline  ## compare standalone Bend with native Lean OnBytes on the full-size CPU workload
+	@python3 -B scripts/benchmark-standalone.py --compare lean --fixture full-size $(BENCH_ARGS)
 
 .PHONY: fresh-proof
 

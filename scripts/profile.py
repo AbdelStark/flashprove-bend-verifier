@@ -34,7 +34,7 @@ def main() -> int:
     stated = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())
     cmd = [str(BUILD / "verify-bend"), *(str(example / f) for f in
            ("config", "ivk", "example.req", "example.y", "example.proof")),
-           "-id", (example / "ID.txt").read_text().strip(), "-data", str(BUILD), "-timing",
+           "-id", (example / "ID.txt").read_text().strip(), "-data", str(BUILD), "-j", "1", "-timing",
            *(["-policy", stated[1]] if stated else [])]
     if platform.system() != "Darwin":
         print("profile: stack sampling here uses macOS `sample`. On Linux run:\n  perf record -g -- "
@@ -44,7 +44,7 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         raw = Path(tmp) / "sample.txt"
-        call = subprocess.Popen(cmd, env={**os.environ, "PATH": "", "BEND_THREADS": "1"},
+        call = subprocess.Popen(cmd, env={**os.environ, "PATH": ""},
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         time.sleep(0.3)
         subprocess.run(["/usr/bin/sample", str(call.pid), str(args.seconds), "-file", str(raw)],
