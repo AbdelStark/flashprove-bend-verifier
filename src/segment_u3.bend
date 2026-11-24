@@ -30,6 +30,7 @@ def spans(bs: L.Tiles,+at: Nat,+len: Nat,+rows: Nat,+cols: Nat) -> Bool:
 def local(rs: List<&2,M.Read>,+link: Nat,+bits: Nat,+len: Nat) -> Bool:
   match rs:
     case []: True{}
+    case M.OuterRead{_,n,_} <> tail: Bool.not(Cover.column(n)) && local(tail,link,bits,len)
     case M.U3Run{owner,s} <> tail: Nat.is_eq(owner,link) && U.fits(s,bits,len) && local(tail,link,bits,len)
     case M.Read{owner,name,_} <> tail:
       (Bool.not(Cover.column(name)) || Nat.is_eq(owner,link)) && local(tail,link,bits,len)
@@ -37,6 +38,7 @@ def local(rs: List<&2,M.Read>,+link: Nat,+bits: Nat,+len: Nat) -> Bool:
 def others(rs: List<&2,M.Read>) -> List<&2,M.Read>:
   match rs:
     case []: []
+    case M.OuterRead{o,n,s} <> tail: M.OuterRead{o,n,s} <> others(tail)
     case M.U3Run{_,_} <> tail: others(tail)
     case M.Read{i,name,form} <> tail:
       +s = name
@@ -46,6 +48,7 @@ def others(rs: List<&2,M.Read>) -> List<&2,M.Read>:
 def fits(rs: List<&2,M.Read>,+bits: Nat) -> Bool:
   match rs:
     case []: True{}
+    case M.OuterRead{_,_,_} <> tail: fits(tail,bits)
     case M.U3Run{_,_} <> tail: fits(tail,bits)
     case M.Read{_,name,ts} <> tail:
       (Bool.not(Cover.column(name)) || F.fits(ts,bits)) && fits(tail,bits)
@@ -53,6 +56,7 @@ def fits(rs: List<&2,M.Read>,+bits: Nat) -> Bool:
 def populate(rs: List<&2,M.Read>,buf: Array<X.E3>) -> Array<X.E3>:
   match rs:
     case []: buf
+    case M.OuterRead{_,_,_} <> tail: populate(tail,buf)
     case M.U3Run{_,s} <> tail: populate(tail,U.write(s,buf))
     case M.Read{_,name,ts} <> tail:
       add = Bool.pick(Array<X.E3> -> Array<X.E3>,Cover.column(name),b => F.populate(ts,b),b => b)

@@ -1,4 +1,5 @@
 import Base
+import ./outer_source.bend as O
 import ./u3_series.bend as U
 import ./extension.bend as X
 import ./fold.bend as F
@@ -13,6 +14,7 @@ import ./policy_statement.bend as S
 type Read is Data:
   Read{owner: Nat, array: String, form: F.Form}
   U3Run{owner: Nat, series: U.Series}
+  OuterRead{owner: Nat,array: String,source: O.Source}
 
 type Aff is Data:
   Aff{terms: List<&2,Read>, masks: L.Masks, target: X.E3}

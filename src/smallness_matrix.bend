@@ -1,4 +1,5 @@
 import Base
+import ./outer_source.bend as O
 import ./base_check.bend as B
 import ./extension.bend as X
 import ./sumcheck.bend as E
@@ -59,10 +60,11 @@ def tie_parts(weights: F.Form, mat: Matrix, world: World, power: X.E3) -> M.Aff:
   Matrix{G.Matrix{owner,name,+m,k},gam,offset,_} = mat
   World{link,mz,_,_,_,+step,axis,sum} = world
   +sc = power
-  right = SF.dense(gam,KL.powers(Sample.row_bits(Nat.div(Nat.add(m,2n),3n)),step),Sample.row_bits(k),0n,E.negate(sc),[])
+  rs = KL.powers(Sample.row_bits(Nat.div(Nat.add(m,2n),3n)),step)
+  right: O.Source = O.Outer{rs,gam,Sample.row_bits(k),E.negate(sc)}
   left = SF.digits(weights,axis,m,offset,mz,sc)
   target = E.mul(sc,E.mul(KL.small(131072n),E.mul(sum,P.total(m,step))))
-  M.Aff{[M.Read{link,"ZZ",left},M.Read{owner,name,right}],[],target}
+  M.Aff{[M.Read{link,"ZZ",left},M.OuterRead{owner,name,right}],[],target}
 
 def tie(+mat: Matrix, +world: World, n: Nat) -> IO(M.Aff):
   Matrix{G.Matrix{_,_,m,_},_,_,first} = mat

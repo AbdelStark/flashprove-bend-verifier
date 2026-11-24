@@ -131,10 +131,10 @@ def additional(eq: Frame.Equation,packed: Frame.Forms) -> Frame.Equation:
   Frame.Equation{List.append(&2,Frame.On,packed,forms),y}
 
 def physical(link: Nat,ctx: Context,p: Logical) -> IO(Local):
-  Context{book,shape,_,_,_} = ctx
+  Context{book,shape,_,_,basis} = ctx
   Logical{row,packed,pending} = p
   do IO<Local>:
-    eq : Frame.Equation <- Batch.physical(shape,book,link,row)
+    eq : Frame.Equation <- Batch.physical(shape,book,link,row,basis)
     return Local{additional(eq,packed),pending}
 
 def at_attention(+input: M.Inputs,ctx: Context) -> IO(Logical):
