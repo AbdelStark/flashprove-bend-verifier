@@ -58,7 +58,9 @@ def shifted(n: Nat, +src: Nat, factors: F.Factors, prefix: F.Factors, +scale: Ex
       a = X.entry(high,src,scale)
       b = X.entry(high,1n+src,scale)
       Carries{[F.Term{a,suffix}],[F.Term{b,suffix}]}
-    case 1n+k Con{F.Factor{lo,hi},tail}:
+    case 1n+k Con{+f,tail}:
+      lo = F.at_bit(f,False{})
+      hi = F.at_bit(f,True{})
       step(shifted(k,Nat.div(src,2n),tail,prefix,scale),lo,hi,Nat.mod(src,2n))
     case _ _: Carries{[],[]}
 

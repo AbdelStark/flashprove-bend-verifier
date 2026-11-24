@@ -6,6 +6,8 @@ import ./extension.bend as Ext
 # A separable main-row coefficient is weight times one endpoint per bit, low row bits first.
 type Factor is Data:
   Factor{lo: Ext.E3, hi: Ext.E3}
+  Low{}
+  High{}
 def Factors() -> Data:
   List<&2,Factor>
 type Term is Data:
@@ -43,6 +45,13 @@ def one() -> Ext.E3: Ext.E3{0,1,0,0,0,0}
 def sub(a: Ext.E3, b: Ext.E3) -> Ext.E3: E.add(a,E.negate(b))
 def mix(+lo: Ext.E3, hi: Ext.E3, g: Ext.E3) -> Ext.E3: B.masked(lo,g,sub(hi,lo))
 
+# Fixed address bits occur once per dimension of a placed cell.
+def at_bit(f: Factor, high: Bool) -> Ext.E3:
+  match f:
+    case Low{}: Bool.pick(Ext.E3,high,zero(),one())
+    case High{}: Bool.pick(Ext.E3,high,one(),zero())
+    case Factor{lo,hi}: Bool.pick(Ext.E3,high,hi,lo)
+
 # q(0)+q(1) fixes the absent linear coefficient.
 def round(claim: Ext.E3, +c0: Ext.E3, +c2: Ext.E3, +g: Ext.E3) -> Ext.E3:
   c1 = sub(sub(claim,E.add(c0,c0)),c2)
@@ -51,6 +60,8 @@ def round(claim: Ext.E3, +c0: Ext.E3, +c2: Ext.E3, +g: Ext.E3) -> Ext.E3:
 def fix(gs: B.Elements, fs: Factors, weight: Ext.E3) -> Term:
   match gs fs:
     case Nil{} rest: Term{weight,rest}
+    case Con{g,tail} Con{High{},rest}: fix(tail,rest,E.mul(weight,g))
+    case Con{g,tail} Con{Low{},rest}: fix(tail,rest,E.mul(weight,sub(one(),g)))
     case Con{g,tail} Con{Factor{lo,hi},rest}: fix(tail,rest,E.mul(weight,mix(lo,hi,g)))
     case _ _: Term{zero(),[]}
 
@@ -125,7 +136,9 @@ def spread(lo: Ext.E3, hi: Ext.E3, xs: B.Elements) -> B.Elements: spread_into(lo
 def factor_table(fs: Factors, weight: Ext.E3) -> B.Elements:
   match fs:
     case []: [weight]
-    case Factor{lo,hi} <> tail:
+    case +f <> tail:
+      lo = at_bit(f,False{})
+      hi = at_bit(f,True{})
       rest = factor_table(tail,weight)
       spread(lo,hi,rest)
 
@@ -157,6 +170,8 @@ def deposit_branch(fs: Factors, +i: U32, +w: Ext.E3, f: Ext.E3, skip: Bool, buf:
   match fs skip:
     case _ True{}: buf
     case Nil{} False{}: summed(Array.get(Ext.E3,buf,i),i,times(w,f))
+    case Con{Low{},tail} False{}: deposit_branch(tail,U32.add(i,i),w,f,False{},buf)
+    case Con{High{},tail} False{}: deposit_branch(tail,U32.add(U32.add(i,i),1),w,f,False{},buf)
     case Con{Factor{+a,+b},+tail} False{}:
       +v = times(w,f)
       +lo = U32.add(i,i)

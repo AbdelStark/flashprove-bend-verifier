@@ -13,7 +13,9 @@ import ./transcript.bend as T
 def prefix(fs: F.Factors,+limit: Nat,pow: Nat) -> Bool:
   match fs:
     case []: True{}
-    case F.Factor{lo,hi} <> tail:
+    case +f <> tail:
+      lo = F.at_bit(f,False{})
+      hi = F.at_bit(f,True{})
       +p = pow
       Bool.not(T.is_zero(lo)) && (Nat.is_le(limit,p) || Bool.not(T.is_zero(hi))) && prefix(tail,limit,Nat.mul(2n,p))
 

@@ -111,8 +111,8 @@ def multiply(p:X.E3,w:X.E3) -> X.E3:
 def upper_value(fs:F.Factors,+index:Nat,w:X.E3) -> X.E3:
   match fs:
     case []: w
-    case F.Factor{lo,hi} <> tail:
-      +p = Bool.pick(X.E3,Nat.is_eq(Nat.mod(index,2n),0n),lo,hi)
+    case f <> tail:
+      +p = F.at_bit(f,Nat.is_eq(Nat.mod(index,2n),1n))
       go = Bool.pick(Unit -> X.E3,B.equal(p,F.zero()),_ => F.zero(),
         _ => upper_value(tail,Nat.div(index,2n),multiply(p,w)))
       go(Unit{})

@@ -14,6 +14,7 @@ def weight_sum(fs: F.Factors, acc: X.E3) -> X.E3:
   match fs:
     case []: acc
     case F.Factor{a,b} <> tail: weight_sum(tail,E.mul(acc,E.add(a,b)))
+    case _ <> tail: weight_sum(tail,acc)
 
 def total(rows: F.Form, acc: X.E3) -> X.E3:
   match rows:
