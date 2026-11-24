@@ -25,7 +25,7 @@ Lean OnBytes is a native executable built from a Lean translation of the C++ fil
 
 ## Reproduce a measurement
 
-Start from the repository root with `make bootstrap upstream`. The full-size Bend process peaked around 10.84 GiB in the recorded runs. Each command below builds its prerequisites before timing. Linux uses GNU `/usr/bin/time`. [Build prerequisites](../../CONTRIBUTING.md#build-a-verifier-you-can-check)
+Start from the repository root with `make bootstrap upstream`. Each command below builds its prerequisites before timing. Linux uses GNU `/usr/bin/time`. [Build prerequisites](../../CONTRIBUTING.md#build-a-verifier-you-can-check)
 
 | Question | Command or recipe | Where to read the result |
 | --- | --- | --- |
@@ -34,9 +34,9 @@ Start from the repository root with `make bootstrap upstream`. The full-size Ben
 | How long does Lean OnBytes take on its own? | `make benchmark-lean` runs three consecutive calls at each size, then checks a damaged small proof. | The terminal shows each call and the median for each genuine proof. This harness uses no discarded warmup. [Harness](../../scripts/onbytes-test.py) |
 | What did the older hybrid verifier measure? | `make benchmark` pairs the hybrid CLI with upstream C++ at both sizes. | The terminal prints per-program medians. The hybrid runs a C++ protocol driver with Bend kernels. [Hybrid design](../adr/native-kernels.md) |
 
-## Where Bend spends the time
+## What made the earlier Bend build slow
 
-In a separate full-size M4 call, Bend's own timers recorded 0.7 s for public inputs, 2.6 s for the key, 0.7 s for the leaf and 287.8 s for the request proof. The request stage accounted for most of that call. These times came from one run with `-timing`. The headline table uses medians measured from outside the process. [Stage timings from the optimization](https://github.com/AbdelStark/fv-flashprove-bend-verifier/pull/37) · [Timer implementation](../../src/standalone.bend)
+Before the request-stage optimization, Bend's own timers on one full-size M4 call recorded 0.7 s for public inputs, 2.6 s for the key, 0.7 s for the leaf and 287.8 s for the request proof. The request stage accounted for most of that call. These times came from one run with `-timing`. The headline table uses medians measured from outside the process. [Stage timings from the optimization](https://github.com/AbdelStark/fv-flashprove-bend-verifier/pull/37) · [Timer implementation](../../src/standalone.bend)
 
 To inspect one call, `make profile FIXTURE=full-size` records stage times and samples stacks on macOS. The percentages describe the sampling interval. On Linux the target prints a `perf` command. The kernel experiments from `make spikes` measure operations such as field multiplication or hashing in isolation. The H100 experiment uses `make fresh-proof` to create a new small proof and check it on CPU. [Profiler](../../scripts/profile.py) · [Kernel measurements](../research/bend2-assessment.md) · [H100 procedure](../research/fresh-proof.md)
 
