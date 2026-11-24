@@ -39,12 +39,19 @@ def weight(fs: F.Form, +i: Nat, acc: E.E3) -> E.E3:
 def unit(bits: Nat, pos: Nat, coeff: E.E3) -> F.Term: F.Term{coeff,X.choice(bits,pos)}
 
 # Insert the group's aligned block selector above an oracle's own low row bits.
-def insert(fs: F.Form, +at: Nat, +n: Nat, +idx: Nat, acc: F.Form) -> F.Form:
+def insert_bits(at: Nat,fs: F.Factors,prefix: F.Factors) -> F.Factors:
+  match at fs:
+    case 1n+k Con{f,tail}: f <> insert_bits(k,tail,prefix)
+    case _ rest: List.append(&2,F.Factor,prefix,rest)
+
+def insert_all(fs: F.Form,+at: Nat,+prefix: F.Factors,acc: F.Form) -> F.Form:
   match fs:
     case []: acc
-    case F.Term{w,+f} <> rest:
-      f2 = List.append(&2,F.Factor,List.take(&2,F.Factor,f,at),List.append(&2,F.Factor,X.choice(n,idx),List.drop(&2,F.Factor,f,at)))
-      insert(rest,at,n,idx,F.Term{w,f2} <> acc)
+    case F.Term{w,f} <> rest:
+      insert_all(rest,at,prefix,F.Term{w,insert_bits(at,f,prefix)} <> acc)
+
+def insert(fs: F.Form,at: Nat,n: Nat,idx: Nat,acc: F.Form) -> F.Form:
+  insert_all(fs,at,X.choice(n,idx),acc)
 
 def used(part: Bool, member: Member) -> Nat:
   Member{_,n,_,m,kept} = member
