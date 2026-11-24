@@ -18,7 +18,9 @@ On the Apple M4 Max, we started the clock when we launched each compiled verifie
 
 With one worker, optimized Bend verified this proof **1.51× faster than native Lean OnBytes** and **6.36× faster than our earlier implementation**. A separately paired run with 16 Bend workers took **20.380 s** against **59.756 s** for sequential Lean. Each median covers three fresh processes after a verified warmup per executable. Peak memory is the largest measured resident set in each row. [Every sample, input and build identity](docs/research/cpu-optimization.md) · [Earlier benchmarks](docs/research/m4-standalone.md)
 
-On a Lucid Xeon Platinum 8480CL the single-worker medians were much closer, **90.706 s for Bend and 93.978 s for Lean OnBytes**. OnBytes is FlashProve’s Lean implementation of the byte-level checks performed by its C++ verifier. The often-quoted **19-minute Lean result** times a different command on the Xeon. That driver builds a parser tool, links a helper and evaluates the verifier defined in the upstream soundness development. [Linux measurements by job](docs/research/lucid.md) · [Which benchmark to run](docs/spec/performance.md#reproduce-a-measurement)
+On a Lucid Xeon Platinum 8480CL the single-worker medians were much closer, **90.706 s for Bend and 93.978 s for Lean OnBytes**. [Paired Xeon samples](docs/research/cpu-optimization.md#repeating-the-comparison-on-a-xeon)
+
+OnBytes is FlashProve’s Lean implementation of the byte-level checks performed by its C++ verifier. The often-quoted **19-minute Lean result** times a different command on the Xeon. That driver builds a parser tool, links a helper and evaluates the verifier defined in the upstream soundness development. [Theorem-linked Linux measurements](docs/research/lucid.md#theorem-linked-verifier) · [Which benchmark to run](docs/spec/performance.md#reproduce-a-measurement)
 
 ## Verify the small example
 
