@@ -146,17 +146,25 @@ def summed(pair: Array<Ext.E3> & Ext.E3,i: U32,w: Ext.E3) -> Array<Ext.E3>:
   (buf,old) = pair
   Array.set(Ext.E3,buf,i,E.add(old,w))
 
-def deposit(fs: Factors,+i: U32,+w: Ext.E3,buf: Array<Ext.E3>) -> Array<Ext.E3>:
-  match fs:
-    case []: summed(Array.get(Ext.E3,buf,i),i,w)
-    case Factor{+a,+b} <> +tail:
+# Each nonzero endpoint contributes one subtree. Boolean selectors follow
+# one child with the original weight, common when placing matrix cells.
+def times(w: Ext.E3, f: Ext.E3) -> Ext.E3:
+  match f:
+    case Ext.E3{0,1,0,0,0,0}: w
+    case x: E.mul(w,x)
+
+def deposit_branch(fs: Factors, +i: U32, +w: Ext.E3, f: Ext.E3, skip: Bool, buf: Array<Ext.E3>) -> Array<Ext.E3>:
+  match fs skip:
+    case _ True{}: buf
+    case Nil{} False{}: summed(Array.get(Ext.E3,buf,i),i,times(w,f))
+    case Con{Factor{+a,+b},+tail} False{}:
+      +v = times(w,f)
       +lo = U32.add(i,i)
-      +hi = U32.add(lo,1)
-      left = Bool.pick(Array<Ext.E3> -> Array<Ext.E3>,B.equal(a,zero()),
-        x => x,x => deposit(tail,lo,E.mul(w,a),x))
-      right = Bool.pick(Array<Ext.E3> -> Array<Ext.E3>,B.equal(b,zero()),
-        x => x,x => deposit(tail,hi,E.mul(w,b),x))
-      right(left(buf))
+      left = deposit_branch(tail,lo,v,a,B.equal(a,zero()),buf)
+      deposit_branch(tail,U32.add(lo,1),v,b,B.equal(b,zero()),left)
+
+def deposit(fs: Factors, i: U32, w: Ext.E3, buf: Array<Ext.E3>) -> Array<Ext.E3>:
+  deposit_branch(fs,i,w,one(),False{},buf)
 
 def populate(main: Form,buf: Array<Ext.E3>) -> Array<Ext.E3>:
   match main:
