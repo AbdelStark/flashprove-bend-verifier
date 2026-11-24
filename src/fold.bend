@@ -65,12 +65,54 @@ def fix(gs: B.Elements, fs: Factors, weight: Ext.E3) -> Term:
     case Con{g,tail} Con{Factor{lo,hi},rest}: fix(tail,rest,E.mul(weight,mix(lo,hi,g)))
     case _ _: Term{zero(),[]}
 
-def fixed_into(main: Form, +gs: B.Elements, +eps: Ext.E3, acc: Form) -> Form:
+def times(w: Ext.E3, f: Ext.E3) -> Ext.E3:
+  match f:
+    case Ext.E3{0,1,0,0,0,0}: w
+    case x: E.mul(w,x)
+
+# A chunk caches the product contributed by each Boolean prefix. When
+# a general factor interrupts a prefix, fix the remaining coordinates of
+# that chunk by ordinary multilinear interpolation.
+type Chunk is Data:
+  Tip{weight: Ext.E3}
+  Split{weight: Ext.E3, gamma: B.Elements, low: Chunk, high: Chunk}
+type Chunks is Data:
+  End{}
+  More{head: Chunk, rest: Chunks}
+
+def chunk(gs: B.Elements, +w: Ext.E3) -> Chunk:
+  match gs:
+    case []: Tip{w}
+    case +g <> +rest:
+      Split{w,g <> rest,chunk(rest,times(sub(one(),g),w)),chunk(rest,times(g,w))}
+
+def chunks(fuel: Nat, gs: B.Elements) -> Chunks:
+  match fuel gs:
+    case 1n+k Con{g,rest}:
+      +all: B.Elements = g <> rest
+      More{chunk(List.take(&2,Ext.E3,all,4n),one()),chunks(k,List.drop(&2,Ext.E3,all,4n))}
+    case _ _: End{}
+
+def visit(c: Chunk, fs: Factors, w: Ext.E3) -> Term:
+  match c fs:
+    case Tip{p} rest: Term{times(w,p),rest}
+    case Split{_,_,left,_} Con{Low{},rest}: visit(left,rest,w)
+    case Split{_,_,_,right} Con{High{},rest}: visit(right,rest,w)
+    case Split{p,gs,_,_} rest: fix(gs,rest,times(w,p))
+
+def project(cs: Chunks, term: Term) -> Term:
+  match cs term:
+    case End{} t: t
+    case More{c,rest} Term{w,fs}: project(rest,visit(c,fs,w))
+
+def prepare(+gs: B.Elements) -> Chunks: chunks(count(Ext.E3,gs,0n),gs)
+
+def fixed_into(main: Form, +cs: Chunks, +eps: Ext.E3, acc: Form) -> Form:
   match main:
     case []: List.reverse(&2,Term,acc)
-    case Term{w,fs} <> more: fixed_into(more,gs,eps,fix(gs,fs,E.mul(w,eps)) <> acc)
+    case Term{w,fs} <> more: fixed_into(more,cs,eps,project(cs,Term{E.mul(w,eps),fs}) <> acc)
 
-def fixed(main: Form, gs: B.Elements, eps: Ext.E3) -> Form: fixed_into(main,gs,eps,[])
+def fixed(main: Form, gs: B.Elements, eps: Ext.E3) -> Form: fixed_into(main,prepare(gs),eps,[])
 
 def fits_all(main: Form, +bits: Nat, good: Bool) -> Bool:
   match main good:
@@ -161,11 +203,6 @@ def summed(pair: Array<Ext.E3> & Ext.E3,i: U32,w: Ext.E3) -> Array<Ext.E3>:
 
 # Each nonzero endpoint contributes one subtree. Boolean selectors follow
 # one child with the original weight, common when placing matrix cells.
-def times(w: Ext.E3, f: Ext.E3) -> Ext.E3:
-  match f:
-    case Ext.E3{0,1,0,0,0,0}: w
-    case x: E.mul(w,x)
-
 def deposit_branch(fs: Factors, +i: U32, +w: Ext.E3, f: Ext.E3, skip: Bool, buf: Array<Ext.E3>) -> Array<Ext.E3>:
   match fs skip:
     case _ True{}: buf
