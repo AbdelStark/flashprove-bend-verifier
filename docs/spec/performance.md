@@ -6,7 +6,7 @@ The standalone verifier is correct on every fixture and slow. This page fixes ho
 
 ## Where the time goes today
 
-Measured on the standalone build of `f82965b`, one thread, exact-match fixtures.
+Measured on the standalone build of `f82965b`, using the exact-match fixtures. Bend ran sequential verifier code with its default worker pool. The harness did not observe the pool size. C++ used `-j 1` for the request stage.
 
 | Quantity | Small | Full-size | Source |
 |---|---:|---:|---|
@@ -27,7 +27,7 @@ A stack sample of the full-size call splits the verifier's own CPU time as follo
 | 20% | `row_tensor.choice`, `fold.*`, `List.length`, `List.drop`, `Nat.pow`, `String.order` | list traversal and repeated lookups inside loops |
 | under 1% | BLAKE2b | all hashing |
 
-Three structural facts follow. The request stage is 84% of the small call (key 1.0 s, leaf and link 0.4 s, request 7.6 s on an M4 Max). The sources contain no parallel call, so 16 threads take as long as one. The field kernel alone, at the measured 4 to 5 times C, would put the full-size call near 90 s on the Lucid host; the other 570 s are data representation.
+The request stage accounts for about 84% of the small call on the M4 Max. The measured verifier contains no explicit parallel call. The earlier experiment setting `BEND_THREADS` to 1 and 16 used the same default pool in both cases. A scaling measurement must observe the worker count inside the native process at each setting. The 90-second estimate on Lucid extrapolates from isolated kernel measurements. The full-call profile was sampled on the Mac. [Worker-count tracking](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/19)
 
 ## Requirements
 
