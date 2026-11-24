@@ -15,7 +15,9 @@ import ./segment_projection.bend as Output
 def factors(xs:F.Factors,+power:X.E3,acc:X.E3) -> X.E3:
   match xs:
     case []: acc
-    case F.Factor{lo,hi} <> tail:
+    case +factor <> tail:
+      lo = F.at_bit(factor,False{})
+      hi = F.at_bit(factor,True{})
       factors(tail,E.mul(power,power),E.mul(acc,E.add(lo,E.mul(power,hi))))
 def terms(xs:F.Form,acc:X.E3) -> X.E3:
   match xs:

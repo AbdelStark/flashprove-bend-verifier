@@ -15,7 +15,9 @@ import ./segment_projection.bend as Output
 def at(f: F.Factors, coordinate: Nat,acc: X.E3) -> X.E3:
   match f:
     case []: acc
-    case F.Factor{l,h} <> rest:
+    case +factor <> rest:
+      l = F.at_bit(factor,False{})
+      h = F.at_bit(factor,True{})
       +i = coordinate
       at(rest,1n+i,E.mul(acc,F.mix(l,h,KL.small(i))))
 
