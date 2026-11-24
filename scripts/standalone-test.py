@@ -11,11 +11,17 @@ ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / ".upstream/FlashProve/examples"
 
 
-def run(binary, directory, args, status, expected):
+def run(binary, directory, args, status, expected, workers=None):
     env = {"PATH": str(directory / "empty-path"), "BEND_THREADS": "1"}
     result = subprocess.run([binary, *args], cwd=directory, env=env, capture_output=True,
                             text=True, timeout=3600)
-    lines = (result.stdout + result.stderr).strip().splitlines()
+    if workers is not None:
+        stderr = result.stderr.splitlines()
+        if not stderr or stderr[0] != f"timing: workers {workers}":
+            raise RuntimeError(f"expected {workers} runtime workers, got {stderr[:1]}")
+        lines = result.stdout.strip().splitlines()
+    else:
+        lines = (result.stdout + result.stderr).strip().splitlines()
     if result.returncode != status or lines != expected.splitlines():
         raise RuntimeError(f"expected {status} {expected!r}, got {result.returncode} {lines[-4:]!r}")
 
@@ -50,9 +56,14 @@ def main():
                 expected = expected.replace("<64 hex digits>", digest)
                 run(binary, work, [*call, "-id", expected_id, *options], 0, expected)
                 if name == fixtures[0]:
+                    for workers in (1, 4):
+                        run(binary, work, [*call, *options, "-id", expected_id, "-j", str(workers),
+                                           "-timing"], 0, expected, workers)
+                    run(binary, work, [*call, *options, "-j", "--help"], 2,
+                        "verify-bend: -j expects a worker count from 1 to 128")
                     run(binary, work, [*call, "-id", "0" * 64, *options], 1, "NO: model-statement")
                     run(binary, work, [*call, "+RTS", "--help"], 2,
-                        "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-timing]")
+                        "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-j WORKERS] [-timing]")
             print(f"{name}: verified independently, {expected.splitlines()[-1]}", flush=True)
 
 
