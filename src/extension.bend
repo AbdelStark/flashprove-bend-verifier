@@ -8,12 +8,17 @@ type E3 is Data:
 def add(a: Field.Gl, b: Field.Gl) -> Field.Gl:
   Field.Gl{+ah, +al} = a
   Field.Gl{+bh, +bl} = b
-  +lo = U32.add(al, bl)
-  +c = Field.carry(al, lo)
-  +h = U32.add(ah, bh)
-  +hi = U32.add(h, c)
-  +overflow = U32.or(Field.carry(ah, h), Field.carry(h, hi))
-  Field.Gl.reduce(0, overflow, hi, lo)
+  +low = Nat.add(U32.to_nat(al), U32.to_nat(bl))
+  +high = Nat.add(Nat.add(U32.to_nat(ah), U32.to_nat(bh)), Field.high_word(low))
+  +lo = U32.from_nat(low)
+  +hi = U32.from_nat(high)
+  # (high, lo) reaches p at (q - 1, 1), where q = 2^32. It can only
+  # reach 2p for noncanonical operands. Preserve reduction there as well.
+  first = Bool.or(Nat.is_ge(high, Field.radix()), Bool.and(U32.is_eq(hi, 4294967295), U32.is_ne(lo, 0)))
+  +twice_high = Nat.add(Field.radix(), 4294967294n)
+  second = Bool.or(Nat.is_gt(high, twice_high), Bool.and(Nat.is_eq(high, twice_high), U32.is_ge(lo, 2)))
+  +k = U32.add(Bool.to_u32(first), Bool.to_u32(second))
+  Field.Gl{U32.sub(U32.add(hi, k), Field.borrow(lo, k)), U32.sub(lo, k)}
 
 def product(a: Field.Gl, b: Field.Gl) -> Field.Gl:
   Field.Gl{ah, al} = a
@@ -31,22 +36,12 @@ def sum3(p: Field.W, q: Field.W, r: Field.W) -> Field.Gl:
   Field.W{+p3, +p2, +p1, +p0} = p
   Field.W{+q3, +q2, +q1, +q0} = q
   Field.W{+r3, +r2, +r1, +r0} = r
-  +a0 = U32.add(p0, q0)
-  +s0 = U32.add(a0, r0)
-  +k0 = U32.add(Field.carry(p0, a0), Field.carry(a0, s0))
-  +a1 = U32.add(p1, q1)
-  +b1 = U32.add(a1, r1)
-  +s1 = U32.add(b1, k0)
-  +k1 = U32.add(U32.add(Field.carry(p1, a1), Field.carry(a1, b1)), Field.carry(b1, s1))
-  +a2 = U32.add(p2, q2)
-  +b2 = U32.add(a2, r2)
-  +s2 = U32.add(b2, k1)
-  +k2 = U32.add(U32.add(Field.carry(p2, a2), Field.carry(a2, b2)), Field.carry(b2, s2))
-  +a3 = U32.add(p3, q3)
-  +b3 = U32.add(a3, r3)
-  +s3 = U32.add(b3, k2)
-  +k3 = U32.add(U32.add(Field.carry(p3, a3), Field.carry(a3, b3)), Field.carry(b3, s3))
-  Field.Gl.lower(Field.Gl.reduce(s3, s2, s1, s0), k3)
+  +s0 = Field.column(p0, q0, r0, 0n)
+  +s1 = Field.column(p1, q1, r1, Field.high_word(s0))
+  +s2 = Field.column(p2, q2, r2, Field.high_word(s1))
+  +s3 = Field.column(p3, q3, r3, Field.high_word(s2))
+  value = Field.Gl.reduce(U32.from_nat(s3), U32.from_nat(s2), U32.from_nat(s1), U32.from_nat(s0))
+  Field.Gl.lower(value, U32.from_nat(Field.high_word(s3)))
 
 # Schoolbook product with X^3 replaced by 2: d1 and d2 are 2 b1 and 2 b2. Each coefficient
 # sums its three 128-bit products before one reduction.
