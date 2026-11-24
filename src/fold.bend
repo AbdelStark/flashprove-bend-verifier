@@ -114,10 +114,16 @@ def fixed_into(main: Form, +cs: Chunks, +eps: Ext.E3, acc: Form) -> Form:
 
 def fixed(main: Form, gs: B.Elements, eps: Ext.E3) -> Form: fixed_into(main,prepare(gs),eps,[])
 
+def has_width(bits: Nat, fs: Factors) -> Bool:
+  match bits fs:
+    case 0n Nil{}: True{}
+    case 1n+k Con{_,rest}: has_width(k,rest)
+    case _ _: False{}
+
 def fits_all(main: Form, +bits: Nat, good: Bool) -> Bool:
   match main good:
     case Nil{} b: b
-    case Con{Term{_,fs},rest} True{}: fits_all(rest,bits,Nat.is_eq(List.length(&2,Factor,fs),bits))
+    case Con{Term{_,fs},rest} True{}: fits_all(rest,bits,has_width(bits,fs))
     case _ _: False{}
 
 def fits(main: Form, bits: Nat) -> Bool: fits_all(main,bits,True{})
