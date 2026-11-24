@@ -146,6 +146,10 @@ standalone-rejections: standalone oracle  ## compare standalone and reference re
 standalone-extended: standalone oracle  ## compare 122 altered sets and a cross-commitment leaf
 	@python3 -B scripts/standalone-rejections.py --extended
 
+.PHONY: worker-parity
+worker-parity: standalone oracle  ## compare worker counts on the four fixtures, refusals, seeded fuzz and failure ordering
+	@python3 -B scripts/worker_parity.py
+
 .PHONY: request-claims-test
 request-claims-test: bootstrap upstream plans public-tables  ## check local, carried and deferred equations at a fixed genuine transcript
 	@python3 -B scripts/test-request-claims.py

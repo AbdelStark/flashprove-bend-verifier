@@ -1,0 +1,64 @@
+{
+  "job": 7725,
+  "platform": "Linux x86_64",
+  "verifier_commit": "ca1297cbe4a9ca8d3e8d8baa03bb7b2e2993bbf9",
+  "upstream_commit": "9e2bdd8ff5bf9c62f18263d7dac189b0400b260c",
+  "bend_version": "2.0.40",
+  "clang_version": "18.1.3",
+  "bend_source_digest": "e11adc7155647c5f30c7b0d6af95d4fa2d8b06da0e90660abb71876a29ce7fb2",
+  "binary_sha256": {
+    "verify-bend": "96cc35cf8aa4ed67181e3cf863f57ac2c2d0e04f957ab92d103143341124a352",
+    "cp_verify": "7f9efc1e86a848a3715c6cc870e465ac2a1c5e8fd1eac09e4809023de7604394"
+  },
+  "paired_workers": [
+    1,
+    16
+  ],
+  "compared": [
+    "exit",
+    "stdout bytes",
+    "stderr bytes"
+  ],
+  "accepted_fixtures": {
+    "accepted-proof": {
+      "proof_bytes": 4145300,
+      "commitment": "79a5a2bc7a469b40df73dedf40abeb740671e8ae8077738bd3743897aeb22183"
+    },
+    "accepted-proof-clipped-gap": {
+      "proof_bytes": 4151892,
+      "commitment": "8df714349b76202d6f302bb80b33d6d0798bd81d987b9e387038b7fd24c55ae6"
+    },
+    "full-size": {
+      "proof_bytes": 18779540,
+      "commitment": "7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe"
+    },
+    "full-size-clipped-gap": {
+      "proof_bytes": 18762484,
+      "commitment": "d62a9c1f6542db1e8ca422d0f50b2b9b40bf505c6bbfa87ec003bcae69c49191"
+    }
+  },
+  "paired_cli_refusals": 2,
+  "altered_copy_rejections": {
+    "exact-match": 10,
+    "clipped-gap": 10
+  },
+  "differential_fuzz": {
+    "seed": "speed-first-pass",
+    "exact-match": 32,
+    "clipped-gap": 32,
+    "both_rejected": 64
+  },
+  "paired_calls": 90,
+  "worker_disagreements": 0,
+  "dual_fault": {
+    "workers": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "exit": 1,
+    "diagnostic": "NO: key-header"
+  }
+}
