@@ -1,4 +1,5 @@
 import Base
+import ./u3_series.bend as U
 import ./fold.bend as F
 import ./row_tensor.bend as Tensor
 import ./segment_layout.bend as L
@@ -26,19 +27,36 @@ def spans(bs: L.Tiles,+at: Nat,+len: Nat,+rows: Nat,+cols: Nat) -> Bool:
 
 # Cover.u3 collects coefficients under one name. Leave the general placement
 # intact when reads of that name target distinct owners.
-def local(rs: List<&2,M.Read>,+link: Nat) -> Bool:
+def local(rs: List<&2,M.Read>,+link: Nat,+bits: Nat,+len: Nat) -> Bool:
   match rs:
     case []: True{}
+    case M.U3Run{owner,s} <> tail: Nat.is_eq(owner,link) && U.fits(s,bits,len) && local(tail,link,bits,len)
     case M.Read{owner,name,_} <> tail:
-      (Bool.not(Cover.column(name)) || Nat.is_eq(owner,link)) && local(tail,link)
+      (Bool.not(Cover.column(name)) || Nat.is_eq(owner,link)) && local(tail,link,bits,len)
 
 def others(rs: List<&2,M.Read>) -> List<&2,M.Read>:
   match rs:
     case []: []
+    case M.U3Run{_,_} <> tail: others(tail)
     case M.Read{i,name,form} <> tail:
       +s = name
       +rest = others(tail)
       Bool.pick(List<&2,M.Read>,Cover.column(s),rest,M.Read{i,s,form} <> rest)
+
+def fits(rs: List<&2,M.Read>,+bits: Nat) -> Bool:
+  match rs:
+    case []: True{}
+    case M.U3Run{_,_} <> tail: fits(tail,bits)
+    case M.Read{_,name,ts} <> tail:
+      (Bool.not(Cover.column(name)) || F.fits(ts,bits)) && fits(tail,bits)
+
+def populate(rs: List<&2,M.Read>,buf: Array<X.E3>) -> Array<X.E3>:
+  match rs:
+    case []: buf
+    case M.U3Run{_,s} <> tail: populate(tail,U.write(s,buf))
+    case M.Read{_,name,ts} <> tail:
+      add = Bool.pick(Array<X.E3> -> Array<X.E3>,Cover.column(name),b => F.populate(ts,b),b => b)
+      populate(tail,add(buf))
 
 # An affine interpolation over two adjacent halves equals the multilinear
 # extension evaluated at the current gamma. Descend highest bit first, so

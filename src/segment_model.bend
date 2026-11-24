@@ -1,4 +1,5 @@
 import Base
+import ./u3_series.bend as U
 import ./extension.bend as X
 import ./fold.bend as F
 import ./key_stage_lookup_rows.bend as L
@@ -11,6 +12,7 @@ import ./policy_statement.bend as S
 # power-of-two envelope of the array, low row bits then high column bits.
 type Read is Data:
   Read{owner: Nat, array: String, form: F.Form}
+  U3Run{owner: Nat, series: U.Series}
 
 type Aff is Data:
   Aff{terms: List<&2,Read>, masks: L.Masks, target: X.E3}

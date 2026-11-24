@@ -1,4 +1,5 @@
 import Base
+import ../../src/u3_series.bend as U
 import ../../src/segment_inputs.bend as Inputs
 import ../../src/segment_attention.bend as Attention
 import ../../src/segment_attention_aff.bend as A
@@ -23,6 +24,7 @@ def terms(xs:F.Form,acc:X.E3) -> X.E3:
 def reads(xs:List<&2,Model.Read>,acc:X.E3) -> X.E3:
   match xs:
     case []: acc
+    case Model.U3Run{_,s} <> tail: reads(tail,terms(U.expand(s),acc))
     case Model.Read{_,_,fs} <> tail: reads(tail,terms(fs,acc))
 def rows(xs:Model.Equations,acc:X.E3) -> IO(X.E3):
   match xs:

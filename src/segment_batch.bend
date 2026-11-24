@@ -1,4 +1,5 @@
 import Base
+import ./u3_series.bend as U
 import ./smallness.bend as Small
 import ./smallness_form.bend as SF
 import ./smallness_geometry.bend as Geo
@@ -27,6 +28,7 @@ type Row is Data:
 def scaled(ts: List<&2,M.Read>,+power: X.E3,acc: List<&2,M.Read>) -> List<&2,M.Read>:
   match ts:
     case []: acc
+    case M.U3Run{id,s} <> rest: scaled(rest,power,M.U3Run{id,U.scaled(s,power)} <> acc)
     case M.Read{link,name,terms} <> rest:
       scaled(rest,power,M.Read{link,name,V.scale(terms,power,[])} <> acc)
 
@@ -114,6 +116,10 @@ def combine(+prefix: M.Equations,suffix: M.Equations,part: Small.Contribution,+s
 def place(rs: List<&2,M.Read>,+layout: Layout.Book,+shape: Q.Shape,acc: Frame.Forms) -> IO(Frame.Forms):
   match rs:
     case []: IO.pure(Frame.Forms,acc)
+    case M.U3Run{owner,s} <> tail:
+      do IO<Frame.Forms>:
+        on : Frame.On <- Layout.on_main(layout,shape,owner,"U3",U.expand(s))
+        place(tail,layout,shape,on <> acc)
     case M.Read{owner,name,terms} <> tail:
       do IO<Frame.Forms>:
         on : Frame.On <- Layout.on_main(layout,shape,owner,name,terms)

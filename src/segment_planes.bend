@@ -1,4 +1,5 @@
 import Base
+import ./u3_series.bend as U
 import ./extension.bend as X
 import ./fold.bend as F
 import ./sumcheck.bend as E
@@ -59,6 +60,7 @@ def mapped_row(row: L.Row, +shape: S.Forest, link: Nat, +lm: Nat, off: Nat, leng
 def negative_reads(xs: List<&2,M.Read>) -> List<&2,M.Read>:
   match xs:
     case []: []
+    case M.U3Run{o,s} <> rest: M.U3Run{o,U.scaled(s,E.negate(F.one()))} <> negative_reads(rest)
     case M.Read{o,n,ts} <> rest: M.Read{o,n,Tensor.scale(ts,E.negate(F.one()),[])} <> negative_reads(rest)
 
 def bit_row(eq: M.Aff) -> M.Aff:

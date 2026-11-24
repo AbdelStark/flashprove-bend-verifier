@@ -82,10 +82,9 @@ def dense(valid: Bool,+rs: List<&2,M.Read>,v: B.Elements,y: X.E3,pending: Maybe<
   match valid basis:
     case True{} Project.Basis{gs,gr,_}:
       +bits = Sample.row_bits(n)
-      +ts = Cover.u3(rs,[])
       do IO<Logical>:
-        check : Unit <- Header.require(F.fits(ts,bits),"NO: segment-zero-U3-column")
-        vals : List<X.E3> = Array.to_list(X.E3,F.populate(ts,Array.new(X.E3,bits,F.zero())))
+        check : Unit <- Header.require(Dense.fits(rs,bits),"NO: segment-zero-U3-column")
+        vals : List<X.E3> = Array.to_list(X.E3,Dense.populate(rs,Array.new(X.E3,bits,F.zero())))
         combined(Dense.scan(bs,gs,gr,row_bits,col_bits,vals),id,rs,v,y,pending)
     case False{} _: regular(Batch.Row{rs,v,y},n,pending)
 
@@ -95,7 +94,7 @@ def preparing(row: Batch.Row,pending: Maybe<&2,Own.Pending>,+link: Nat,table: La
   Layout.Matrix{_,_,+n,+bs,_} = table
   Frame.Member{id,+rows,_,_,keep} = member
   B.Code{_,+cols,_} = code
-  good = Bool.not(keep) && Dense.local(rs,link) && Dense.spans(bs,0n,n,rows,cols)
+  good = Bool.not(keep) && Dense.local(rs,link,Sample.row_bits(n),n) && Dense.spans(bs,0n,n,rows,cols)
   dense(good,rs,v,y,pending,bs,n,id,Sample.row_bits(rows),Sample.row_bits(cols),basis)
 
 def prepare(row: Batch.Row,pending: Maybe<&2,Own.Pending>,+link: Nat,+table: Layout.Matrix,shape: Shape.Shape,basis: Project.Basis) -> IO(Logical):
