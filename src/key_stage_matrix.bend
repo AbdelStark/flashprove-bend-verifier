@@ -73,6 +73,19 @@ def block_bits(n: Nat, row: Nat) -> Nat:
   +word = U32.from_nat(row)
   Bool.pick(Nat,U32.is_zero(word),k,Nat.min(k,U32.log2(U32.and(word,U32.sub(0,word)))))
 
+# When the source start is divisible by this block's length, its low
+# coordinates pass through unchanged and cannot carry into the prefix.
+def aligned(n: Nat, cell: Nat, fs: F.Factors, high: F.Factors, scale: Ext.E3, rev: F.Factors, acc: F.Form) -> F.Form:
+  match n fs:
+    case 0n rest: F.Term{X.entry(rest,cell,scale),List.reverse.go(&2,F.Factor,rev,high)} <> acc
+    case 1n+k f <> rest: aligned(k,cell,rest,high,scale,f <> rev,acc)
+    case _ _: acc
+
+def shifted_block(exact: Bool, b: Nat, +c: Nat, size: Nat, point: F.Factors, high: F.Factors, scale: Ext.E3, acc: F.Form) -> F.Form:
+  match exact:
+    case True{}: aligned(b,Nat.div(c,size),point,high,scale,[],acc)
+    case False{}: merge(shifted(b,c,point,high,scale),acc)
+
 # A run needs at most two destination blocks per row-index bit.
 def stretch(fuel: Nat, +rows: Nat, cell: Nat, row: Nat, count: Nat, +point: F.Factors, +scale: Ext.E3, acc: F.Form) -> F.Form:
   match fuel count:
@@ -83,8 +96,8 @@ def stretch(fuel: Nat, +rows: Nat, cell: Nat, row: Nat, count: Nat, +point: F.Fa
       +size = Nat.pow(2n,b)
       +c = cell
       high = X.choice(Nat.sub(rows,b),Nat.div(r,size))
-      items = shifted(b,c,point,high,scale)
-      stretch(k,rows,Nat.add(c,size),Nat.add(r,size),Nat.sub(n,size),point,scale,merge(items,acc))
+      items = shifted_block(Nat.is_eq(Nat.mod(c,size),0n),b,c,size,point,high,scale,acc)
+      stretch(k,rows,Nat.add(c,size),Nat.add(r,size),Nat.sub(n,size),point,scale,items)
     case _ _: acc
 
 def digits(weights: H.Bytes, +cell: Nat, +row: Nat, +count: Nat, +stride: Nat, +bits: Nat,
