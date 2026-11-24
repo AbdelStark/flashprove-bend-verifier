@@ -1,19 +1,30 @@
-# FlashProve verification with Bend 2
+# FlashProve verifier in Bend 2
 
-`build/verify-bend` verifies FlashProve H821 inference proofs on a CPU. The native Bend executable reads the caller’s configuration, verification key, selected leaf, request, next token and proof. It computes the commitment ID, verifies all three proof stages and emits the covered token range and policy. It runs with the packaged public data and an empty executable search path.
+This is a CPU verifier for FlashProve inference proofs. Given a model commitment, a token sequence and a proof, it checks whether the specified tokens satisfy the caller’s policy under the committed integer model. Under exact match, each checked token must be the model’s first choice at that position. The weights stay with the prover. [Upstream protocol](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c)
 
-## Verify a proof
+We built the verifier to measure how Bend 2 handles the same proof as FlashProve’s C++ and Lean implementations. The standalone executable checks the key, the selected leaf and the request in Bend. It supports four H821 configurations, covering two model sizes and two acceptance policies. The published examples use synthetic weights. The largest has the dimensions of Llama 4 Maverick. [Supported configurations](docs/adr/public-plans.md) · [Full-size fixture](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md)
 
-Building requires the pinned Bend 2 compiler, clang, Python 3 and make. The benchmark harness requires Python 3.11 or newer. The upstream checkout supplies the examples and independent test oracles. The packaged plan and table data can be installed offline once the toolchain is available.
+## Verify the small example
+
+From the repository root on macOS or Linux, with Git, make, Clang, curl and Python 3.11 or newer on your path, run the following commands. The build installs the pinned Bend compiler locally, checks the upstream fixture hashes and writes the executable and its public data to `build/`.
 
 ```sh
-make standalone upstream
+make bootstrap upstream standalone
 example=.upstream/FlashProve/examples/accepted-proof
+id=79a5a2bc7a469b40df73dedf40abeb740671e8ae8077738bd3743897aeb22183
 build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
-  "$example/example.y" "$example/example.proof" -id "$(cat "$example/ID.txt")" -data build
+  "$example/example.y" "$example/example.proof" -id "$id" -data build
 ```
 
-The small exact-match example covers tokens 61 through 63 and the requested next token. Its last line is `YES`. In an application, supply the model commitment and acceptable policy chosen by the caller. Verify the exit status, commitment, policy and coverage in the closing `result-v1` record. The build field identifies the transitive Bend sources and build inputs. [Verifier output contract](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/verifier/docs/output.md)
+The command exits 0 and prints `YES`. Look one line above it for `result-v1`. In this example, `tokens=61..63 y=yes` means the proof covers the final three tokens of the request and the proposed next token, ID 199. Each is the integer model’s first choice given the preceding tokens. [Fixture and expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/accepted-proof/README.md)
+
+For your own verification, get the commitment ID from a source you trust before sending the prompt. Supply the tokens you sent and received, the range you want checked and the policy you accept. Check the process exit status and confirm the ID, claim, policy and coverage in `result-v1`. [Verification contract](docs/spec/verifier.md)
+
+## When a reply uses a different token
+
+A floating-point inference engine and the committed integer model can rank two tokens differently. FlashProve’s *clipped-gap* policy scores each covered reply token by how far its logit falls below the best logit, with a tie rule. The caller chooses limits on the average clipped cost and the number of costs above the clip. A next token covered by the proof must still be the integer model’s first choice.
+
+In the small clipped-gap example, four of the 32 reply tokens differ from the model’s first choice. The proof passes the stated limits. To see the distinction, run the example with its published policy.
 
 ```sh
 example=.upstream/FlashProve/examples/accepted-proof-clipped-gap
@@ -22,42 +33,16 @@ build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
   -policy clipped-gap,9244130,323343,1,16,8 -data build
 ```
 
-This proof covers tokens 16 through 47. Its next token lies outside the requested interval. A successful call ends with `WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8`.
+The last line starts with `WITHIN LIMITS`. The record gives `tokens=16..47 y=no`. This proof covers the reply in the request file and makes no claim about the following token. The ID and policy above belong to this fixture. [Clipped-gap example and cost calculation](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/prover/examples/target_small_f2_gap/README.md)
 
-## Supported configurations
+## Speed and assurance
 
-The independent verifier admits the four H821 configurations bundled with FlashProve, the small and full-size models under exact match and clipped gap. It hashes the complete configuration, authenticates all seven chain plans and four public tables, and checks each stage’s largest dyadic error at each work factor against the 128-bit target. The release embeds public geometry. Key bytes, proof bytes, transcript challenges, layer equations and verdicts are computed at verification time. A new configuration requires reproducing and reviewing its public catalog entries. [Public plan contract](docs/adr/public-plans.md) · [Verification requirements](docs/spec/verifier.md)
+On an Apple M4 Max, the standalone Bend verifier took **254.945 s** by median on the full-size exact-match proof. Compiled Lean OnBytes took **58.693 s** on the same inputs. Peak memory was **10.84 GiB** and **4.91 GiB**, respectively. The measurements cover complete CPU verification calls. FlashProve also ships a separate theorem-linked Lean command. On a Lucid Xeon, that command took 1,141 s, an earlier standalone Bend build took 665 s, and C++ took 19.1 s. [Matched M4 measurements and commands](docs/research/m4-standalone.md) · [Linux builds and measurements](docs/research/lucid.md)
 
-The request stage checks the feed-forward, attention and output-head relations, their lookup forests and smallness constraints, the folded codewords, and the shared and request-specific linear claims that bind the model weights. The accounting includes proof of work and assumes the upstream theorem on codes. The formal theorem for the Lean verifier applies to the Lean implementation. [Protocol research and source map](docs/research/protocol.md) · [Release tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/12)
+Bend and Lean OnBytes agree on all four published fixtures. A fresh proof from the H100 prover also passed both Bend and C++ under a new commitment. Bend’s independent kernel checked the standalone definitions against their declared types. A proof that Bend acceptance implies Lean acceptance for every supported input remains open. The reported `bits=128` is the verifier’s accounting target, with assumptions about proof of work and commitment binding. [Assurance and its limits](docs/spec/assurance.md) · [Fresh-proof record](docs/research/fresh-proof.md) · [Upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md)
 
-## Whole-proof benchmarks
+## Development
 
-Median elapsed seconds on Lucid’s Xeon Platinum 8480CL, for three complete exact-match verifications per entry. Each process reads the caller's files and returns a checked verdict. The theorem-linked Lean runner supports only the full-size fixture.
+Run `make standalone-full` to check all four published proofs and `make standalone-extended` to compare refusals with the C++ reference. The [protocol source map](docs/research/protocol.md) connects the format rules to the implementation and its tests. For the earlier hybrid executable, see the [native kernel design](docs/adr/native-kernels.md).
 
-| CPU verifier | Small | Full-size |
-|---|---:|---:|
-| Native Bend 2 | 14.727 | 665.120 |
-| FlashProve C++ | 1.454 | 19.098 |
-| Lean OnBytes | 5.814 | 95.482 |
-| Theorem-linked Lean | — | 1,141.270 |
-
-On the full-size proof Bend used 41.7% less elapsed time than theorem-linked Lean. Lean OnBytes was 6.97× faster than Bend, and C++ was 34.83× faster. Bend's full-size peak RSS was 10.84 GiB. The Linux CPU benchmark used the H100 server's host processors. The run log distinguishes the matched Bend/C++ pairs from the earlier Lean runs on the same host. [Setup and results](docs/research/lucid.md) · [Raw benchmark records](docs/research/notes/lucid-standalone.tsv)
-
-## Reproduce the evidence
-
-| Command | What it checks |
-|---|---|
-| `make ci` | Type and proof checks, JS and native unit tests, the small proof matrix and differential checks. |
-| `make standalone-full` | All four real proofs with the freestanding binary and caller-selected public inputs. Compares all four closing lines and the exit status. |
-| `make fresh-proof` | Generates a new small H821 commitment and next-token proof on an H100 and verifies it with C++ and standalone Bend. [Observed result](docs/research/fresh-proof.md) |
-| `make standalone-extended` | Compares both small altered-copy tables, 79 item mutations and 23 altered record sets with C++. Also substitutes a valid leaf from another commitment. |
-| `make stages-full` | Intermediate evidence against upstream, including all three model families and both model sizes. |
-| `make request-claims-test` | Individually change a real BAT target, carried FOLD target, weight-merge target, weight coefficient, attention lookup join and output-head lookup join. Each must reach and fail its final equation. |
-| `make plans-reproduce` | Re-exports schedules, shapes and exact accounting from the pinned configuration-only planner and compares the packaged data. |
-| `make benchmark-standalone` | Three alternating single-thread native Bend and upstream C++ calls at each model size, recording identity, timing, peak memory and validated output. |
-| `make benchmark-lean` | Reproduces the native Lean OnBytes comparator. |
-| `make help` | Lists all build, test and benchmark targets. |
-
-The original hybrid prototype remains available through `make verifier` as `build/verify`. It links Bend kernels into a C++ worker and has its own build identity. The standalone build, tests and verdicts are independent of that worker. Whole-call measurements identify the executable, hardware, fixture and concurrency. [Lucid benchmark results](docs/research/lucid.md) · [M4 hybrid benchmarks](docs/research/field-performance.md) · [Native integration decision](docs/adr/native-kernels.md)
-
-[Contribution workflow](AGENTS.md) · [Implementation plan](docs/plan/implementation.md) · [License](LICENSE) · [Upstream notices](NOTICE)
+[Contributing](CONTRIBUTING.md) · [Reporting a verifier defect privately](SECURITY.md) · [Apache 2.0 license](LICENSE) · [Upstream notices](NOTICE)

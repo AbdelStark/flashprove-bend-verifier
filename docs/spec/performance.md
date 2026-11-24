@@ -2,54 +2,41 @@
 
 > Status: living
 
-The standalone verifier is correct on every fixture and slow. This page fixes how its speed is measured, what it must reach, and what a speed change may never alter. The correctness requirements stay in the [verification contract](verifier.md); the measurements behind the numbers here are in the [independent review](../research/independent-review.md) and the [Lucid results](../research/lucid.md).
+Measure the time a caller waits for a verified answer. A whole call starts a native process, reads the public configuration, key, request, token and proof, and ends when the process emits the expected verdict and exits. The standalone Bend executable checks every stage. The historical hybrid delegates model checks to a C++ worker and has its own build identity. [Verification contract](verifier.md) · [Hybrid design](../adr/native-kernels.md)
 
-## Where the time goes today
+## Measurements on record
 
-Measured on the standalone build of `f82965b`, using the exact-match fixtures. Bend ran sequential verifier code with its default worker pool. The harness did not observe the pool size. C++ used `-j 1` for the request stage.
+| Experiment | Full-size exact-match result | What the comparison covers |
+| --- | --- | --- |
+| [M4 Max, after the extension multiplication change](../research/m4-standalone.md) | Bend 254.945 s, native Lean OnBytes 58.693 s | Three alternating pairs on the same workstation. Bend used 4.34 times the median wall time. |
+| [Lucid Xeon, before that change](../research/lucid.md#independent-bend-verification) | Bend 665.120 s, C++ 19.098 s | Three alternating pairs in one CPU allocation. The standalone verifier executed sequential code with its default worker pool. |
+| [Two Linux Lean baselines](../research/lucid.md#theorem-linked-verifier) | OnBytes 95.482 s, theorem-linked command 1,141.270 s | Separate jobs on the same Xeon. The theorem-linked command builds a parser tool and relinks a helper during each call. |
 
-| Quantity | Small | Full-size | Source |
-|---|---:|---:|---|
-| Bend standalone, median wall | 14.7 s | 665.1 s | Lucid, Xeon 8480CL |
-| C++ `cp_verify`, median wall | 1.45 s | 19.1 s | same host |
-| Lean OnBytes, median wall | 5.8 s | 95.5 s | same host |
-| Theorem-linked Lean, median wall | n/a | 1,141.3 s | same host |
-| Bend peak resident memory | 0.84 GB | 11.6 GB | M4 Max; Lucid |
-| Bend time relative to C++ | 10x | 35x | derived |
-
-A stack sample of the full-size call splits the verifier's own CPU time as follows. The small call has the same shape.
-
-| Share | Where | What it is |
-|---:|---|---|
-| 41% | `extension.product`, `sumcheck.mul` | field multiplication in the cubic extension |
-| 28% | `term_drop`, `span_fade`, `rfc_wrap` | freeing and reference counting of list cells and boxed elements |
-| 10% | closure application | `Bool.pick` over function values in `fold.deposit` and similar |
-| 20% | `row_tensor.choice`, `fold.*`, `List.length`, `List.drop`, `Nat.pow`, `String.order` | list traversal and repeated lookups inside loops |
-| under 1% | BLAKE2b | all hashing |
-
-The request stage accounts for about 84% of the small call on the M4 Max. The measured verifier contains no explicit parallel call. The earlier experiment setting `BEND_THREADS` to 1 and 16 used the same default pool in both cases. A scaling measurement must observe the worker count inside the native process at each setting. The 90-second estimate on Lucid extrapolates from isolated kernel measurements. The full-call profile was sampled on the Mac. [Worker-count tracking](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/19)
-
-## Requirements
-
-| Requirement | Obligation | Evidence required for completion |
-|---|---|---|
-| **REQ-PERF-2** | The verifier reports the wall time of the key, leaf and request stages on request, on the error stream, without changing standard output or the verdict. | `-timing` prints one line per stage (`timing: <stage> <n> ms` for public, key, leaf, request and total). Standard output is byte-identical with and without it. `make profile` writes the stage lines and a stack-sample table for a named fixture. |
-| **REQ-PERF-3** | On one thread the full-size exact-match call takes at most 8 times the C++ median measured in the same job, and its peak resident memory is at most 7 GB. | The [benchmark protocol](#measurement-protocol) on the Lucid host, three samples per program, with the stage lines of REQ-PERF-2. |
-| **REQ-PERF-4** | On 16 threads the full-size exact-match call takes at most the one-thread C++ median measured in the same job. | The same protocol with the thread count recorded, plus the scaling table at 1, 2, 4, 8 and 16 threads. |
-| **REQ-PAR-1** | The exit status and every line of standard output are identical at every thread count, for accepted and for refused inputs. When several checks fail, the reported one is the first in sequential order: key, then leaf, then request, and file order inside a stage. | All four fixtures, both altered-copy tables and `make fuzz` at 1 thread and at 16, compared byte for byte. |
-| **REQ-PERF-5** | A change that slows the small exact-match call by more than a stated tolerance fails CI. | A checked-in budget, expressed as CPU time relative to `cp_verify` on the same runner, and a CI step that compares against it. |
-
-The two budgets of REQ-PERF-3 and REQ-PERF-4 are engineering targets derived from the kernel bound above and from the 12 to 14 times scaling that Bend's fork-join showed on 16 cores in the [spikes](../research/bend2-assessment.md). Change them here, with the measurement that justifies the change, and nowhere else.
-
-## Rules for a speed change
-
-1. **Verdicts first.** Before and after, `make ci`, `make standalone-extended` and `make fuzz` pass, and the closing lines of the four fixtures are byte-identical. A faster verifier that accepts one more input is a defect, whatever it gains.
-2. **Measure, then change.** A pull request names the row of the profile it targets and reports the same measurement before and after. A change with no measured gain on a whole call is reverted.
-3. **Kernels keep their known answers.** A change to field, extension, hash or transcript code runs the independent vectors on both lanes (`make test`, `make test-native`).
-4. **No unchecked code for speed.** The verification path stays free of `@unsafe` defs and foreign effects, so that laws about it remain provable and `--verdict` remains possible. The only foreign code is the argument shim of the native entry.
-5. **Sequential meaning.** A parallel call may reorder work, never results: REQ-PAR-1 is tested on every change that adds one.
-6. **Representation behind an interface.** Field elements, extension elements and vectors of them are reached through their own modules, so that a native 64-bit integer in a later Bend release, or a different vector layout, changes those modules alone.
+The M4 timings answer how the optimized port compares with native Lean OnBytes. The earlier Lucid measurements also include the theorem-linked Lean command. Changes in hardware, compiler, verifier revision and run conditions prevent using the two experiments to estimate a cross-platform speedup.
 
 ## Measurement protocol
 
-A number counts when it comes from `make benchmark-standalone` or its Slurm job, which: verifies every fixture file against its `SHA256SUMS`; runs one verified warm-up per program; then three fresh processes per program in alternating order with an empty executable search path; requires exit 0 and the four published closing lines from every sample; and records wall time, peak resident memory, the thread count, the host, the compiler versions, and the source and executable digests. Report the median and all samples. Compare programs only within one job. State the fixture, the policy and the thread count beside every figure, and keep measurements of other builds or hosts labeled as such.
+1. Build each program before timing. Record the verifier revision, protocol and toolchain pins, compiler flags, executable hashes, and any source digest reported in the verdict. Name the fixture, its checksum and the caller's policy.
+2. Use one host or scheduler allocation. Record the CPU, OS, memory measurement method, worker settings and any concurrent load. For scaling tests, observe the runtime worker count. The standalone argument shim leaves Bend's pool at its default. Changing `BEND_THREADS` did not change the pool. [Worker-count probe](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/19#issuecomment-7126288622)
+3. Verify the fixture against its checksum manifest. Discard one verified warmup per binary and fixture, then time three fresh processes per binary with a warm filesystem cache. Alternate the order of each pair and give the standalone verifier an empty executable search path.
+4. Validate every call. Compare the exit status and four closing lines with the fixture's expected output for that executable. Record each wall time, the median and peak resident memory. Identify any setup inside the timed command.
+
+`make benchmark-standalone` runs the paired Bend/C++ comparison on both exact-match fixtures. The Slurm job runs the same harness on a CPU allocation. `make benchmark-lean` runs OnBytes separately. The paired M4 record includes commands for running Bend and OnBytes together. [Bend/C++ harness](../../scripts/benchmark-standalone.py) · [Slurm job](../../scripts/cluster/standalone-benchmark.sh) · [M4 reproduction](../research/m4-standalone.md#repeat-the-comparison)
+
+## Requirements
+
+| Requirement | Target | Evidence |
+| --- | --- | --- |
+| **REQ-PERF-2** | `-timing` reports public input, key, leaf, request and total wall time in milliseconds on stderr. | Compare stdout and verdict with and without the option. On macOS, `make profile` records stage timings and samples stacks. On Linux the target prints the corresponding `perf` command. |
+| **REQ-PERF-3** | With one Bend worker, median full-size exact-match wall time is at most eight times the C++ median in the same Lucid job. Bend's peak RSS is at most 7 GB. | Run the measurement protocol with one request-stage thread for C++ and record the stage timings. |
+| **REQ-PERF-4** | With 16 Bend workers, median full-size exact-match wall time is at most the single-request-thread C++ median in the same job. | Publish a verified scaling series at 1, 2, 4, 8 and 16 workers. |
+| **REQ-PAR-1** | Changing the worker count preserves stdout and exit status. When several faults are present, the verifier reports the first failure in sequential stage order (key, leaf, request), then in file order. | Compare all four fixtures, both altered-copy tables and `make fuzz` at 1 and 16 workers. |
+| **REQ-PERF-5** | CI fails if a change increases small exact-match CPU time beyond the published tolerance. | Keep the budget relative to a C++ run on the same runner and demonstrate that an injected slowdown trips the check. |
+
+The speed and memory budgets are engineering targets. Early field measurements and a 16-core fork-join hashing benchmark informed them. The latter exposed parallel work explicitly. Change a target here and give the whole-verifier measurement that justifies the change. [Kernel experiments](../research/bend2-assessment.md) · [Performance tracker](https://github.com/AbdelStark/fv-flashprove-bend-verifier/issues/23)
+
+## Reviewing an optimization
+
+- Identify the expensive operation in a profile. Measure the same whole call before and after. Keep a speed change when it improves that call. Report kernel throughput separately.
+- Run `make ci`, `make standalone-full`, `make standalone-extended` and `make fuzz` on both revisions. For each of the four fixtures, only the source build marker may differ between accepted records. Check the exit status as well. Run field, extension, hash and transcript vectors on the JS and native lanes.
+- Keep verification logic in checked Bend and the native entry's C shim limited to argument handling. Keep field elements, extension elements and their vectors behind their existing module interfaces. A change that adds parallel work must also satisfy REQ-PAR-1.

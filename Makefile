@@ -1,11 +1,10 @@
-# The command surface of the repo. Every command an agent or CI needs is a target here;
-# docs name commands only as `make <target>` (scripts/check-docs.py enforces it).
+# Build, verification and measurement commands used in the documentation.
 export BEND_NO_TELEMETRY := 1
 
 .PHONY: help bootstrap upstream check test test-native docs-check spikes ci
 
 help:  ## list the targets
-	@grep -E '^[a-z0-9-]+:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## /\t/' | expand -t 14
+	@awk '/^[a-z0-9-]+:.*## / {target = $$1; sub(/:$$/, "", target); sub(/^.*## /, ""); printf "%-24s %s\n", target, $$0}' $(MAKEFILE_LIST)
 
 bootstrap:  ## install the pinned Bend toolchain into .toolchain/ (see toolchain.lock)
 	@sh scripts/bootstrap.sh
@@ -24,15 +23,16 @@ test-native: bootstrap  ## run the expectation tests as native binaries (the lan
 
 docs-check:  ## mechanical anti-drift checks over the Markdown
 	@python3 scripts/check-docs.py
+	@python3 tests/test_docs_check.py
 
 spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
 	@sh research/spikes/run.sh
 
-ci: docs-check check test test-native e2e plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## what CI runs
+ci: docs-check check test test-native e2e plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
 
 .PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
 
-verifier: build/verify build/bend_verify.digest  ## build the whole verifier with native Bend kernels
+verifier: build/verify build/bend_verify.digest  ## build the hybrid Bend CLI and its C++ worker
 
 WORKER_MODULES := $(addprefix src/,hashlib.bend goldilocks.bend extension.bend merkle.bend chain.bend sumcheck.bend)
 WORKER_NATIVE := $(wildcard src/native/*.patch src/native/*.inc src/native/*.h) src/native/bridge.c src/native/entry.bend.in

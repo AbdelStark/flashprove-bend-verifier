@@ -1,22 +1,25 @@
 name: Verifier change
-description: Implement a protocol rule or resolve a conformance mismatch.
+description: Implement a protocol rule or investigate a conformance mismatch.
 body:
+  - type: markdown
+    attributes:
+      value: "For a suspected unsound acceptance or a failure on hostile input, follow the [security reporting instructions](https://github.com/AbdelStark/fv-flashprove-bend-verifier/blob/main/SECURITY.md)."
   - type: textarea
     id: rule
     attributes:
-      label: Behavior and scope
-      description: Identify the stage, the pinned format rule or source function, and the applicable requirement in docs/spec/verifier.md.
+      label: What should the verifier do?
+      description: Name the stage, the format rule or pinned source function, and the requirement this change serves.
     validations:
       required: true
   - type: textarea
     id: dependencies
     attributes:
-      label: Dependencies
-      description: Link prerequisites and add their blocked-by relationship on GitHub.
+      label: Prerequisites
+      description: List issues that must land first and add them under the issue's “Blocked by” relationship.
   - type: textarea
     id: evidence
     attributes:
-      label: Acceptance evidence
-      description: Give the input, command, expected verdict or intermediate value, and a case that should fail. For a performance change, identify the baseline and measurement conditions.
+      label: How can we check the change?
+      description: Give a fixture or safe test input, the command and the expected verdict or intermediate value. For a speed change, identify the workload and baseline.
     validations:
       required: true

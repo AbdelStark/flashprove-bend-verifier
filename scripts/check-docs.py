@@ -3,18 +3,19 @@
 
 Rules (each failure prints `path:line: rule: message`):
   status    every file under docs/ declares `> Status: living|frozen|superseded` near its top
-  link      every relative Markdown link resolves to a file in the repo
+  link      relative Markdown links point to checkout files or their directories
   pin       a Bend version or FlashProve commit written in a living doc equals the lock file
-  make      every `make <target>` written in a living doc is a target of the Makefile
+  make      literal make goals in inline code and sh/bash fences exist in the Makefile
   req       a requirement ID (REQ-<AREA>-<n>) is defined at most once across docs/spec
   open      no TODO/TBD/FIXME in a living doc unless the same line cites an issue (#123)
   path      every repo path written in backticks in AGENTS.md exists
 
 Frozen and superseded docs are snapshots: only `status` and `link` apply to them.
 """
+import os
 import re
+import shlex
 import subprocess
-import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +24,11 @@ LINK = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)\)")
 REQ_DEF = re.compile(r"^\|?\s*\*\*(REQ-[A-Z0-9]+-\d+)\*\*", re.M)
 OPEN = re.compile(r"\b(TODO|TBD|FIXME)\b")
 ISSUE = re.compile(r"#\d+")
+GOAL = re.compile(r"[\w.][\w./-]*")
+UPSTREAM_REF = re.compile(
+    r"(?:github\.com/anthropics/FlashProve/(?:tree|blob|commit)/"
+    r"|raw\.githubusercontent\.com/anthropics/FlashProve/"
+    r"|\bFlashProve\s+(?:commit|revision)\s+`?)([0-9a-f]{7,40})\b", re.I)
 
 
 def lock(name: str) -> dict[str, str]:
@@ -30,52 +36,87 @@ def lock(name: str) -> dict[str, str]:
     return {k.strip(): v.strip() for k, v in pairs}
 
 
-def tracked_markdown() -> list[Path]:
-    out = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "*.md"], cwd=ROOT,
-                         capture_output=True, text=True, check=True).stdout.split("\n")
-    return [ROOT / p for p in out if p]
+def checkout_files() -> set[Path]:
+    # Include new files during editing, exclude ignored outputs and working-tree deletions.
+    names = subprocess.check_output(["git", "ls-files", "-coz", "--exclude-standard"], cwd=ROOT)
+    paths = (Path(os.fsdecode(name)) for name in names.split(b"\0") if name)
+    return {path for path in paths if (ROOT / path).is_file()}
+
+
+def make_goals(command: str) -> list[str]:
+    """Check the examples' simple `make GOAL ... NAME=value` form, using the repo Makefile."""
+    if not re.match(r"^\s*make\s", command):
+        return []
+    lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True
+    try:
+        args = list(lexer)[1:]
+    except ValueError:
+        return []
+    goals = [arg for arg in args if not re.match(r"^[A-Za-z_]\w*=", arg)]
+    # Flags can select another Makefile. Shell control, redirections and expansions
+    # also take an example outside the literal command form this checker understands.
+    return goals if all(GOAL.fullmatch(goal) for goal in goals) else []
 
 
 def main() -> int:
     bend_version = lock("toolchain.lock")["BEND_VERSION"]
     commit = lock("upstream.lock")["FLASHPROVE_COMMIT"]
     makefile = (ROOT / "Makefile").read_text() if (ROOT / "Makefile").exists() else ""
-    targets = set(re.findall(r"^([A-Za-z0-9_.-]+):", makefile, re.M))
+    targets = {goal for rule in re.findall(r"^([\w./-]+(?: +[\w./-]+)*):", makefile, re.M)
+               for goal in rule.split()}
     errors: list[str] = []
     req_seen: dict[str, str] = {}
+    files = checkout_files()
+    members = files | {parent for path in files for parent in path.parents}
+    markdown = sorted(path for path in files if path.suffix == ".md")
 
-    for md in tracked_markdown():
-        rel = md.relative_to(ROOT)
+    for rel in markdown:
+        md = ROOT / rel
         text = md.read_text()
         in_docs = rel.parts[0] == "docs"
         m = STATUS.search("\n".join(text.splitlines()[:12]))
         if in_docs and not m:
             errors.append(f"{rel}:1: status: missing `> Status: living|frozen|superseded` in the first 12 lines")
         living = not (m and m.group(1) != "living")
-        fenced = False
+        fence = None
+        continued = ""
         for n, line in enumerate(text.splitlines(), 1):
             if line.lstrip().startswith("```"):
-                fenced = not fenced
-            if fenced:
+                fence = line.strip()[3:].strip() if fence is None else None
+                continued = ""
+                continue
+            if living:
+                snippets = []
+                if fence is None:
+                    snippets = re.findall(r"`([^`\n]+)`", line)
+                elif fence in {"sh", "bash"}:
+                    if line.endswith("\\"):
+                        continued += line[:-1]
+                        continue
+                    snippets = [continued + line]
+                    continued = ""
+                for snippet in snippets:
+                    for goal in make_goals(snippet):
+                        if goal not in targets:
+                            errors.append(f"{rel}:{n}: make: `make {goal}` is not a Makefile target")
+            if fence is not None:
                 continue
             for target in LINK.findall(line):
                 if re.match(r"^(https?:|mailto:|#)", target):
                     continue
-                path = (md.parent / target.split("#", 1)[0]).resolve()
-                if not path.exists():
-                    errors.append(f"{rel}:{n}: link: `{target}` does not resolve")
+                path = md.parent / target.split("#", 1)[0]
+                if (Path(os.path.relpath(path, ROOT)) not in members or
+                        Path(os.path.relpath(path.resolve(), ROOT)) not in members):
+                    errors.append(f"{rel}:{n}: link: `{target}` does not resolve in the checkout")
             if not living:
                 continue
             for v in re.findall(r"\bBend (\d+\.\d+\.\d+)\b", line):
                 if v != bend_version:
                     errors.append(f"{rel}:{n}: pin: Bend {v} but toolchain.lock pins {bend_version}")
-            for sha in re.findall(r"\b[0-9a-f]{7,40}\b", line):
-                if "FlashProve" in line and re.search(r"[a-f]", sha) and re.search(r"\d", sha) \
-                        and not commit.startswith(sha):
+            for sha in UPSTREAM_REF.findall(line):
+                if not commit.startswith(sha.lower()):
                     errors.append(f"{rel}:{n}: pin: FlashProve commit {sha} but upstream.lock pins {commit[:12]}")
-            for t in re.findall(r"`make ([A-Za-z0-9_.-]+)", line):
-                if t not in targets:
-                    errors.append(f"{rel}:{n}: make: `make {t}` is not a Makefile target")
             if OPEN.search(line) and not ISSUE.search(line) and rel.name != "check-docs.py":
                 errors.append(f"{rel}:{n}: open: {OPEN.search(line).group(1)} without an issue reference")
             if rel.as_posix() == "AGENTS.md":
@@ -90,9 +131,9 @@ def main() -> int:
 
     for e in errors:
         print(e)
-    print(f"docs-check: {len(errors)} problem(s) in {len(tracked_markdown())} Markdown files")
+    print(f"docs-check: {len(errors)} problem(s) in {len(markdown)} Markdown files")
     return 1 if errors else 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

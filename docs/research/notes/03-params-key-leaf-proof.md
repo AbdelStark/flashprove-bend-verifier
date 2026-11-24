@@ -1,7 +1,9 @@
 # 03 — Parameter file, derived quantities, key file, leaf file, proof file (FORMAT §8–§10)
 
-> Status: frozen
+> Status: superseded
 > Recovered working notes, 2026-11-23. Upstream excerpts from FlashProve, Copyright 2026 Anthropic PBC, Apache-2.0.
+
+The [protocol source map](../protocol.md#from-bytes-to-a-verdict) now covers parameter derivation and the key, leaf and request readers. The original calculations follow for reference.
 
 Source: FlashProve 0.16.0-rc.26, commit 9e2bdd8, read-only. All paths are relative to the upstream root
 `<scratchpad>/upstream/FlashProve`.
