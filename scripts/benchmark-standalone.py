@@ -53,7 +53,7 @@ def machine():
 def measure(program, case, digest, sample, work, logs):
     stem = f"{case.name}-{program.name}-{sample}"
     timing = logs / f"{stem}.time"
-    # BEND_THREADS=1 selects one native worker; the C++ verifier's equivalent is -j 1.
+    # The standalone shim uses Bend's default worker pool. C++ accepts an explicit request-stage count.
     common = [case / name for name in ("config", "ivk", "example.req", "example.y", "example.proof")]
     options = ["-data", "data"] if program.name == "verify-bend" else ["-j", "1"]
     cmd = [program, *common, "-id", (case / "ID.txt").read_text().strip(), "-q", *options]
@@ -62,7 +62,7 @@ def measure(program, case, digest, sample, work, logs):
         timer.append("-l")
     else:
         timer.extend(["-f", "%M peak-kib"])
-    env = {**os.environ, "LC_ALL": "C", "BEND_THREADS": "1", "PATH": str(work / "empty-path")}
+    env = {**os.environ, "LC_ALL": "C", "PATH": str(work / "empty-path")}
     start = time.monotonic_ns()
     with (logs / f"{stem}.stdout").open("w") as stdout, (logs / f"{stem}.stderr").open("w") as stderr:
         result = subprocess.run([*timer, *cmd], cwd=work, env=env, stdout=stdout, stderr=stderr)
@@ -97,6 +97,7 @@ def markdown(data):
     lines = ["# Native standalone whole calls", "",
              f"{host['os']} on {host['cpu']} ({host['arch']}). Checkout `{host['git']}`.", "",
              "Each binary completed one verified warmup at each size before the measured fresh processes.", "",
+             "Standalone Bend uses the default runtime pool, with no observed worker count. C++ uses `-j 1`.", "",
              "Each sample matched all four closing lines from the fixture and exited zero.", "",
              "| Exact fixture | Program | Ordered wall times (s) | Median (s) | Peak RSS range (KiB) |",
              "| --- | --- | --- | ---: | ---: |"]
