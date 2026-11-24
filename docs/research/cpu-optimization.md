@@ -42,7 +42,20 @@ A profiled call of the optimized binary on the M4 Max took 39.681 s on its inter
 
 On a Lucid Xeon Platinum 8480CL the single-worker result was closer. In job 7729, optimized Bend took 90.706 s by median (90.706, 90.713, 89.935 s) and Lean OnBytes took 93.978 s (93.978, 95.602, 92.481 s). Bend used 3.5% less wall time on this host. Peak RSS was 2.17 GiB for Bend and 4.96 GiB for Lean. The host ran Linux x86-64 and Ubuntu Clang 18.1.3 built the native Bend code. Both verification commands ran entirely on CPU, within the same 16-CPU allocation and with one requested worker. The node was shared. The small-proof job below overlapped the end of the Lean comparison on a separate allocation. [Full-size sample records](notes/lucid-onbytes-one-worker.json)
 
+In the same allocation, two additional experiments paired Bend with the C++ reference using one C++ request-stage thread. The serial Bend median met the eight-times-C++ target. The 16-worker median remained above the C++ target. Run `make benchmark-standalone BENCH_ARGS="--fixture full-size --workers 16"` for the parallel pair, or change the count to 1 for the serial pair.
+
+| Bend workers | Bend median (s) | C++ median (s) | Bend / C++ wall time | Evidence |
+| ---: | ---: | ---: | ---: | --- |
+| 1 | 88.696 | 18.666 | 4.75× | [Sample records](notes/lucid-cpp-one-worker.json) |
+| 16 | 45.736 | 18.751 | 2.44× | [Sample records](notes/lucid-cpp-16-workers.json) |
+
 The small exact-match proof exercises the same verifier with a different model size. In job 7731 on the same Xeon host, all three executables shared a single logical CPU. The earlier Bend took 13.332 s, optimized Bend took 5.687 s and upstream C++ took 1.855 s. Bend’s peak RSS fell from 805 MiB to 219 MiB. These are three-run medians after a warmup per binary, using the 4,145,300-byte proof. To repeat this comparison with the earlier worktree shown below, run `make benchmark-standalone BENCH_ARGS="--fixture accepted-proof --before $scratch/before/build/verify-bend"`. [Small sample records](notes/lucid-small-before-after.json)
+
+## Conformance on the measured builds
+
+The earlier and optimized sources passed `make ci`, `make standalone-full`, `make standalone-extended` and `make fuzz FUZZ_ARGS="-n 32 --seed speed-first-pass"` on Linux. Each build returned the expected result for the four published proofs and rejected 122 altered proof sets, a leaf from a different commitment and all 64 seeded mutations. Jobs 7713 and 7722 tested the earlier and optimized builds respectively. The optimized build also passed `make stages-full` in job 7727.
+
+Jobs 7725 and 7730 compared the native outputs at one and 16 workers. Both runs matched stdout, stderr and exit status in 90 paired cases. With faults in both key and request, all five worker counts reported the key failure first. Run `make worker-parity` to repeat these tests. [Parity record](worker-parity.json) · [Scope of the independent BendTT check](../spec/assurance.md#what-has-been-formally-checked)
 
 ## Reproduce the whole calls
 

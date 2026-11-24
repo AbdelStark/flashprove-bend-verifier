@@ -32,6 +32,8 @@ build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
   "$example/example.y" "$example/example.proof" -id "$id" -data build
 ```
 
+Append `-j 16` to use 16 Bend workers, or `-j 1` for the serial path. Add `-timing` to see the observed worker count and stage times on stderr.
+
 The command exits 0 and prints `YES`. Look one line above it for `result-v1`. In this example, `tokens=61..63 y=yes` means the proof covers the final three tokens of the request and the proposed next token, ID 199. Each is the integer model’s first choice given the preceding tokens. [Fixture and expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/accepted-proof/README.md)
 
 For your own verification, get the commitment ID from a source you trust before sending the prompt. Supply the tokens you sent and received, the range you want checked and the policy you accept. Check the process exit status and confirm the ID, claim, policy and coverage in `result-v1`. [Verification contract](docs/spec/verifier.md)
