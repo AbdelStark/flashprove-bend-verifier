@@ -119,8 +119,28 @@ def start(xs: List<&2,Batch>,+ctx: Local.Context,c: B.Code,m: B.Code,st: State) 
     case []: IO.pure(State,st)
     case first <> tail: pipeline(tail,prepared(first,ctx),ctx,c,m,st)
 
-def walk(models: Inputs.Batches,links: List<&2,Q.Link>,ctx: Local.Context,c: B.Code,m: B.Code,st: State,i: Nat) -> IO(State):
-  start(batches(models,links,i),ctx,c,m,st)
+def serial(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c: B.Code,+m: B.Code,state: State,i: Nat) -> IO(State):
+  match models links:
+    case Nil{} Nil{}: IO.pure(State,state)
+    case Con{+model,+tail} Con{link,rest}:
+      +idx = i
+      do IO<State>:
+        ok : Unit <- Header.require(Nat.is_eq(idx,Local.number(model)),"NO: segment-link-order")
+        logical : Local.Logical <- family(model,ctx,List.is_empty(&2,M.Inputs,tail))
+        physical : Local.Local <- Local.physical(idx,ctx,logical)
+        after : State <- step(link,physical,c,m,state,Nat.is_eq(idx,0n))
+        serial(tail,rest,ctx,c,m,after,1n+idx)
+    case _ _: IO.die(State,1,"NO: segment-link-count")
+
+def parallel(st: State) -> Bool:
+  match st:
+    case State{Transport.State{_,_,Transport.Sequential{_}},_}: False{}
+    case _: True{}
+
+def walk(+models: Inputs.Batches,+links: List<&2,Q.Link>,+ctx: Local.Context,+c: B.Code,+m: B.Code,+st: State,+i: Nat) -> IO(State):
+  run = Bool.pick(Unit -> IO(State),parallel(st),
+    _ => start(batches(models,links,i),ctx,c,m,st), _ => serial(models,links,ctx,c,m,st,i))
+  run(Unit{})
 
 def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
   State{cur,rows} = st
