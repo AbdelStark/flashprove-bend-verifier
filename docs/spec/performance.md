@@ -14,14 +14,17 @@ The headline workload is one exact-match proof for a model with Llama 4 Maverick
 
 | CPU and experiment | Median wall seconds per full-size proof | How to read the result |
 | --- | --- | --- |
-| Apple M4 Max, paired runs | Standalone Bend **254.945**, Lean OnBytes **58.693** | Both binaries verified the same proof in three alternating pairs. Bend took 4.34 times as long by median. [Samples and binary identities](../research/m4-standalone.md) |
+| Apple M4 Max, three-program run | Earlier Bend **249.893**, optimized Bend (1 worker) **39.309**, Lean OnBytes **59.329** | Each program ran once in every launch position. [Samples and build identities](../research/cpu-optimization.md) |
+| Same M4 Max, parallel run | Optimized Bend (16 workers) **20.380**, sequential Lean OnBytes **59.756** | Alternating pairs using the same executables and fixture. [Raw samples](../research/notes/m4-cpu-16-workers.json) |
+| Apple M4 Max, earlier paired runs | Standalone Bend **254.945**, Lean OnBytes **58.693** | Both binaries verified the same proof in three alternating pairs. Bend took 4.34 times as long by median. [Samples and binary identities](../research/m4-standalone.md) |
 | Same M4 Max and binaries, repeated experiment | Standalone Bend **287.03**, Lean OnBytes **64.58** | The repeat gave a wall-time ratio of 4.44. [Replay samples](https://github.com/AbdelStark/fv-flashprove-bend-verifier/pull/38) |
-| Lucid Xeon, paired runs | Earlier standalone Bend **665.120**, C++ **19.098** | Both ran in one CPU allocation before the Bend field arithmetic optimization. [Job 7683](../research/lucid.md#independent-bend-verification) |
+| Lucid Xeon, optimized single-worker build | Standalone Bend **90.706**, Lean OnBytes **93.978** | Three alternating full-size pairs in job 7729. [Sample records](../research/notes/lucid-onbytes-one-worker.json) |
+| Lucid Xeon, earlier paired runs | Earlier standalone Bend **665.120**, C++ **19.098** | Both ran in one CPU allocation before the Bend field arithmetic optimization. [Job 7683](../research/lucid.md#independent-bend-verification) |
 | Same Xeon, separate Lean jobs | Lean OnBytes **95.482**, theorem-linked Lean command **1,141.270** | These jobs timed different programs under different loads. The theorem-linked command rebuilt its parser tool and relinked a helper inside each timed call. [Jobs 7668 and 7669](../research/lucid.md#theorem-linked-verifier) |
 
-Both M4 experiments discarded a verified warmup per program, then alternated the order of three measured pairs on a warm filesystem cache. The original measured wall time with a monotonic clock around the timed subprocess. The replay read the `real` seconds reported by macOS `/usr/bin/time -l`. Each row gives the medians of that experiment's three samples per program.
+The two earlier M4 experiments discarded a verified warmup per program, then alternated the order of three measured pairs on a warm filesystem cache. The original experiment measured wall time with a monotonic clock around the timed subprocess. The replay read the `real` seconds reported by macOS `/usr/bin/time -l`. Each row gives the medians of that experiment's three samples per program.
 
-Lean OnBytes is a native executable built from a Lean translation of the C++ file checks. The theorem-linked Linux driver runs the verifier defined in the upstream Lean development. Checking that development's theorem is a separate activity from either timed invocation. Read ratios within a paired experiment. The Lucid and M4 runs differ in CPU, native compiler and Bend revision. [Upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) · [Assurance contract](assurance.md)
+Lean OnBytes is a native executable built from a Lean translation of the C++ file checks. The theorem-linked Linux driver runs the verifier defined in the upstream Lean development. Checking that development's theorem is a separate activity from either timed invocation. Read ratios within a paired experiment. The Lucid and M4 runs use different CPUs and native compilers. The historical rows also use earlier Bend revisions. [Upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) · [Assurance contract](assurance.md)
 
 ## Reproduce a measurement
 
@@ -37,6 +40,8 @@ Start from the repository root with `make bootstrap upstream`. Each command belo
 ## What made the earlier Bend build slow
 
 Before the request-stage optimization, Bend's own timers on one full-size M4 call recorded 0.7 s for public inputs, 2.6 s for the key, 0.7 s for the leaf and 287.8 s for the request proof. The request stage accounted for most of that call. These times came from one run with `-timing`. The headline table uses medians measured from outside the process. [Stage timings from the optimization](https://github.com/AbdelStark/fv-flashprove-bend-verifier/pull/37) · [Timer implementation](../../src/standalone.bend)
+
+After optimization, another profiled M4 call spent **36.844 s of 39.681 s** in the request with one observed worker. The allocation and field arithmetic visible in those stacks guide the remaining work. [Profiles of both builds](../research/cpu-optimization.md#what-still-costs-time)
 
 To inspect one call, `make profile FIXTURE=full-size` records stage times and samples stacks on macOS. The percentages describe the sampling interval. On Linux the target prints a `perf` command. The kernel experiments from `make spikes` measure operations such as field multiplication or hashing in isolation. The H100 experiment uses `make fresh-proof` to create a new small proof and check it on CPU. [Profiler](../../scripts/profile.py) · [Kernel measurements](../research/bend2-assessment.md) · [H100 procedure](../research/fresh-proof.md)
 
