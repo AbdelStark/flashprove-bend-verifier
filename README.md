@@ -4,6 +4,21 @@ This is a CPU verifier for FlashProve inference proofs. Given a model commitment
 
 We built the verifier to measure how Bend 2 handles the same proof as FlashProve’s C++ and Lean implementations. The standalone executable checks the key, the selected leaf and the request in Bend. It supports four H821 configurations, covering two model sizes and two acceptance policies. The published examples use synthetic weights. The largest has the dimensions of Llama 4 Maverick. [Supported configurations](docs/adr/public-plans.md) · [Full-size fixture](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md)
 
+## How long does it take to verify one proof?
+
+The benchmark measures the time a client waits to check **one existing proof on its CPU**. In the full-size example, the first 24 tokens are the prompt. The proof covers the next 1,000 tokens in the reply and one proposed next token. A single `YES` means all 1,001 predictions match the committed integer model's first choice at their respective positions. [What the fixture proves](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md#what-the-yes-says)
+
+On the Apple M4 Max, we started the clock when we launched each compiled verifier. It read the 17.91 MiB proof and the other public inputs from local files, checked the model commitment and the token claims, printed its verdict and exited. Compilation, downloads, model inference and proof generation all happened before the timer started.
+
+| Verifier on the M4 Max | Original run, seconds per proof | Repeat run, seconds per proof | Peak RAM in original run |
+| --- | ---: | ---: | ---: |
+| Standalone Bend | 254.945 | 287.03 | 10.84 GiB |
+| Compiled Lean OnBytes | 58.693 | 64.58 | 4.91 GiB |
+
+Each verifier checked the same proof once to warm the filesystem cache, then three more times in fresh processes. The table gives the middle time of each set of three. With identical binaries in both experiments, Bend took about **4.4 times as long as Lean OnBytes**. [Original samples and reproduction commands](docs/research/m4-standalone.md) · [Repeat measurements](https://github.com/AbdelStark/fv-flashprove-bend-verifier/pull/38)
+
+The **19-minute Lean result** comes from a different program. On a Lucid Xeon CPU, FlashProve's theorem-linked driver built a parser tool, linked a helper and evaluated the Lean verifier during each timed call. A separate experiment on that Xeon paired an earlier standalone Bend build (665.1 s per proof) with the C++ reference (19.1 s). [Linux measurements by job](docs/research/lucid.md) · [Which benchmark to run](docs/spec/performance.md#reproduce-a-measurement)
+
 ## Verify the small example
 
 From the repository root on macOS or Linux, with Git, make, Clang, curl and Python 3.11 or newer on your path, run the following commands. The build installs the pinned Bend compiler locally, checks the upstream fixture hashes and writes the executable and its public data to `build/`.
@@ -35,9 +50,7 @@ build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
 
 The last line starts with `WITHIN LIMITS`. The record gives `tokens=16..47 y=no`. This proof covers the reply in the request file and makes no claim about the following token. The ID and policy above belong to this fixture. [Clipped-gap example and cost calculation](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/prover/examples/target_small_f2_gap/README.md)
 
-## Speed and assurance
-
-On an Apple M4 Max, the standalone Bend verifier took **254.945 s** by median on the full-size exact-match proof. Compiled Lean OnBytes took **58.693 s** on the same inputs. Peak memory was **10.84 GiB** and **4.91 GiB**, respectively. The measurements cover complete CPU verification calls. FlashProve also ships a separate theorem-linked Lean command. On a Lucid Xeon, that command took 1,141 s, an earlier standalone Bend build took 665 s, and C++ took 19.1 s. [Matched M4 measurements and commands](docs/research/m4-standalone.md) · [Linux builds and measurements](docs/research/lucid.md)
+## What has been checked
 
 Bend and Lean OnBytes agree on all four published fixtures. A fresh proof from the H100 prover also passed both Bend and C++ under a new commitment. Bend’s independent kernel checked the standalone definitions against their declared types. A proof that Bend acceptance implies Lean acceptance for every supported input remains open. The reported `bits=128` is the verifier’s accounting target, with assumptions about proof of work and commitment binding. [Assurance and its limits](docs/spec/assurance.md) · [Fresh-proof record](docs/research/fresh-proof.md) · [Upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md)
 

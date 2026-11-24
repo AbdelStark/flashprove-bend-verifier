@@ -65,7 +65,7 @@ e2e-extended: verifier oracle  ## run 102 additional item and record rejection c
 generated-check:  ## compare the checked-in hash kernel to the generator
 	@python3 research/spikes/blake2b/gen.py kernel | cmp - src/hashlib.bend
 
-benchmark: verifier oracle  ## time three alternating exact-match runs at each model size
+benchmark: verifier oracle  ## compare the historical hybrid CLI with C++ on both exact-match proofs
 	@python3 scripts/e2e.py --benchmark 3 --full-size
 
 .PHONY: lean-baseline benchmark-lean
@@ -75,7 +75,7 @@ lean-baseline: build/verify-on-bytes  ## build the optional pinned native Lean O
 build/verify-on-bytes: scripts/onbytes-build.sh upstream.lock | upstream
 	@bash scripts/onbytes-build.sh
 
-benchmark-lean: lean-baseline  ## time three Lean OnBytes calls per exact-match fixture
+benchmark-lean: lean-baseline  ## time Lean OnBytes alone on both exact-match proofs
 	@python3 scripts/onbytes-test.py --samples 3
 
 .PHONY: plans plans-reproduce plan-test
@@ -159,7 +159,7 @@ fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend mu
 	@python3 -B scripts/fuzz-differential.py $(FUZZ_ARGS)
 
 .PHONY: benchmark-standalone
-benchmark-standalone: standalone oracle  ## measure validated standalone and C++ whole calls on both exact fixtures
+benchmark-standalone: standalone oracle  ## compare standalone Bend with C++ on both exact-match proofs
 	@python3 -B scripts/benchmark-standalone.py
 
 .PHONY: fresh-proof
