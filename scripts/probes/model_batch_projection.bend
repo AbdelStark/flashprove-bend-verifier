@@ -42,7 +42,7 @@ def result(row: Local.Local,ms: X.E3) -> IO(Unit):
   IO.print("model-batch " ++ Output.print(y) ++ " " ++ Output.print(cells(fs,F.zero())) ++ " " ++ Output.print(ms))
 
 def mask_sum(got: Local.Logical) -> X.E3:
-  Local.Logical{Batch.Row{_,ms,_},_} = got
+  Local.Logical{Batch.Row{_,ms,_},_,_} = got
   masks(ms,1n,F.zero())
 
 def emit(p: Local.Logical,ctx: Local.Context,link: Nat) -> IO(Unit):

@@ -1,6 +1,7 @@
 import Base
 import ./segment_local.bend as Local
 import ./segment_transport.bend as Transport
+import ./segment_projection.bend as Project
 import ./segment_model.bend as M
 import ./segment_inputs.bend as Inputs
 import ./fold.bend as F
@@ -59,12 +60,16 @@ def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.E
     after : Trace.Events <- Fold.finish(Transport.restore(cur),c,m,later)
     Batt.checked(events,after,List.reverse(&2,Own.Pending,rows),items)
 
+def basis(s: Transport.State) -> Project.Basis:
+  Transport.State{_,b,_} = s
+  b
+
 def closed(ctx: Local.Context,models: Inputs.Batches,+events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
   match ctx:
-    case Local.Context{book,Q.Shape{+c,+m,+links,+later},geometry,profile}:
-      context: Local.Context = Local.Context{book,Q.Shape{c,m,links,later},geometry,profile}
+    case Local.Context{book,Q.Shape{+c,+m,+links,+later},geometry,profile,_}:
       do IO<Own.First>:
-        initial : Transport.State <- Transport.begin(events,c,later)
+        +initial : Transport.State <- Transport.begin(events,c,later)
+        context : Local.Context = Local.Context{book,Q.Shape{c,m,links,later},geometry,profile,Some{basis(initial)}}
         done : State <- walk(models,links,context,c,m,State{initial,[]},0n)
         finish(done,c,m,later,events,items)
 
