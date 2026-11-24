@@ -51,6 +51,7 @@ type Task is Data:
 type Batch is Data:
   Single{a: Task}
   Pair{a: Task,b: Task}
+  Joined{left: Batch,right: Batch}
 
 def batches(models: Inputs.Batches,links: List<&2,Q.Link>,i: Nat) -> List<&2,Batch>:
   match models links:
@@ -62,6 +63,19 @@ def batches(models: Inputs.Batches,links: List<&2,Q.Link>,i: Nat) -> List<&2,Bat
       +idx = i
       Single{Task{a,l,idx,List.is_empty(&2,M.Inputs,tail)}} <> batches(tail,rest,1n+idx)
     case _ _: [Single{Mismatch{}}]
+
+# The authenticated order also fixes error priority within joined pairs.
+# Cap a window at eight rows, irrespective of the proof or scheduler size.
+def join_pairs(xs: List<&2,Batch>) -> List<&2,Batch>:
+  match xs:
+    case a <> b <> rest: Joined{a,b} <> join_pairs(rest)
+    case tail: tail
+
+def window(+workers: U32,+xs: List<&2,Batch>) -> List<&2,Batch>:
+  run = Bool.pick(Unit -> List<&2,Batch>,U32.is_ge(workers,8),
+    _ => join_pairs(join_pairs(xs)),
+    _ => Bool.pick(Unit -> List<&2,Batch>,U32.is_ge(workers,4),_ => join_pairs(xs),_ => xs)(Unit{}))
+  run(Unit{})
 
 type Row is Data:
   Row{link: Q.Link,physical: Local.Local,first: Bool}
@@ -85,6 +99,9 @@ def prepared(batch: Batch,+ctx: Local.Context) -> List<IO.OP<Row>>:
     case Pair{a,b}:
       x y = ready(a,ctx) ready(b,ctx)
       [x,y]
+    case Joined{a,b}:
+      left right = prepared(a,ctx) prepared(b,ctx)
+      List.append(&1,IO.OP<Row>,left,right)
 
 def row_step(row: Row,c: B.Code,m: B.Code,st: State) -> IO(State):
   Row{link,local,first} = row
@@ -132,15 +149,15 @@ def serial(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c:
         serial(tail,rest,ctx,c,m,after,1n+idx)
     case _ _: IO.die(State,1,"NO: segment-link-count")
 
-def parallel(st: State) -> Bool:
-  match st:
-    case State{Transport.State{_,_,Transport.Sequential{_}},_}: False{}
-    case _: True{}
+def schedule(workers: U32,models: Inputs.Batches,links: List<&2,Q.Link>,ctx: Local.Context,c: B.Code,m: B.Code,st: State,i: Nat) -> IO(State):
+  match workers:
+    case 1: serial(models,links,ctx,c,m,st,i)
+    case +n: start(window(n,batches(models,links,i)),ctx,c,m,st)
 
-def walk(+models: Inputs.Batches,+links: List<&2,Q.Link>,+ctx: Local.Context,+c: B.Code,+m: B.Code,+st: State,+i: Nat) -> IO(State):
-  run = Bool.pick(Unit -> IO(State),parallel(st),
-    _ => start(batches(models,links,i),ctx,c,m,st), _ => serial(models,links,ctx,c,m,st,i))
-  run(Unit{})
+def walk(models: Inputs.Batches,links: List<&2,Q.Link>,ctx: Local.Context,c: B.Code,m: B.Code,st: State,i: Nat) -> IO(State):
+  do IO<State>:
+    n : U32 <- IO.thread_count()
+    schedule(n,models,links,ctx,c,m,st,i)
 
 def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
   State{cur,rows} = st
