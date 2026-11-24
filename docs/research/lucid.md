@@ -2,11 +2,13 @@
 
 > Status: living
 
-This experiment exercises the pinned Linux x86-64 verifier that calls the executable form of Lean's `verify`. The fixture is the exact-match `examples/full-size` synthetic proof. The upstream command reads the configuration, key, request, token, proof and caller's commitment ID. Success requires exit 0 and exactly `VERDICT: ACCEPT (exact match)` on stdout. Its parser, compiler, executable and the actual run sit outside the Lean theorem. The separate native Lean OnBytes executable implements a translation of the C++ checks. [Lean command and verdict contract](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/tools/lean-verify/README.md) · [Theorem scope](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) · [OnBytes](onbytes.md)
+On 2026-11-23, three jobs used the host CPUs of the same Lucid H100 server to verify the full-size exact-match proof. Job 7668 ran the theorem-linked Lean command. Job 7669 compared C++, the hybrid Bend worker and native Lean OnBytes. Job 7683 compared standalone Bend with C++ before the extension multiplication optimization. Each table below names its job and what the timer includes. The later paired Bend/OnBytes experiment ran on an M4 Max. [M4 measurements](m4-standalone.md)
 
 The full-size proof is 18,779,540 bytes with SHA-256 `efa762e20f72b64e183ad6f688eccf5b2b79649928d8e3a2a96645645dd08af9`. Its caller-supplied ID is `7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe`. The expected claim covers request tokens 24 through 1023 and the next token. [Fixture and expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md) · [File checksums](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/SHA256SUMS)
 
 ## Theorem-linked verifier
+
+The Linux x86-64 driver applies the executable form of Lean’s `verify` to the claim read from the caller’s files. The upstream theorem states its assumptions about the public setup and hash oracle. Its scope excludes the native parser, compiler and this execution. Lean OnBytes is a separate translation of the C++ checks. [Lean driver](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/tools/lean-verify/README.md) · [Theorem scope](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) · [Lean OnBytes](onbytes.md)
 
 All three full-size processes exited 0 and printed exactly `VERDICT: ACCEPT (exact match)`. The median was **1,141.27 seconds** (19 min 1 s). Slurm job 7668 finished with state `COMPLETED` and exit code `0:0` after 1 h 21 min 23 s including setup. The timer for each sample covered the complete six-input `tools/lean-verify/lean_verify.sh` command. [Pinned verifier](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/tools/lean-verify/lean_verify.sh)
 
@@ -16,7 +18,7 @@ All three full-size processes exited 0 and printed exactly `VERDICT: ACCEPT (exa
 | 2 | 1,118.94 | 10,745,348 |
 | 3 | 1,164.27 | 10,754,136 |
 
-Before timing, the repository source-tree checker passed on 29,550 files, Lake built `Johnson.PVR.ProgramGuard` (7,813 tasks), and all 5,056 reusable native helper objects were available. ProgramGuard reported `propext`, `Classical.choice` and `Quot.sound` for `PV.Program.verdictOf_is_verify`. On this full-size fixture, the theorem-linked median was 57.75 times the C++ median, 11.95 times the OnBytes median, and 12.49 times the hybrid median. [Program guard](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/Johnson/PVR/ProgramGuard.lean)
+Before timing, the repository source-tree checker passed on 29,550 files, Lake built `Johnson.PVR.ProgramGuard` (7,813 tasks), and all 5,056 reusable native helper objects were available. ProgramGuard reported `propext`, `Classical.choice` and `Quot.sound` for `PV.Program.verdictOf_is_verify`. [Program guard](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/Johnson/PVR/ProgramGuard.lean)
 
 ## Compiled baselines
 
@@ -85,4 +87,4 @@ Slurm job 7683 completed with exit `0:0` in 52 min 20 s including setup. All fou
 | full-size | C++ | 19.115, 19.098, 19.077 | 19.098 | 3,360.3–3,361.4 |
 | full-size | Standalone Bend | 665.120, 666.087, 659.952 | 665.120 | 11,096.8–11,100.2 |
 
-On the small proof the standalone median was 10.125 times C++, 3.260 times the hybrid and 2.533 times Lean OnBytes. On the full-size proof those ratios were 34.827, 7.281 and 6.966. The full-size theorem-linked command took 1.716 times the standalone Bend median (1,141.27 s versus 665.120 s). [Theorem-linked measurements](#theorem-linked-verifier) · [Hybrid and OnBytes measurements](#compiled-baselines)
+In the paired runs, Bend took 10.13 times the C++ wall time on the small proof and 34.83 times on the full-size proof, by median. For the same full-size input the two earlier Lean jobs recorded medians of 95.482 s for OnBytes and 1,141.270 s for the theorem-linked command. Their warmup, host load and executable setup differed from the paired run. [Theorem-linked measurements](#theorem-linked-verifier) · [Compiled baselines](#compiled-baselines)

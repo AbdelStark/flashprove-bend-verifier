@@ -1,11 +1,13 @@
 ## Change
 
-Link the issue and identify the affected format rule, source function or command.
+<!-- Link the issue. For a verifier change, cite the requirement and the format rule or source function it implements. -->
 
-## Verification
+## Evidence
 
-Record the fixture, command and observed result. For a change to verification logic, include a case that should accept and a case that should reject. For a timing comparison, include build identities, thread settings and stage coverage.
+<!-- Give the fixture or seed, build identity, command and observed result. For a change on the verification path, include an acceptance, a refusal and the native whole-call run. For documentation, name the commands or sources you checked. -->
 
-## Remaining scope
+<!-- For a performance claim, give the same workload before and after, the worker settings, samples and verdicts. -->
 
-List any unverified behavior or dependency that affects the claim.
+## Limits
+
+<!-- Record any unsupported configurations, skipped runs or other limits that affect this change. -->
