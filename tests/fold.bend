@@ -26,6 +26,15 @@ def print_row(row: Maybe<&2,F.Claim>) -> IO(Unit):
 
 def d(+x: U32) -> CS.Draw: CS.Draw{U32.to_nat(x),e(U32.add(x,1)),e(U32.add(x,2)),e(U32.add(x,3))}
 
+# A table of dimension k requires exactly k factors in every term, including
+# zero-weight terms and terms after the first. The empty sum fits any dimension.
+def widths() -> Bool:
+  +zero: F.Term = F.Term{F.zero(),[]}
+  +one: F.Term = F.Term{F.one(),[F.Low{}]}
+  +two: F.Term = F.Term{F.one(),[F.High{},F.Low{}]}
+  F.fits([],5n) && F.fits([zero],0n) && F.fits([one,one],1n) && F.fits([two],2n) &&
+    Bool.not(F.fits([one],0n)) && Bool.not(F.fits([two,one],2n)) && Bool.not(F.fits([one,zero],1n))
+
 # Oracle: field 2 fold_mask_weights/form and generator_row on code (5,4,2) and mask (4,2,1).
 # CS weights use theta^(2+3*i+j), including both occurrences of position 17; mask position there is 1.
 def main() -> IO(Unit):
@@ -36,6 +45,7 @@ def main() -> IO(Unit):
   +next: S.Stage = S.Stage{B.Code{4n,2n,1n},B.Code{4n,8n,1n},1,1}
   +seed: CS.Seed = CS.Seed{[e(2),e(3),e(5),e(6),e(7)],e(8)}
   do IO<Unit>:
+    IO.print(Bool.show(widths()))
     IO.print(list(F.fresh(1n,g,8n)))
     IO.print(list(F.scaled(F.fold_low([e(2)],[e(1),e(4),e(6),e(2)]),e(45))))
     IO.print(show(F.round(e(101),e(3),e(5),e(7))))
@@ -45,6 +55,7 @@ def main() -> IO(Unit):
     print_row(CS.switch(stage,next,old,e(3),[d(17)],CS.Seed{[e(2),e(3),e(5),e(6),e(7)],e(0)},e(9)))
     print_row(CS.switch(stage,S.Stage{B.Code{4n,4n,1n},B.Code{4n,8n,1n},1,1},old,e(3),[d(17)],seed,e(9)))
     print_row(CS.switch(stage,next,F.Single{[],[e(2)],[e(3)],e(11)},e(3),[d(17)],seed,e(9)))
+#|True
 #|0 15/0 30/0 45/0 5/0 25/0 1/0 0/0 0/
 #|0 315/4294967294 4294967207/
 #|0 878

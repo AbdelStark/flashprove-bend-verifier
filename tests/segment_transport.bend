@@ -62,7 +62,28 @@ def check(+coords: B.Elements) -> Bool:
   actual = F.expand(F.fixed(P.lift(p,saved),coords,F.one()),CS.zeros(4n))
   same(actual,saved) && same(saved,expected)
 
+# The ordinary and terminal challenge lists fix adjacent axes. Compare the
+# single scatter to the two explicit folds with a nonempty previous carry.
+def fused(+eps: X.E3) -> Bool:
+  +basis: P.Basis = P.Basis{[F.one(),F.zero()],2n,2n}
+  +coords: B.Elements = [F.zero(),X.E3{0,4,0,2,0,3},F.one()]
+  +local = R.insert(source(),0n,3n,5n,[])
+  +old: B.Elements = [F.one(),F.zero(),K.small(3n),K.small(5n)]
+  +carry = K.small(17n)
+  same(Transport.contract(basis,coords,local,old,carry,eps),P.merge(basis,F.fixed(local,coords,eps),old,carry))
+
+# A queued pair applies the older scalar first. Include a zero carry and
+# a non-base-field carry so reversing or dropping either update changes the
+# resulting table.
+def queued() -> Bool:
+  +basis: P.Basis = P.Basis{[F.one(),F.zero()],2n,2n}
+  +old: B.Elements = [F.one(),K.small(7n),F.zero(),K.small(13n)]
+  +a: Transport.Update = Transport.Update{[],source(),F.zero(),K.small(11n)}
+  +b: Transport.Update = Transport.Update{[],source(),X.E3{0,7,0,5,0,3},K.small(17n)}
+  eager = Transport.commit_one(basis,Transport.commit_one(basis,old,a),b)
+  same(eager,Transport.finish_columns(basis,Transport.Two{old,a,b}))
+
 def main() -> IO(Unit):
-  IO.print(Bool.show(check([K.small(23n),K.small(29n)]) && check([F.one(),F.zero()])))
+  IO.print(Bool.show(check([K.small(23n),K.small(29n)]) && check([F.one(),F.zero()]) && fused(F.zero()) && fused(K.small(7n)) && queued()))
 
 #|True

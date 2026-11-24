@@ -17,7 +17,7 @@ The standalone entry reads the caller's files, checks the public statement, and 
 
 ## Measurement records
 
-For a whole-proof timing, identify the executable first. The [M4 Max run](m4-standalone.md) paired standalone Bend with compiled Lean OnBytes. The [Lucid runs](lucid.md) include C++ and the theorem-linked Lean command. The [initial Bend experiments](bend2-assessment.md) time individual kernels and a fork-join tree. The [fresh-proof record](fresh-proof.md) follows one request from a new commitment on an H100 through both CPU verifiers.
+The [CPU optimization report](cpu-optimization.md) pairs standalone Bend with compiled Lean OnBytes on an Apple M4 Max and a Lucid Xeon. It includes all samples for the earlier and optimized builds and the profiles that motivated the change. The [original M4 Max benchmark](m4-standalone.md) records the performance before this work. The [Lucid runs](lucid.md) include C++ and the theorem-linked Lean command. The [initial Bend experiments](bend2-assessment.md) time individual kernels and a fork-join tree. The [fresh-proof record](fresh-proof.md) follows one request from a new commitment on an H100 through both CPU verifiers.
 
 ## Working notes from the original port
 

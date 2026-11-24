@@ -23,6 +23,8 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from worker_parity import run_cli
+
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"
 EXAMPLES = ROOT / ".upstream/FlashProve/examples"
@@ -76,7 +78,7 @@ def classify(code: int, lines: list[str]) -> str:
 
 
 def run_case(example: Path, identity: str, policy: list[str], work: str, seed: str, index: int,
-             timeout: int) -> dict:
+             timeout: int, parity_dir=None) -> dict:
     rng = random.Random(f"{seed}:{example.name}:{index}")
     name = rng.choices(FILES, WEIGHTS)[0]
     with tempfile.TemporaryDirectory(dir=work) as tmp:
@@ -97,7 +99,8 @@ def run_case(example: Path, identity: str, policy: list[str], work: str, seed: s
              {**os.environ, "PATH": "", "BEND_THREADS": "1"}),
         ):
             try:
-                run = subprocess.run(cmd, cwd=case, env=env, capture_output=True, text=True, timeout=timeout)
+                run = run_cli(cmd, cwd=case, env=env, timeout=timeout,
+                              parity_dir=parity_dir if label == "bend" else None, case=f"{example.name}-{index}")
                 lines = (run.stdout + run.stderr).splitlines()
                 out[label], out[label + "_last"] = classify(run.returncode, lines), (lines[-1][:120] if lines else "")
             except subprocess.TimeoutExpired:
@@ -113,6 +116,7 @@ def main() -> int:
     ap.add_argument("-j", type=int, default=min(os.cpu_count() or 1, 8))
     ap.add_argument("--timeout", type=int, default=1800, help="seconds per verifier call")
     ap.add_argument("--out", type=Path, help="write every case as JSON")
+    ap.add_argument("--parity-dir", type=Path, help="save and compare Bend calls with 1 and 16 workers")
     args = ap.parse_args()
     for exe in ("verify-bend", "cp_verify"):
         if not (BUILD / exe).exists():
@@ -126,8 +130,8 @@ def main() -> int:
             stated = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())
             policy = ["-policy", stated[1]] if stated else []
             with ThreadPoolExecutor(max_workers=args.j) as pool:
-                rows = list(pool.map(lambda i: run_case(example, identity, policy, work, args.seed, i, args.timeout),
-                                     range(args.n)))
+                rows = list(pool.map(lambda i: run_case(example, identity, policy, work, args.seed, i,
+                                                        args.timeout, args.parity_dir), range(args.n)))
             results += rows
             tally: dict[tuple[str, str], int] = {}
             for r in rows:

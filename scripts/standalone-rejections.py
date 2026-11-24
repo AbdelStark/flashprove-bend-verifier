@@ -8,6 +8,8 @@ import subprocess
 import sys
 import tempfile
 
+from worker_parity import run_cli
+
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"
 EXAMPLES = ROOT / ".upstream/FlashProve/examples"
@@ -20,7 +22,7 @@ def oracle(command, ending):
         raise RuntimeError(f"corpus oracle failed\n{result.stdout[-1000:]}\n{result.stderr[-1000:]}")
 
 
-def reject(example, altered, identity, policy, proof_name="example.proof"):
+def reject(example, altered, identity, policy, proof_name="example.proof", parity_dir=None):
     def use(name):
         path = altered / name
         return path if path.exists() else example / name
@@ -29,13 +31,14 @@ def reject(example, altered, identity, policy, proof_name="example.proof"):
     cmd = [BUILD / "verify-bend", use("config"), use("ivk"), use("example.req"), use("example.y"),
            proof if proof.exists() else example / "example.proof", "-id", identity, "-data", BUILD, *policy]
     env = {**os.environ, "PATH": "", "BEND_THREADS": "1"}
-    run = subprocess.run(cmd, cwd=altered, env=env, capture_output=True, text=True, timeout=600)
+    run = run_cli(cmd, cwd=altered, env=env, timeout=600, parity_dir=parity_dir,
+                  case=f"{altered.parent.name}-{altered.name}")
     lines = (run.stdout + run.stderr).splitlines()
     if run.returncode != 1 or not lines or not lines[-1].startswith("NO: "):
         raise RuntimeError(f"{altered.name}: expected a verifier rejection, got {run.returncode} {lines[-3:]}")
 
 
-def table(work, name, extended):
+def table(work, name, extended, parity_dir=None):
     spec = spec_from_file_location("upstream_cases", CASES / "try_altered_copies.py")
     cases = module_from_spec(spec)
     spec.loader.exec_module(cases)
@@ -48,11 +51,11 @@ def table(work, name, extended):
     oracle([sys.executable, "-I", "-B", cases.__file__, BUILD / "cp_verify", work, data, "--example", name],
            f"{expected} altered sets: all rejected")
     for index, (_, _, identity, _) in enumerate(rows, 1):
-        reject(cases.EXAMPLE, work / f"{index:02d}", identity, cases.stated_policy()[0])
+        reject(cases.EXAMPLE, work / f"{index:02d}", identity, cases.stated_policy()[0], parity_dir=parity_dir)
     print(f"{name}, {data.name}: both verifiers rejected {expected} cases", flush=True)
 
 
-def records(work):
+def records(work, parity_dir=None):
     example = EXAMPLES / "accepted-proof"
     runner = EXAMPLES.parent / "verifier/tests/record_altered_sets_test.py"
     identity = (example / "ID.txt").read_text().strip()
@@ -63,13 +66,13 @@ def records(work):
     if len(samples) != 23:
         raise ValueError(f"expected 23 altered record directories, found {len(samples)}")
     for sample in samples:
-        reject(example, sample, identity, [], "altered.proof")
+        reject(example, sample, identity, [], "altered.proof", parity_dir=parity_dir)
     # Substitute an intact but different committed leaf at the caller-selected index.
     cross = work / "cross"
     (cross / "ivk/leaf").mkdir(parents=True)
     (cross / "ivk/key.bin").symlink_to(example / "ivk/key.bin")
     (cross / "ivk/leaf/0.bin").symlink_to(EXAMPLES / "accepted-proof-clipped-gap/ivk/leaf/0.bin")
-    reject(example, cross, identity, [])
+    reject(example, cross, identity, [], parity_dir=parity_dir)
     print("Standalone rejected all 23 altered record sets and a leaf from another commitment", flush=True)
 
 
@@ -77,13 +80,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--extended", action="store_true")
     parser.add_argument("--records-only", action="store_true")
+    parser.add_argument("--parity-dir", type=Path, help="save and compare table cases with 1 and 16 workers")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(dir=BUILD) as tmp:
         root = Path(tmp)
         if args.extended or args.records_only:
-            records(root / "records")
+            records(root / "records", args.parity_dir)
         if not args.records_only:
             for name in ("accepted-proof", "accepted-proof-clipped-gap"):
-                table(root / name, name, False)
+                table(root / name, name, False, args.parity_dir)
             if args.extended:
-                table(root / "items", "accepted-proof", True)
+                table(root / "items", "accepted-proof", True, args.parity_dir)

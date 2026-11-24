@@ -1,4 +1,6 @@
 import Base
+import ./outer_source.bend as O
+import ./u3_series.bend as U
 import ./base_check.bend as B
 import ./extension.bend as X
 import ./fold.bend as F
@@ -13,7 +15,9 @@ import ./transcript.bend as T
 def prefix(fs: F.Factors,+limit: Nat,pow: Nat) -> Bool:
   match fs:
     case []: True{}
-    case F.Factor{lo,hi} <> tail:
+    case +f <> tail:
+      lo = F.at_bit(f,False{})
+      hi = F.at_bit(f,True{})
       +p = pow
       Bool.not(T.is_zero(lo)) && (Nat.is_le(limit,p) || Bool.not(T.is_zero(hi))) && prefix(tail,limit,Nat.mul(2n,p))
 
@@ -50,6 +54,11 @@ def column(axis: String) -> Bool: String.eq(axis,"U3")
 def u3(xs: List<&2,M.Read>,acc: F.Form) -> F.Form:
   match xs:
     case []: acc
+    case M.OuterRead{_,name,s} <> tail:
+      +prev = acc
+      more = Bool.pick(Unit -> F.Form,column(name),_ => List.reverse.go(&2,F.Term,O.expand(s),prev),_ => prev)
+      u3(tail,more(Unit{}))
+    case M.U3Run{_,s} <> tail: u3(tail,List.reverse.go(&2,F.Term,U.expand(s),acc))
     case M.Read{_,name,terms} <> tail:
       +prev = acc
       more = Bool.pick(F.Form,column(name),List.reverse.go(&2,F.Term,terms,prev),prev)

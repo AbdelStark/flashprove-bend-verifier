@@ -86,13 +86,13 @@ def finish(own: Own.First,pair: R.Reader & Req.FirstData) -> IO(Unit):
 
 def start(ctx: L.Context,ms: Inputs.Batches,events: Tr.Events,items: List<&2,P.Item>,+mode: Mode) -> IO(Own.First):
   match ctx ms:
-    case L.Context{book,Q.Shape{+c,+m,Con{+link,+links},+later},geo,p} Con{+g,rest}:
-      +context: L.Context = L.Context{book,Q.Shape{c,m,link <> links,later},geo,p}
+    case L.Context{book,Q.Shape{+c,+m,Con{+link,+links},+later},geo,p,_} Con{+g,rest}:
       +ev = events
       do IO<Own.First>:
+        +initial : Transport.State <- Transport.begin(ev,c,later)
+        +context : L.Context = L.Context{book,Q.Shape{c,m,link <> links,later},geo,p,Some{Chain.basis(initial)}}
         row : L.Logical <- L.at_feed(g,context)
         raw : L.Local <- L.physical(0n,context,row)
-        initial : Transport.State <- Transport.begin(ev,c,later)
         one : Chain.State <- Chain.step(link,change(mode,raw),c,m,Chain.State{initial,[]},True{})
         st : Chain.State <- Chain.walk(rest,links,context,c,m,folded(mode,one),1n)
         Chain.finish(st,c,m,later,ev,items)

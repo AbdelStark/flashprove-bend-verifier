@@ -1,0 +1,113 @@
+diff --git a/src/native/verify_main.c b/src/native/verify_main.c
+index b6e7ddf..8672f64 100644
+--- a/src/native/verify_main.c
++++ b/src/native/verify_main.c
+@@ -1,19 +1,45 @@
+-// Keep all user arguments in the verifier grammar. The Bend runtime otherwise
+-// handles +RTS --help before running main, including options set by BENDRTS.
++// Pass only the verifier's -j option to the scheduler. Keep all caller paths,
++// configuration values and raw +RTS tokens outside Bend's runtime grammar.
+ #define main bend_main
+ #include "verify_generated.c"
+ #undef main
+
+ int main(int argc, char **argv) {
+-  char **args = calloc((size_t)argc + 2, sizeof(*args));
++  char **args = calloc((size_t)argc + 6, sizeof(*args));
+   if (!args || unsetenv("BENDRTS") != 0) {
+-    perror("verify");
++    perror("verify-bend");
+     return 2;
+   }
+-  args[0] = argv[0];
+-  args[1] = "--RTS";
+-  memcpy(args + 2, argv + 1, (size_t)argc * sizeof(*args));
+-  int status = bend_main(argc + 1, args);
++  const char *threads = NULL;
++  // Reserve space ahead of the verifier arguments for a trusted runtime prefix.
++  int used = 5;
++  for (int i = 1; i < argc; i++) {
++    if (i >= 6 && strcmp(argv[i], "-j") == 0) {
++      const char *value = ++i < argc ? argv[i] : "";
++      long count = strtol(value, NULL, 10);
++      if (value[strspn(value, "0123456789")] || count < 1 || count > CUBE_T) {
++        fprintf(stderr, "verify-bend: -j expects a worker count from 1 to %d\n", CUBE_T);
++        free(args);
++        return 2;
++      }
++      threads = value;
++    } else {
++      args[used++] = argv[i];
++      if (i >= 6 && i + 1 < argc && (!strcmp(argv[i], "-id") ||
++          !strcmp(argv[i], "-policy") || !strcmp(argv[i], "-data"))) {
++        args[used++] = argv[++i];
++      }
++    }
++  }
++  int start = threads ? 0 : 3;
++  args[start] = argv[0];
++  if (threads) {
++    args[1] = "+RTS";
++    args[2] = "--threads";
++    args[3] = (char *)threads;
++  }
++  args[4] = "--RTS";
++  int status = bend_main(used - start, args + start);
+   free(args);
+   return status;
+ }
+diff --git a/src/segment_chain.bend b/src/segment_chain.bend
+index d89298f..78695d5 100644
+--- a/src/segment_chain.bend
++++ b/src/segment_chain.bend
+@@ -47,17 +47,27 @@ def walk(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c: B
+       +idx = i
+       do IO<State>:
+         ok : Unit <- Header.require(Nat.is_eq(idx,Local.number(model)),"NO: segment-link-order")
++        a : Nat <- IO.now()
+         logical : Local.Logical <- family(model,ctx,List.is_empty(&2,M.Inputs,tail))
++        +b : Nat <- IO.now()
+         physical : Local.Local <- Local.physical(idx,ctx,logical)
++        +c1 : Nat <- IO.now()
+         after : State <- step(link,physical,c,m,state,Nat.is_eq(idx,0n))
++        d : Nat <- IO.now()
++        trace : Unit <- IO.print_err("group " ++ Nat.show(idx) ++ " family/physical/advance ms " ++ Nat.show(Nat.sub(b,a)) ++ "/" ++ Nat.show(Nat.sub(c1,b)) ++ "/" ++ Nat.show(Nat.sub(d,c1)))
+         walk(tail,rest,ctx,c,m,after,1n+idx)
+     case _ _: IO.die(State,1,"NO: segment-link-count")
+
+ def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
+   State{cur,rows} = st
+   do IO<Own.First>:
++    a : Nat <- IO.now()
+     after : Trace.Events <- Fold.finish(Transport.restore(cur),c,m,later)
+-    Batt.checked(events,after,List.reverse(&2,Own.Pending,rows),items)
++    +b : Nat <- IO.now()
++    result : Own.First <- Batt.checked(events,after,List.reverse(&2,Own.Pending,rows),items)
++    d : Nat <- IO.now()
++    trace : Unit <- IO.print_err("finish fold/batt ms " ++ Nat.show(Nat.sub(b,a)) ++ "/" ++ Nat.show(Nat.sub(d,b)))
++    return result
+
+ def closed(ctx: Local.Context,models: Inputs.Batches,+events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
+   match ctx:
+diff --git a/src/standalone.bend b/src/standalone.bend
+index 625e233..32b5290 100644
+--- a/src/standalone.bend
++++ b/src/standalone.bend
+@@ -12,7 +12,7 @@ import ./hash_bytes.bend as H
+ import ./opening_bytes.bend as O
+
+ def usage() -> String:
+-  "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-timing]"
++  "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-j WORKERS] [-timing]"
+
+ type Options is Data:
+   Options{id: Maybe<&2,String>, policy: Maybe<&2,String>, public: Maybe<&2,String>, timing: Bool}
+@@ -78,6 +78,8 @@ def run(+config: String, +ivk: String, req: String, y: String, proof: String, bu
+       +public = Maybe.default(&2,String,dir,"build")
+       +plans = public ++ "/plans"
+       do IO<Unit>:
++        workers : U32 <- IO.thread_count()
++        counted : Unit <- report(timing,"timing: workers " ++ U32.show(workers))
+         +start : Nat <- IO.now()
+         +st : S.Statement <- S.load(config,req,y,public ++ "/tables",policy)
+         +cfg : Config.Configured <- Config.load(st,config,plans)

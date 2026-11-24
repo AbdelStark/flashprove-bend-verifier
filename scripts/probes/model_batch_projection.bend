@@ -15,7 +15,9 @@ import ./segment_projection.bend as Output
 def at(f: F.Factors, coordinate: Nat,acc: X.E3) -> X.E3:
   match f:
     case []: acc
-    case F.Factor{l,h} <> rest:
+    case +factor <> rest:
+      l = F.at_bit(factor,False{})
+      h = F.at_bit(factor,True{})
       +i = coordinate
       at(rest,1n+i,E.mul(acc,F.mix(l,h,KL.small(i))))
 
@@ -42,7 +44,7 @@ def result(row: Local.Local,ms: X.E3) -> IO(Unit):
   IO.print("model-batch " ++ Output.print(y) ++ " " ++ Output.print(cells(fs,F.zero())) ++ " " ++ Output.print(ms))
 
 def mask_sum(got: Local.Logical) -> X.E3:
-  Local.Logical{Batch.Row{_,ms,_},_} = got
+  Local.Logical{Batch.Row{_,ms,_},_,_} = got
   masks(ms,1n,F.zero())
 
 def emit(p: Local.Logical,ctx: Local.Context,link: Nat) -> IO(Unit):

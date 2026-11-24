@@ -12,8 +12,8 @@ def eq(xs: B.Elements) -> F.Factors:
 
 def select(bit: Nat) -> F.Factor:
   match bit:
-    case 0n: F.Factor{F.one(),F.zero()}
-    case _: F.Factor{F.zero(),F.one()}
+    case 0n: F.Low{}
+    case _: F.High{}
 
 type Member is Data:
   Only{}
@@ -43,15 +43,17 @@ def powers(bits: Nat, +z: Field.Gl) -> F.Factors:
 def entry(fs: F.Factors, +n: Nat, acc: Ext.E3) -> Ext.E3:
   match fs:
     case []: acc
-    case F.Factor{lo,hi} <> tail:
-      pick = Bool.pick(Ext.E3,Nat.is_eq(Nat.mod(n,2n),0n),lo,hi)
+    case f <> tail:
+      pick = F.at_bit(f,Nat.is_eq(Nat.mod(n,2n),1n))
       entry(tail,Nat.div(n,2n),E.mul(acc,pick))
 
 # A dyadic block keeps the low coordinates free and fixes the high coordinates to its prefix.
 def fixed(fs: F.Factors, +prefix: Nat) -> F.Factors:
   match fs:
     case []: []
-    case F.Factor{l,h} <> tail:
+    case +x <> tail:
+      l = F.at_bit(x,False{})
+      h = F.at_bit(x,True{})
       f = Bool.pick(F.Factor,Nat.is_eq(Nat.mod(prefix,2n),0n),F.Factor{l,F.zero()},F.Factor{F.zero(),h})
       f <> fixed(tail,Nat.div(prefix,2n))
 

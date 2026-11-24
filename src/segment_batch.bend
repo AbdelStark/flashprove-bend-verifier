@@ -1,4 +1,8 @@
 import Base
+import ./outer_source.bend as O
+import ./segment_outer.bend as Outer
+import ./segment_projection.bend as Project
+import ./u3_series.bend as U
 import ./smallness.bend as Small
 import ./smallness_form.bend as SF
 import ./smallness_geometry.bend as Geo
@@ -27,6 +31,8 @@ type Row is Data:
 def scaled(ts: List<&2,M.Read>,+power: X.E3,acc: List<&2,M.Read>) -> List<&2,M.Read>:
   match ts:
     case []: acc
+    case M.OuterRead{id,n,s} <> rest: scaled(rest,power,M.OuterRead{id,n,O.scaled(s,power)} <> acc)
+    case M.U3Run{id,s} <> rest: scaled(rest,power,M.U3Run{id,U.scaled(s,power)} <> acc)
     case M.Read{link,name,terms} <> rest:
       scaled(rest,power,M.Read{link,name,V.scale(terms,power,[])} <> acc)
 
@@ -111,13 +117,22 @@ def combine(+prefix: M.Equations,suffix: M.Equations,part: Small.Contribution,+s
     last : State <- batch(suffix,powers(e,shift),chi,slots)
     finish(last,slots,free)
 
-def place(rs: List<&2,M.Read>,+layout: Layout.Book,+shape: Q.Shape,acc: Frame.Forms) -> IO(Frame.Forms):
+def place(rs: List<&2,M.Read>,+layout: Layout.Book,+shape: Q.Shape,+basis: Maybe<&2,Project.Basis>,acc: Frame.Forms) -> IO(Frame.Forms):
   match rs:
     case []: IO.pure(Frame.Forms,acc)
+    case M.OuterRead{+owner,name,source} <> tail:
+      do IO<Frame.Forms>:
+        table : Layout.Matrix <- Layout.lookup(Map.get(Maybe<&2,Layout.Matrix>,None{},layout,Layout.key(owner,name)))
+        on : Frame.On <- Outer.located(shape,table,source,owner,basis)
+        place(tail,layout,shape,basis,on <> acc)
+    case M.U3Run{owner,s} <> tail:
+      do IO<Frame.Forms>:
+        on : Frame.On <- Layout.on_main(layout,shape,owner,"U3",U.expand(s))
+        place(tail,layout,shape,basis,on <> acc)
     case M.Read{owner,name,terms} <> tail:
       do IO<Frame.Forms>:
         on : Frame.On <- Layout.on_main(layout,shape,owner,name,terms)
-        place(tail,layout,shape,on <> acc)
+        place(tail,layout,shape,basis,on <> acc)
 
 def mask_member(ns: Q.Notices) -> IO(Nat):
   match ns:
@@ -129,11 +144,11 @@ def mask_label(link: Q.Link) -> IO(Nat):
   Q.Link{_,ns} = link
   mask_member(ns)
 
-def physical(shape: Q.Shape,layout: Layout.Book,link: Nat,row: Row) -> IO(Frame.Equation):
+def physical(shape: Q.Shape,layout: Layout.Book,link: Nat,row: Row,basis: Maybe<&2,Project.Basis>) -> IO(Frame.Equation):
   Q.Shape{c,+m,+links,stages} = shape
   Row{rs,v,y} = row
   do IO<Frame.Equation>:
     l : Q.Link <- K.need(Q.Link,List.get(&2,Q.Link,links,link),"NO: segment-link")
     id : Nat <- mask_label(l)
-    on : Frame.Forms <- place(rs,layout,Q.Shape{c,m,links,stages},[])
+    on : Frame.Forms <- place(rs,layout,Q.Shape{c,m,links,stages},basis,[])
     return Frame.Equation{Frame.On{id,True{},SF.dense(v,[],Layout.columns(m),0n,F.one(),[])} <> on,y}

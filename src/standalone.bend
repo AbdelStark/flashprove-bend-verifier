@@ -12,7 +12,7 @@ import ./hash_bytes.bend as H
 import ./opening_bytes.bend as O
 
 def usage() -> String:
-  "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-timing]"
+  "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-j WORKERS] [-timing]"
 
 type Options is Data:
   Options{id: Maybe<&2,String>, policy: Maybe<&2,String>, public: Maybe<&2,String>, timing: Bool}
@@ -78,6 +78,8 @@ def run(+config: String, +ivk: String, req: String, y: String, proof: String, bu
       +public = Maybe.default(&2,String,dir,"build")
       +plans = public ++ "/plans"
       do IO<Unit>:
+        workers : U32 <- IO.thread_count()
+        counted : Unit <- report(timing,"timing: workers " ++ U32.show(workers))
         +start : Nat <- IO.now()
         +st : S.Statement <- S.load(config,req,y,public ++ "/tables",policy)
         +cfg : Config.Configured <- Config.load(st,config,plans)

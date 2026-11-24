@@ -70,14 +70,14 @@ def write(term: F.Term,buf: Array<X.E3>) -> Array<X.E3>:
     a => F.deposit(List.reverse(&2,F.Factor,fs),0,w,a))
   branch(buf)
 
-def reduce(xs: F.Form,+gamma: B.Elements,buf: Array<X.E3>) -> Array<X.E3>:
+def reduce(xs: F.Form,+cs: F.Chunks,buf: Array<X.E3>) -> Array<X.E3>:
   match xs:
     case []: buf
-    case F.Term{w,fs} <> tail: reduce(tail,gamma,write(F.fix(gamma,fs,w),buf))
+    case term <> tail: reduce(tail,cs,write(F.project(cs,term),buf))
 
 def merge(+basis: Basis,local: F.Form,old: B.Elements,scale: X.E3) -> B.Elements:
   Basis{gs,_,n} = basis
-  table = reduce(local,gs,Array.new(X.E3,n,F.zero()))
+  table = reduce(local,F.prepare(gs),Array.new(X.E3,n,F.zero()))
   F.accumulate(Array.to_list(X.E3,table),F.scaled(old,scale),[])
 
 def zeros(basis: Basis) -> B.Elements:

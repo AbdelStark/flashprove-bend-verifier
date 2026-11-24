@@ -1,4 +1,5 @@
 import Base
+import ./outer_source.bend as O
 import ./extension.bend as X
 import ./fold.bend as F
 import ./base_check.bend as B
@@ -14,6 +15,7 @@ def weight_sum(fs: F.Factors, acc: X.E3) -> X.E3:
   match fs:
     case []: acc
     case F.Factor{a,b} <> tail: weight_sum(tail,E.mul(acc,E.add(a,b)))
+    case _ <> tail: weight_sum(tail,acc)
 
 def total(rows: F.Form, acc: X.E3) -> X.E3:
   match rows:
@@ -46,10 +48,4 @@ def at_columns(xs: B.Elements, +offset: Nat, +stride: Nat, +bits: Nat, i: Nat, +
 
 # Two consecutive dense column coefficients share the fixed upper factors.
 def dense(cols: B.Elements, +row: F.Factors, +bits: Nat, i: Nat, +scale: X.E3, acc: F.Form) -> F.Form:
-  match cols:
-    case []: acc
-    case [a]: F.Term{E.mul(a,scale),List.append(&2,F.Factor,row,V.choice(bits,i))} <> acc
-    case a <> b <> tail:
-      +j = i
-      fs: F.Factors = F.Factor{a,b} <> V.choice(Nat.sub(bits,1n),Nat.div(j,2n))
-      dense(tail,row,bits,Nat.add(j,2n),scale,F.Term{scale,List.append(&2,F.Factor,row,fs)} <> acc)
+  O.pairs(cols,row,bits,i,scale,acc)

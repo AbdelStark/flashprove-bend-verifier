@@ -44,3 +44,7 @@ echo "== Read and parse the full-size proof (18.8 MB) as 64-bit words =="
 "$bend" "$here/parse/parse.bend" -o "$w/parse"
 echo "bend (1 thread):"; t "$w/parse" "$proof" +RTS --threads 1
 echo "python reference:"; python3 "$here/parse/ref.py" "$proof"
+
+echo "== LIN own-table layout, 81,920 terms with 12 to 23 input coordinates =="
+"$bend" "$here/lin/layout.bend" -o "$w/layout"
+echo "bend (1 thread), expected 2048000 output coordinates:"; t "$w/layout" +RTS --threads 1

@@ -16,8 +16,104 @@ import ./oracle_sample.bend as Sample
 # the admitted text by Layout.check. Each logical block is one dyadic tile.
 type Block is Data:
   Block{i: Nat, c: Nat, r: Nat, p: Nat, bi: Nat, bc: Nat, br: Nat, bp: Nat, i_low: Bool}
+# A dyadic tile lies on one side of any cut above its own size. Build a
+# decision tree over logical row and column prefixes once per public matrix.
+def Tiles() -> Data: List<&2,Block>
+type Index is Data:
+  Empty{}
+  Leaf{block: Block}
+  Rows{lo: Index,hi: Index}
+  Cols{lo: Index,hi: Index}
+  General{}
+
+type Next is Data:
+  CompleteIndex{tree: Index}
+  CutTiles{row: Bool, rows: Nat, cols: Nat, lo: Tiles, hi: Tiles}
+
+def row_bits(b: Block) -> Nat:
+  Block{_,_,_,_,r,_,_,_,_} = b
+  r
+
+def col_bits(b: Block) -> Nat:
+  Block{_,_,_,_,_,c,_,_,_} = b
+  c
+
+def free_cut(bs: Tiles,+row: Bool,+bits: Nat) -> Bool:
+  match bs:
+    case []: True{}
+    case +b <> tail:
+      Nat.is_lt(Bool.pick(Nat,row,row_bits(b),col_bits(b)),bits) && free_cut(tail,row,bits)
+
+def coordinate(b: Block,row: Bool) -> Nat:
+  Block{i,c,_,_,_,_,_,_,_} = b
+  Bool.pick(Nat,row,i,c)
+
+def divide(bs: Tiles,+row: Bool,+half: Nat,+lo: Tiles,+hi: Tiles) -> Tiles & Tiles:
+  match bs:
+    case []: (lo,hi)
+    case +b <> tail:
+      +upper = Nat.is_eq(Nat.mod(Nat.div(coordinate(b,row),half),2n),1n)
+      divide(tail,row,half,Bool.pick(Tiles,upper,lo,b <> lo),Bool.pick(Tiles,upper,b <> hi,hi))
+
+def cut(row: Bool,rows: Nat,cols: Nat,pair: Tiles & Tiles) -> Next:
+  (lo,hi) = pair
+  CutTiles{row,rows,cols,lo,hi}
+
+def cut_axis(row: Bool,bs: Tiles,rows: Nat,cols: Nat) -> Next:
+  match row:
+    case True{}:
+      +r = Nat.sub(rows,1n)
+      cut(True{},r,cols,divide(bs,True{},Nat.pow(2n,r),[],[]))
+    case False{}:
+      +c = Nat.sub(cols,1n)
+      cut(False{},rows,c,divide(bs,False{},Nat.pow(2n,c),[],[]))
+
+def branch(+bs: Tiles,+r: Nat,+c: Nat) -> Next:
+  +row = free_cut(bs,True{},r)
+  go = Bool.pick(Unit -> Next,row || free_cut(bs,False{},c),_ => cut_axis(row,bs,r,c),_ => CompleteIndex{General{}})
+  go(Unit{})
+
+def split(bs: Tiles,+r: Nat,+c: Nat) -> Next:
+  match bs:
+    case []: CompleteIndex{Empty{}}
+    case [+b]:
+      go = Bool.pick(Unit -> Next,Nat.is_eq(row_bits(b),r) && Nat.is_eq(col_bits(b),c),
+        _ => CompleteIndex{Leaf{b}},_ => branch([b],r,c))
+      go(Unit{})
+    case xs: branch(xs,r,c)
+
+def node(row: Bool,lo: Index,hi: Index) -> Index:
+  match row lo hi:
+    case _ General{} _: General{}
+    case _ _ General{}: General{}
+    case True{} a b: Rows{a,b}
+    case False{} a b: Cols{a,b}
+
+def tree(budget: Nat,next: Next) -> Index:
+  match budget next:
+    case _ CompleteIndex{t}: t
+    case 1n+m CutTiles{is_row,+r,+c,lo,hi}:
+      +k = m
+      node(is_row,tree(k,split(lo,r,c)),tree(k,split(hi,r,c)))
+    case 0n _: General{}
+
+def axis_valid(+at: Nat,+bits: Nat,limit: Nat) -> Bool:
+  Nat.is_lt(at,limit) && Nat.is_eq(Nat.mod(at,Nat.pow(2n,bits)),0n)
+
+def aligned(bs: Tiles,+rows: Nat,+cols: Nat) -> Bool:
+  match bs:
+    case []: True{}
+    case Block{i,c,_,_,bi,bc,_,_,_} <> rest:
+      axis_valid(i,bi,rows) && axis_valid(c,bc,cols) && aligned(rest,rows,cols)
+
+def index(+rows: Nat,+cols: Nat,+bs: Tiles) -> Index:
+  +r = Sample.row_bits(rows)
+  +c = Sample.row_bits(cols)
+  go = Bool.pick(Unit -> Index,aligned(bs,rows,cols),_ => tree(Nat.add(r,c),split(bs,r,c)),_ => General{})
+  go(Unit{})
+
 type Matrix is Data:
-  Matrix{message: Nat, rows: Nat, columns: Nat, blocks: List<&2,Block>}
+  Matrix{message: Nat, rows: Nat, columns: Nat, blocks: List<&2,Block>, index: Index}
 def Book() -> Data: Map<&2,Maybe<&2,Matrix>>
 type Cut<-A: Data> is Data:
   Cut{value: A, tail: H.Bytes}
@@ -40,11 +136,11 @@ def block_list(n: Nat, xs: List<&2,Nat>, acc: List<&2,Block>) -> IO(List<&2,Bloc
       block_list(k,rest,Block{i,c,r,p,bi,bc,br,bp,Nat.is_eq(low,1n)} <> acc)
     case _ _: IO.die(List<&2,Block>,1,"NO: segment-layout-block")
 
-def placed(k: String, book: Book, m: Nat, rows: Nat, cols: Nat, n: Nat, cut: Cut<List<&2,Nat>>) -> IO(Cut<Book>):
+def placed(k: String, book: Book, m: Nat, +rows: Nat, +cols: Nat, n: Nat, cut: Cut<List<&2,Nat>>) -> IO(Cut<Book>):
   Cut{data,tail} = cut
   do IO<Cut<Book>>:
-    pieces : List<&2,Block> <- block_list(n,data,[])
-    return Cut{Map.set(&2,Maybe<&2,Matrix>,book,k,Some{Matrix{m,rows,cols,pieces}}),tail}
+    +pieces : List<&2,Block> <- block_list(n,data,[])
+    return Cut{Map.set(&2,Maybe<&2,Matrix>,book,k,Some{Matrix{m,rows,cols,pieces,index(rows,cols,pieces)}}),tail}
 
 def metadata(k: String, book: Book, cut: Cut<List<&2,Nat>>) -> IO(Cut<Book>):
   match cut:
@@ -105,14 +201,15 @@ def cat(xs: F.Factors, ys: F.Factors) -> F.Factors:
 # coordinate disagrees, before allocating its destination factor list.
 def multiply(p:X.E3,w:X.E3) -> X.E3:
   match p:
+    case X.E3{0,0,0,0,0,0}: F.zero()
     case X.E3{0,1,0,0,0,0}: w
     case +v: E.mul(w,v)
 
 def upper_value(fs:F.Factors,+index:Nat,w:X.E3) -> X.E3:
   match fs:
     case []: w
-    case F.Factor{lo,hi} <> tail:
-      +p = Bool.pick(X.E3,Nat.is_eq(Nat.mod(index,2n),0n),lo,hi)
+    case f <> tail:
+      +p = F.at_bit(f,Nat.is_eq(Nat.mod(index,2n),1n))
       go = Bool.pick(Unit -> X.E3,B.equal(p,F.zero()),_ => F.zero(),
         _ => upper_value(tail,Nat.div(index,2n),multiply(p,w)))
       go(Unit{})
@@ -162,10 +259,56 @@ def translate(ts:F.Form,+bs:List<&2,Block>,+src:Nat,+dr:Nat,+dc:Nat,acc:F.Form) 
     case []: acc
     case t <> tail: translate(tail,bs,src,dr,dc,tiles(bs,axes(t,src),dr,dc,acc))
 
+# Reverse each axis once. On entry to a leaf, the remaining factors are
+# exactly its free low bits. The accumulated weight includes its fixed prefix.
+def descend(tree: Index,live: Bool,rows: F.Factors,cols: F.Factors,w: X.E3,dr: Nat,dc: Nat,acc: F.Form) -> F.Form:
+  match tree live rows cols:
+    case _ False{} _ _: acc
+    case Rows{a,b} True{} Con{+f,+tail} +xs:
+      +r = dr
+      +c = dc
+      +v = w
+      +lo = F.at_bit(f,False{})
+      +hi = F.at_bit(f,True{})
+      left = descend(a,Bool.not(B.equal(lo,F.zero())),tail,xs,multiply(lo,v),r,c,acc)
+      descend(b,Bool.not(B.equal(hi,F.zero())),tail,xs,multiply(hi,v),r,c,left)
+    case Cols{a,b} True{} +xs Con{+f,+tail}:
+      +r = dr
+      +c = dc
+      +v = w
+      +lo = F.at_bit(f,False{})
+      +hi = F.at_bit(f,True{})
+      left = descend(a,Bool.not(B.equal(lo,F.zero())),xs,tail,multiply(lo,v),r,c,acc)
+      descend(b,Bool.not(B.equal(hi,F.zero())),xs,tail,multiply(hi,v),r,c,left)
+    case Leaf{b} True{} rs cs:
+      +v = w
+      project(b,Axes{v,List.reverse(&2,F.Factor,rs),List.reverse(&2,F.Factor,cs)},dr,dc,v) <> acc
+    case _ _ _ _: acc
+
+def indexed_term(valid: Bool,tree: Index,bs: Tiles,+dr: Nat,+dc: Nat,a: Axes,acc: F.Form) -> F.Form:
+  match valid a:
+    case True{} Axes{+w,rs,cs}: descend(tree,Bool.not(B.equal(w,F.zero())),List.reverse(&2,F.Factor,rs),List.reverse(&2,F.Factor,cs),w,dr,dc,acc)
+    case False{} x: tiles(bs,x,dr,dc,acc)
+
+def indexed_terms(ts: F.Form,+tree: Index,+bs: Tiles,+rb: Nat,+width: Nat,+dr: Nat,+dc: Nat,acc: F.Form) -> F.Form:
+  match ts:
+    case []: acc
+    case F.Term{w,+fs} <> tail:
+      valid = Nat.is_eq(width,List.length(&2,F.Factor,fs))
+      a = axes(F.Term{w,fs},rb)
+      indexed_terms(tail,tree,bs,rb,width,dr,dc,indexed_term(valid,tree,bs,dr,dc,a,acc))
+
+def translate_matrix(tree: Index,ts: F.Form,bs: Tiles,rows: Nat,cols: Nat,dr: Nat,dc: Nat) -> F.Form:
+  match tree:
+    case General{}: translate(ts,bs,Sample.row_bits(rows),dr,dc,[])
+    case t:
+      +rb = Sample.row_bits(rows)
+      indexed_terms(ts,t,bs,rb,Nat.add(rb,Sample.row_bits(cols)),dr,dc,[])
+
 def addressed(m: Matrix, link: Nat, terms: F.Form, width: Nat, member: Frame.Member) -> Frame.On:
-  Matrix{msg,n,_,bs} = m
+  Matrix{msg,n,cols,bs,tree} = m
   Frame.Member{_,rows,_,_,_} = member
-  Frame.On{Q.label(link,msg),False{},translate(terms,bs,Sample.row_bits(n),Sample.row_bits(rows),width,[])}
+  Frame.On{Q.label(link,msg),False{},translate_matrix(tree,terms,bs,n,cols,Sample.row_bits(rows),width)}
 
 def lookup(found: Book & Maybe<&2,Matrix>) -> IO(Matrix):
   (_,m) = found
@@ -186,7 +329,7 @@ def columns(c: B.Code) -> Nat:
 
 def on_member(q: Q.Shape, +mat: Matrix, +link: Nat, terms: F.Form) -> IO(Frame.On):
   Q.Shape{code,_,links,_} = q
-  Matrix{msg,_,_,_} = mat
+  Matrix{msg,_,_,_,_} = mat
   do IO<Frame.On>:
     shape : Q.Link <- K.need(Q.Link,List.get(&2,Q.Link,links,link),"NO: segment-layout-link")
     message : Frame.Member <- member(shape,msg)

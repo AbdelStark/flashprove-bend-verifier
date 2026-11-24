@@ -1,4 +1,6 @@
 import Base
+import ../../src/outer_source.bend as O
+import ../../src/u3_series.bend as U
 import ../../src/segment_inputs.bend as Inputs
 import ../../src/segment_attention.bend as Attention
 import ../../src/segment_attention_aff.bend as A
@@ -14,7 +16,9 @@ import ./segment_projection.bend as Output
 def factors(xs:F.Factors,+power:X.E3,acc:X.E3) -> X.E3:
   match xs:
     case []: acc
-    case F.Factor{lo,hi} <> tail:
+    case +factor <> tail:
+      lo = F.at_bit(factor,False{})
+      hi = F.at_bit(factor,True{})
       factors(tail,E.mul(power,power),E.mul(acc,E.add(lo,E.mul(power,hi))))
 def terms(xs:F.Form,acc:X.E3) -> X.E3:
   match xs:
@@ -23,6 +27,8 @@ def terms(xs:F.Form,acc:X.E3) -> X.E3:
 def reads(xs:List<&2,Model.Read>,acc:X.E3) -> X.E3:
   match xs:
     case []: acc
+    case Model.OuterRead{_,_,s} <> tail: reads(tail,terms(O.expand(s),acc))
+    case Model.U3Run{_,s} <> tail: reads(tail,terms(U.expand(s),acc))
     case Model.Read{_,_,fs} <> tail: reads(tail,terms(fs,acc))
 def rows(xs:Model.Equations,acc:X.E3) -> IO(X.E3):
   match xs:

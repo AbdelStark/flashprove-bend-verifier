@@ -40,11 +40,33 @@ def geometry(ss: List<&2,S.Stage>, w: U32, masks: U32, omega: U32) -> IO(Geometr
       return_geometry(s <> tail,U32.to_nat(w),U32.to_nat(masks),U32.to_nat(omega),ell,ell_mask,U32.to_nat(k),U32.to_nat(h))
     case _: IO.die(Geometry,1,"NO: lin-own-stages")
 
-def table(terms: F.Form, +rows: Nat, +ell: Nat, k: Nat, offset: Nat) -> F.Form:
-  +places = CS.bits(ell)
+# Source coordinates are [place, member row]. A shorter term fixes its missing
+# high bits to zero. Group coordinates are [member row, group prefix, place].
+def place_factors(n: Nat, fs: F.Factors, +zero: F.Factor) -> F.Factors:
+  match n fs:
+    case 0n _: []
+    case 1n+k Con{f,rest}: f <> place_factors(k,rest,zero)
+    case 1n+k Nil{}: zero <> place_factors(k,[],zero)
+
+def row_factors(n: Nat, fs: F.Factors, prefix: F.Factors, places: F.Factors, +zero: F.Factor) -> F.Factors:
+  match n fs:
+    case 0n rest: List.append(&2,F.Factor,prefix,List.append(&2,F.Factor,rest,places))
+    case 1n+k Con{f,rest}: f <> row_factors(k,rest,prefix,places,zero)
+    case 1n+k Nil{}: zero <> row_factors(k,[],prefix,places,zero)
+
+def layout(terms: F.Form, +cols: Nat, +rows: Nat, +prefix: F.Factors, +zero: F.Factor) -> F.Form:
+  match terms:
+    case []: []
+    case F.Term{w,+fs} <> tail:
+      places = place_factors(cols,fs,zero)
+      row = List.drop(&2,F.Factor,fs,cols)
+      ordered = row_factors(rows,row,prefix,places,zero)
+      F.Term{w,ordered} <> layout(tail,cols,rows,prefix,zero)
+
+def table(terms: F.Form, rows: Nat, ell: Nat, k: Nat, offset: Nat) -> F.Form:
   +r = Sample.row_bits(rows)
-  local = X.rows_high(X.extend(terms,Nat.add(places,r),0n),places,X.Only{})
-  Sample.group_form(local,r,k,offset)
+  prefix = X.choice(Nat.sub(k,r),Nat.div(offset,Nat.pow(2n,r)))
+  layout(terms,CS.bits(ell),r,prefix,X.select(0n))
 
 def eq(psi: B.Elements, scale: E.E3) -> F.Form:
   [F.Term{scale,X.eq(psi)}]

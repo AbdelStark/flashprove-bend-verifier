@@ -43,13 +43,26 @@ def valid(part: Part) -> Bool:
   Nat.is_eq(rows,0n) || (Nat.is_lt(0n,ell) && Nat.is_le(g,32n) && Nat.is_eq(Nat.mod(first,span),0n) &&
     Nat.is_le(Nat.add(first,span),Nat.pow(2n,Nat.min(g,32n))))
 
-def group_form(terms: F.Form, +bits: Nat, +group: Nat, +first: Nat) -> F.Form:
+# The prefix fixes the high group-row coordinates between member rows and places.
+def insert_prefix(rows: Nat, fs: F.Factors, prefix: F.Factors) -> F.Factors:
+  match rows fs:
+    case 0n rest: List.append(&2,F.Factor,prefix,rest)
+    case 1n+k Con{f,rest}: f <> insert_prefix(k,rest,prefix)
+    case _ Nil{}: prefix
+
+def prefix_terms(terms: F.Form, +bits: Nat, +prefix: F.Factors) -> F.Form:
   match terms:
     case []: []
-    case F.Term{w,+fs} <> rest:
-      prefix = X.choice(Nat.sub(group,bits),Nat.div(first,Nat.pow(2n,bits)))
-      factors = List.concat(&2,F.Factor,[List.take(&2,F.Factor,fs,bits),prefix,List.drop(&2,F.Factor,fs,bits)])
-      F.Term{w,factors} <> group_form(rest,bits,group,first)
+    case F.Term{w,fs} <> rest:
+      F.Term{w,insert_prefix(bits,fs,prefix)} <> prefix_terms(rest,bits,prefix)
+
+def embed_group(extra: Nat, terms: F.Form, +bits: Nat, first: Nat) -> F.Form:
+  match extra:
+    case 0n: terms
+    case 1n+k: prefix_terms(terms,bits,X.choice(1n+k,Nat.div(first,Nat.pow(2n,bits))))
+
+def group_form(terms: F.Form, +bits: Nat, group: Nat, first: Nat) -> F.Form:
+  embed_group(Nat.sub(group,bits),terms,bits,first)
 
 def basis(i: Nat) -> Ext.E3:
   match i:

@@ -1,4 +1,5 @@
 import Base
+import ./u3_series.bend as U
 import ./segment_coverage.bend as Cover
 import ./base_check.bend as B
 import ./extension.bend as X
@@ -21,14 +22,6 @@ import ./header.bend as Header
 # therefore have the geometric progression (chi^128)^sg without division.
 type Sums is Data:
   Sums{reads: List<&2,M.Read>, rhs: X.E3, count: Nat, entries: Nat, power: X.E3, matrix_weights: F.Form}
-
-def columns(gam: B.Elements, +segments: Nat, +offset: Nat, +total_bits: Nat,
-  +low: F.Factors, +weight: X.E3, acc: F.Form) -> F.Form:
-  match gam:
-    case []: acc
-    case c <> rest:
-      terms = SF.move([F.Term{E.mul(c,weight),low}],[],segments,offset,total_bits,F.one(),acc)
-      columns(rest,segments,Nat.add(offset,segments),total_bits,low,weight,terms)
 
 def with_high(rows: F.Form,+high: F.Factors) -> F.Form:
   match rows:
@@ -54,11 +47,11 @@ def read(fn_: M.Functional, mat: Mat.Matrix, world: Mat.World, state: Sums) -> I
   +delta = E.mul(lead,E.mul(K.small(131072n),E.mul(sum_u,SF.total(phi,F.zero()))))
   +weights = with_high(phi,high)
   zz = SF.digits(weights,axis,rows,off,mz,lead)
-  u3 = columns(gam,segments,at,bits,high,E.negate(lead),[])
+  u3: U.Series = U.Series{gam,segments,at,bits,step,E.negate(lead)}
   do IO<Sums>:
     valid : Unit <- Header.require(Nat.is_eq(Nat.pow(2n,Sample.row_bits(length)),length) &&
       Nat.is_eq(Nat.mul(length,segments),rows) && F.fits(phi,Sample.row_bits(length)),"NO: segment-functional-shape")
-    return Sums{M.Read{link,"U3",u3} <> M.Read{link,"ZZ",zz} <> fs,E.add(rhs,E.mul(delta,sum(progression))),
+    return Sums{M.U3Run{link,u3} <> M.Read{link,"ZZ",zz} <> fs,E.add(rhs,E.mul(delta,sum(progression))),
       Nat.add(n,segments),Nat.add(entries,Nat.mul(k,segments)),E.mul(lead,after(progression)),Tensor.scale(weights,lead,test)}
 
 def matrix(fn_: M.Functional) -> Nat:

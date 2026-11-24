@@ -23,6 +23,16 @@ def main() -> IO(Unit):
     # ((2^32 - 1) + 2 * 2^128) mod p = (2^32 - 2) * 2^32.
     # Correcting the high-limb borrow also wraps the low limb.
     IO.print(limbs(Field.Gl.lower(Field.Gl{0, 4294967295}, 2)))
+    # Direct 128-bit reduction vectors span the signed carry cases of
+    # x0 - x2 - x3 + 2^32 * (x1 + x2). Expected limbs are divmod(X % p, 2^32).
+    IO.print(limbs(Field.Gl.reduce(4294967295, 0, 0, 4294967294)))
+    IO.print(limbs(Field.Gl.reduce(0, 0, 4294967295, 1)))
+    IO.print(limbs(Field.Gl.reduce(0, 4294967295, 4294967295, 4294967295)))
+    IO.print(limbs(Field.Gl.reduce(4294967295, 4294967295, 4294967295, 4294967295)))
+    # floor((2^32 - 1)^2 / 2^32) exercises the maximum 48-bit partial sum.
+    IO.print(U32.show(Field.mulhi(4294967295, 4294967295)))
+    # Adding two raw 64-bit words still reduces at the second multiple of p.
+    IO.print(limbs(Ext.add(Field.Gl{4294967295, 4294967295}, Field.Gl{4294967295, 4294967295})))
 
 #|0 2 0 0 0 0
 #|0 0 0 2 0 0
@@ -32,3 +42,9 @@ def main() -> IO(Unit):
 #|0 0 0 0 0 0
 #|2822347717 1272377527 3139375100 2795758142 971541336 761933512
 #|4294967294 0
+#|4294967295 0
+#|0 0
+#|4294967294 4294967295
+#|4294967294 0
+#|4294967294
+#|1 4294967292
