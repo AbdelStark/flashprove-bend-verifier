@@ -224,6 +224,8 @@ def translate(ts:F.Form,+bs:List<&2,Block>,+src:Nat,+dr:Nat,+dc:Nat,acc:F.Form) 
 def descend(tree: Columns,rev: F.Factors,w: X.E3,dr: Nat,dc: Nat,acc: F.Form) -> F.Form:
   match tree rev w:
     case _ _ X.E3{0,0,0,0,0,0}: acc
+    case Fork{a,_} Con{F.Low{},tail} v: descend(a,tail,v,dr,dc,acc)
+    case Fork{_,b} Con{F.High{},tail} v: descend(b,tail,v,dr,dc,acc)
     case Fork{a,b} Con{F.Factor{l,h},+tail} +v:
       +r = dr
       +c = dc
