@@ -261,29 +261,33 @@ def translate(ts:F.Form,+bs:List<&2,Block>,+src:Nat,+dr:Nat,+dc:Nat,acc:F.Form) 
 
 # Reverse each axis once. On entry to a leaf, the remaining factors are
 # exactly its free low bits. The accumulated weight includes its fixed prefix.
-def descend(tree: Index,rows: F.Factors,cols: F.Factors,w: X.E3,dr: Nat,dc: Nat,acc: F.Form) -> F.Form:
-  match tree rows cols w:
-    case _ _ _ X.E3{0,0,0,0,0,0}: acc
-    case Rows{a,_} Con{F.Low{},rs} cs v: descend(a,rs,cs,v,dr,dc,acc)
-    case Rows{_,b} Con{F.High{},rs} cs v: descend(b,rs,cs,v,dr,dc,acc)
-    case Cols{a,_} rs Con{F.Low{},cs} v: descend(a,rs,cs,v,dr,dc,acc)
-    case Cols{_,b} rs Con{F.High{},cs} v: descend(b,rs,cs,v,dr,dc,acc)
-    case Rows{a,b} Con{F.Factor{l,h},+tail} +xs +v:
+def descend(tree: Index,live: Bool,rows: F.Factors,cols: F.Factors,w: X.E3,dr: Nat,dc: Nat,acc: F.Form) -> F.Form:
+  match tree live rows cols:
+    case _ False{} _ _: acc
+    case Rows{a,b} True{} Con{+f,+tail} +xs:
       +r = dr
       +c = dc
-      left = descend(a,tail,xs,multiply(l,v),r,c,acc)
-      descend(b,tail,xs,multiply(h,v),r,c,left)
-    case Cols{a,b} +xs Con{F.Factor{l,h},+tail} +v:
+      +v = w
+      +lo = F.at_bit(f,False{})
+      +hi = F.at_bit(f,True{})
+      left = descend(a,Bool.not(B.equal(lo,F.zero())),tail,xs,multiply(lo,v),r,c,acc)
+      descend(b,Bool.not(B.equal(hi,F.zero())),tail,xs,multiply(hi,v),r,c,left)
+    case Cols{a,b} True{} +xs Con{+f,+tail}:
       +r = dr
       +c = dc
-      left = descend(a,xs,tail,multiply(l,v),r,c,acc)
-      descend(b,xs,tail,multiply(h,v),r,c,left)
-    case Leaf{b} rs cs +v: project(b,Axes{v,List.reverse(&2,F.Factor,rs),List.reverse(&2,F.Factor,cs)},dr,dc,v) <> acc
+      +v = w
+      +lo = F.at_bit(f,False{})
+      +hi = F.at_bit(f,True{})
+      left = descend(a,Bool.not(B.equal(lo,F.zero())),xs,tail,multiply(lo,v),r,c,acc)
+      descend(b,Bool.not(B.equal(hi,F.zero())),xs,tail,multiply(hi,v),r,c,left)
+    case Leaf{b} True{} rs cs:
+      +v = w
+      project(b,Axes{v,List.reverse(&2,F.Factor,rs),List.reverse(&2,F.Factor,cs)},dr,dc,v) <> acc
     case _ _ _ _: acc
 
 def indexed_term(valid: Bool,tree: Index,bs: Tiles,+dr: Nat,+dc: Nat,a: Axes,acc: F.Form) -> F.Form:
   match valid a:
-    case True{} Axes{w,rs,cs}: descend(tree,List.reverse(&2,F.Factor,rs),List.reverse(&2,F.Factor,cs),w,dr,dc,acc)
+    case True{} Axes{+w,rs,cs}: descend(tree,Bool.not(B.equal(w,F.zero())),List.reverse(&2,F.Factor,rs),List.reverse(&2,F.Factor,cs),w,dr,dc,acc)
     case False{} x: tiles(bs,x,dr,dc,acc)
 
 def indexed_terms(ts: F.Form,+tree: Index,+bs: Tiles,+rb: Nat,+width: Nat,+dr: Nat,+dc: Nat,acc: F.Form) -> F.Form:
