@@ -1,4 +1,5 @@
 import Base
+import ./segment_workers.bend as Workers
 import ./segment_local.bend as Local
 import ./segment_transport.bend as Transport
 import ./segment_projection.bend as Project
@@ -41,18 +42,85 @@ def step(link: Q.Link,placed: Local.Local,c: B.Code,m: B.Code,state: State,first
     next : Transport.State <- Transport.advance(link,row,c,m,cur,first)
     return State{next,pending(maybe,ps)}
 
-def walk(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c: B.Code,+m: B.Code,state: State,i: Nat) -> IO(State):
+# Each local equation depends only on its authenticated segment slice. Batches
+# of two put one feed-forward and one attention segment on separate workers.
+# A final unmatched descriptor reports the original length error in order.
+type Task is Data:
+  Task{input: M.Inputs, link: Q.Link, index: Nat, last: Bool}
+  Mismatch{}
+type Batch is Data:
+  Single{a: Task}
+  Pair{a: Task,b: Task}
+
+def batches(models: Inputs.Batches,links: List<&2,Q.Link>,i: Nat) -> List<&2,Batch>:
   match models links:
-    case Nil{} Nil{}: IO.pure(State,state)
-    case Con{+model,+tail} Con{link,rest}:
+    case Nil{} Nil{}: []
+    case a <> b <> +tail l <> k <> rest:
       +idx = i
+      Pair{Task{a,l,idx,False{}},Task{b,k,1n+idx,List.is_empty(&2,M.Inputs,tail)}} <> batches(tail,rest,2n+idx)
+    case a <> +tail l <> rest:
+      +idx = i
+      Single{Task{a,l,idx,List.is_empty(&2,M.Inputs,tail)}} <> batches(tail,rest,1n+idx)
+    case _ _: [Single{Mismatch{}}]
+
+type Row is Data:
+  Row{link: Q.Link,physical: Local.Local,first: Bool}
+
+def prepare(task: Task,+ctx: Local.Context) -> IO(Row):
+  match task:
+    case Mismatch{}: IO.die(Row,1,"NO: segment-link-count")
+    case Task{+model,link,+i,last}:
+      do IO<Row>:
+        ok : Unit <- Header.require(Nat.is_eq(i,Local.number(model)),"NO: segment-link-order")
+        logical : Local.Logical <- family(model,ctx,last)
+        physical : Local.Local <- Local.physical(i,ctx,logical)
+        return Row{link,physical,Nat.is_eq(i,0n)}
+
+def ready(task: Task,ctx: Local.Context) -> IO.OP<Row>:
+  Workers.observe(Row,prepare(task,ctx))
+
+def prepared(batch: Batch,+ctx: Local.Context) -> List<IO.OP<Row>>:
+  match batch:
+    case Single{a}: [ready(a,ctx)]
+    case Pair{a,b}:
+      x y = ready(a,ctx) ready(b,ctx)
+      [x,y]
+
+def row_step(row: Row,c: B.Code,m: B.Code,st: State) -> IO(State):
+  Row{link,local,first} = row
+  step(link,local,c,m,st,first)
+
+def apply(xs: List<IO.OP<Row>>,+c: B.Code,+m: B.Code,st: State) -> IO(State):
+  match xs:
+    case []: IO.pure(State,st)
+    case outcome <> tail:
       do IO<State>:
-        ok : Unit <- Header.require(Nat.is_eq(idx,Local.number(model)),"NO: segment-link-order")
-        logical : Local.Logical <- family(model,ctx,List.is_empty(&2,M.Inputs,tail))
-        physical : Local.Local <- Local.physical(idx,ctx,logical)
-        after : State <- step(link,physical,c,m,state,Nat.is_eq(idx,0n))
-        walk(tail,rest,ctx,c,m,after,1n+idx)
-    case _ _: IO.die(State,1,"NO: segment-link-count")
+        row : Row <- Workers.result(Row,outcome)
+        next : State <- row_step(row,c,m,st)
+        apply(tail,c,m,next)
+
+def advanced(xs: List<IO.OP<Row>>,c: B.Code,m: B.Code,st: State) -> IO.OP<State>:
+  Workers.observe(State,apply(xs,c,m,st))
+
+# The previous batch carries shared FOLD state. Overlap its ordered transport
+# with the next pair's local equations. A numerical refusal is replayed only
+# when its turn in file order arrives.
+def pipeline(xs: List<&2,Batch>,placed: List<IO.OP<Row>>,+ctx: Local.Context,+c: B.Code,+m: B.Code,st: State) -> IO(State):
+  match xs:
+    case []: apply(placed,c,m,st)
+    case task <> tail:
+      done next = advanced(placed,c,m,st) prepared(task,ctx)
+      do IO<State>:
+        state : State <- Workers.result(State,done)
+        pipeline(tail,next,ctx,c,m,state)
+
+def start(xs: List<&2,Batch>,+ctx: Local.Context,c: B.Code,m: B.Code,st: State) -> IO(State):
+  match xs:
+    case []: IO.pure(State,st)
+    case first <> tail: pipeline(tail,prepared(first,ctx),ctx,c,m,st)
+
+def walk(models: Inputs.Batches,links: List<&2,Q.Link>,ctx: Local.Context,c: B.Code,m: B.Code,st: State,i: Nat) -> IO(State):
+  start(batches(models,links,i),ctx,c,m,st)
 
 def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.Events,items: List<&2,Plan.Item>) -> IO(Own.First):
   State{cur,rows} = st
