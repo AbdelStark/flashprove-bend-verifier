@@ -85,13 +85,28 @@ def output(state: Kernel.H8, n: U32) -> Bytes:
 type Context is Data:
   Context{state: Kernel.H8, tail: Bytes, offset: U32}
 
-def absorb(count: Nat, state: Kernel.H8, +src: Bytes, +offset: U32) -> Context:
+type Block is Data:
+  Block{words: Bytes, rest: Bytes}
+
+# A full BLAKE2b block has 32 little-endian words. Consume each byte once
+# and return the suffix. update keeps the last 1..128 bytes for finalization.
+def read_block(n: Nat, src: Bytes, rev: Bytes) -> Block:
+  match n src:
+    case 1n+k a <> b <> c <> d <> tail:
+      w = (a + U32.shln(b,8n) + U32.shln(c,16n) + U32.shln(d,24n) : U32)
+      read_block(k,tail,w <> rev)
+    case _ tail: Block{List.reverse(&2,U32,rev),tail}
+
+def absorb_more(n: Nat, state: Kernel.H8, block: Block, +end: U32) -> Context:
+  match n block:
+    case 0n Block{words,rest}: Context{compress(words,state,end,0),rest,end}
+    case 1n+k Block{words,rest}:
+      absorb_more(k,compress(words,state,end,0),read_block(32n,rest,[]),U32.add(end,128))
+
+def absorb(count: Nat, state: Kernel.H8, src: Bytes, offset: U32) -> Context:
   match count:
-    case 0n: Context{state, src, offset}
-    case 1n+next:
-      +end = U32.add(offset, 128)
-      h = compress(u32s(List.take(&2, U32, src, 128n)), state, end, 0)
-      absorb(next, h, List.drop(&2, U32, src, 128n), end)
+    case 0n: Context{state,src,offset}
+    case 1n+k: absorb_more(k,state,read_block(32n,src,[]),U32.add(offset,128))
 
 def update(ctx: Context, bytes: Bytes) -> Context:
   Context{state, tail, offset} = ctx
