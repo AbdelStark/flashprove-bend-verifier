@@ -4,8 +4,9 @@ import ./row_tensor.bend as T
 import ./extension.bend as X
 import ./sumcheck.bend as E
 
-# A fixed U3 cell contributes at the address selected by its low bits.
-# Keep the BAT-sigma scale on the row until deposition or general placement.
+# An affine read already names an integer cell. Keep that address through BAT
+# instead of constructing one Low/High factor per bit and decoding them at placement.
+# Carry the common BAT-sigma scale once for the whole list.
 type Cell is Data:
   Cell{index: Nat, weight: X.E3}
 type Points is Data:
@@ -28,6 +29,9 @@ def expand(p: Points) -> F.Form:
   Points{xs,bits,s} = p
   terms(xs,bits,s,[])
 
+# Tensor.choice(bits, i) uses exactly the low bits, even when two addresses alias.
+# Add to the existing slot so repeated reads can cancel. The caller tests the
+# final sum at every genuine cell after all reads have been deposited.
 def scatter(xs: List<&2,Cell>,+mask: U32,+s: X.E3,buf: Array<X.E3>) -> Array<X.E3>:
   match xs:
     case []: buf
