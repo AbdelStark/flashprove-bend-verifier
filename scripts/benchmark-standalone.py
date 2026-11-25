@@ -149,18 +149,56 @@ def bend_digest(program):
     return digest
 
 
+
+def screen_workers(binary, counts, samples, logs):
+    """Select workers on the full-size fixture before running the independent Lean pairing."""
+    case = EXAMPLES / "full-size"
+    digest = bend_digest(binary)
+    data = {"host": machine(), "harness_sha256": sha256(Path(__file__)), "binary_sha256": sha256(binary),
+            "source_digest": digest, "fixture": check_inputs(case), "warmups": [], "samples": []}
+    with tempfile.TemporaryDirectory(dir=BUILD) as temp:
+        work = Path(temp)
+        program = Path(shutil.copy2(binary, work / "verify-bend"))
+        (work / "empty-path").mkdir()
+        for name in ("tables", "plans"):
+            shutil.copytree(BUILD / name, work / "data" / name)
+        # Reverse the order on alternate rounds so high worker counts do not always run last.
+        for trial in range(samples + 1):
+            for count in (counts if trial % 2 else reversed(counts)):
+                directory = logs / ("warmups" if trial == 0 else "samples") / str(count)
+                directory.mkdir(parents=True, exist_ok=True)
+                row = measure(program, case, digest, trial, work, directory, count, observe_workers=trial == 0)
+                row["workers"] = count
+                data["warmups" if trial == 0 else "samples"].append(row)
+                (logs / "results.json").write_text(json.dumps(data, indent=2) + "\n")
+    medians = {n: median(row["wall_s"] for row in data["samples"] if row["workers"] == n) for n in counts}
+    winner = min(counts, key=lambda n: (medians[n], n))
+    data["selected_workers"] = winner
+    (logs / "results.json").write_text(json.dumps(data, indent=2) + "\n")
+    for count, seconds in medians.items():
+        print(f"{count:>3} workers   {seconds:.3f} s median")
+    print(f"Selected {winner} workers for the independent comparison.")
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--samples", type=int, default=3)
     parser.add_argument("--output", type=Path, help="new directory for raw process logs and results.json")
-    parser.add_argument("--compare", choices=["cpp", "lean", "bend"], default="cpp")
+    parser.add_argument("--compare", choices=["cpp", "lean", "bend", "workers"], default="cpp")
     parser.add_argument("--before", type=Path, help="prior Bend executable and adjacent .digest (required for --compare bend)")
     parser.add_argument("--after", type=Path, default=BUILD / "verify-bend",
                         help="candidate Bend executable and adjacent .digest (default: build/verify-bend)")
     parser.add_argument("--fixture", choices=["accepted-proof", "full-size"], action="append",
                         help="exact-match fixture to run (default: both)")
     parser.add_argument("--workers", type=int, default=1, help="Bend workers requested, applied to both binaries with --compare bend")
+    parser.add_argument("--worker-counts", type=int, nargs="+", help="pool sizes to screen on the full-size fixture")
     args = parser.parse_args()
+    if args.compare == "workers":
+        if not args.worker_counts or not all(1 <= n <= 128 for n in args.worker_counts):
+            parser.error("worker screening requires --worker-counts between 1 and 128")
+        if args.before or args.fixture and args.fixture != ["full-size"]:
+            parser.error("worker screening runs one Bend binary on the full-size fixture")
+    elif args.worker_counts:
+        parser.error("--worker-counts requires --compare workers")
     if args.compare == "bend" and args.before is None:
         parser.error("--compare bend requires --before")
     if not 1 <= args.workers <= 128:
@@ -175,6 +213,9 @@ def main():
     if args.output:
         logs.mkdir(parents=True)
     print(f"Result directory: {logs}", flush=True)
+    if args.compare == "workers":
+        screen_workers(args.after, sorted(set(args.worker_counts)), args.samples, logs)
+        return
     digests = {}
     if args.compare == "cpp":
         digests = build_digests(True)
@@ -209,7 +250,7 @@ def main():
             print(f"Verified warmups on {fixture} (excluded from reported samples)", flush=True)
             for name, digest in digests.items():
                 data["warmups"].append(measure(work / name, case, digest, 1, work, warmup_logs, workers[name],
-                                              observe_workers=args.compare == "bend"))
+                                              observe_workers=name == "verify-bend" or (args.compare == "bend" and name == "before")))
             for i in range(args.samples):
                 order = list(digests) if i % 2 == 0 else list(reversed(digests))
                 if len(digests) == 3:

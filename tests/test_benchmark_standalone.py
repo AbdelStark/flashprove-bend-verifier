@@ -2,6 +2,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -50,6 +51,33 @@ class PairedRevisions(unittest.TestCase):
                                      ("before", 16, False), ("verify-bend", 16, False),
                                      ("verify-bend", 16, False), ("before", 16, False),
                                      ("before", 16, False), ("verify-bend", 16, False)])
+
+    def test_screen_uses_quiet_medians_and_reverses_trial_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            binary = root / "release"
+            binary.write_text("test binary")
+            logs = root / "logs"
+            logs.mkdir()
+            for name in ("tables", "plans"):
+                (root / name).mkdir()
+            calls = []
+
+            def observe(program, case, digest, sample, work, directory, workers, observe_workers=False):
+                calls.append((sample, workers, observe_workers))
+                # One fast outlier for 4 workers must not decide the winner.
+                wall = {2: [300, 5, 5, 5], 4: [1, 1, 6, 8]}[workers][sample]
+                return {"wall_s": wall}
+
+            with patch.object(bench, "BUILD", root), patch.object(bench, "measure", observe), \
+                 patch.object(bench, "bend_digest", return_value="a" * 64), \
+                 patch.object(bench, "check_inputs", return_value={}), contextlib.redirect_stdout(io.StringIO()):
+                bench.screen_workers(binary, [2, 4], 3, logs)
+            self.assertEqual(calls, [(0, 4, True), (0, 2, True), (1, 2, False), (1, 4, False),
+                                     (2, 4, False), (2, 2, False), (3, 2, False), (3, 4, False)])
+            data = json.loads((logs / "results.json").read_text())
+            self.assertEqual(data["selected_workers"], 2)
+            self.assertEqual(len(data["samples"]), 6)
 
     def test_warmup_refuses_ignored_worker_count(self):
         with tempfile.TemporaryDirectory() as tmp:
