@@ -48,7 +48,9 @@ def main() -> IO(Unit):
     C.Cell{2n,F.one()},C.Cell{3n,x}],2n,F.one()}
   +scaled = C.scaled(ps,x)
   direct = C.write(scaled,Array.new(X.E3,2n,F.zero()))
-  IO.print(Bool.show(C.width(ps,2n) && Bool.not(C.width(ps,3n)) && compare(scaled) && mixed() &&
-    Bool.not(Cover.all(4n,Array.to_list(X.E3,direct)))))
+  values = Array.to_list(X.E3,direct)
+  # (5 + 3X + 11X²)² = 157 + 272X + 119X² in X³ = 2.
+  expected: List<X.E3> = [x,F.zero(),x,X.E3{0,157,0,272,0,119}]
+  IO.print(Bool.show(same(values,expected) && C.width(ps,2n) && Bool.not(C.width(ps,3n)) && compare(scaled) && mixed()))
 
 #|True
