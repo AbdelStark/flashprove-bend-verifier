@@ -28,7 +28,7 @@ type Basis is Data:
   Basis{places: F.Chunks, rows: F.Chunks, base_bits: Nat}
 
 # A weight term arrives as [low place, surviving place, member row].
-# Fold the two disjoint slices; deposit only the surviving place factors.
+# Fold the two disjoint slices and deposit only the surviving place factors.
 def write(high: F.Factors, row: F.Term, buf: Array<E.E3>) -> Array<E.E3>:
   F.Term{v,_} = row
   F.deposit(List.reverse(&2,F.Factor,high),0,v,buf)

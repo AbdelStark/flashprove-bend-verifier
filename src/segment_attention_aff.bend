@@ -3,7 +3,6 @@ import ./u3_cells.bend as Cells
 import ./extension.bend as X
 import ./sumcheck.bend as E
 import ./fold.bend as F
-import ./row_tensor.bend as Tensor
 import ./oracle_sample.bend as Sample
 import ./key_stage_lookup.bend as Int
 import ./key_stage_lookup_rows.bend as L
