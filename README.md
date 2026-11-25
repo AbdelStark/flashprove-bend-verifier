@@ -10,12 +10,14 @@ The full-size example has a 24-token prompt. Its 17.91 MiB proof covers the next
 
 Both programs start from the same committed key, leaf, tokens and proof bytes. We time one fresh process from launch through exit, including file reads, all three verification stages and reporting the verdict. Inference and proof generation happen beforehand. **Lean OnBytes** is FlashProve’s native Lean executable for verifying these files.
 
-| CPU | Bend workers | Standalone Bend | Lean OnBytes | Lean time ÷ Bend time |
-| --- | ---: | ---: | ---: | ---: |
-| Apple M4 Max | 16 | 11.18 s | 59.71 s | 5.34× |
-| Intel Xeon Platinum 8480CL | 8 | 23.38 s | 93.35 s | 3.99× |
+| CPU | Bend workers | Standalone Bend | Bend speedup vs. 1 worker | Lean OnBytes | Lean time ÷ Bend time |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Apple M4 Max | 1 | 21.34 s | 1.00× | 59.37 s | 2.78× |
+| Apple M4 Max | 16 | 11.18 s | **1.91×** | 59.71 s | 5.34× |
+| Intel Xeon Platinum 8480CL | 1 | 45.86 s | 1.00× | 93.16 s | 2.03× |
+| Intel Xeon Platinum 8480CL | 8 | 23.38 s | **1.96×** | 93.35 s | 3.99× |
 
-Times are medians of three alternating runs per program after one warmup each, with the proof in the file cache. We selected the fastest measured Bend worker count on each CPU in a separate run. Lean OnBytes verifies sequentially. [All samples, worker selection and peak memory](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
+Both worker counts on each CPU use the same Bend executable. Each row reports median wall times from three alternating pairs of Bend and sequential Lean OnBytes runs after one warmup per program, with the proof in the file cache. Bend speedup divides the one-worker time by the time at the indicated worker count. A separate trial selected the parallel worker count on each CPU. [Paired samples, worker selection and peak memory](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
 
 ## Verify the small example
 
