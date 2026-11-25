@@ -1,0 +1,59 @@
+Replay the paired full-size H821 request diagnostic for issue #44. Slurm job
+7767 on h100-nvl-1-0-cc ran 89e1df4 and 9d00a32 consecutively on CPU 0.
+Both executables used Bend 2.0.40 and Ubuntu Clang 18.1.3. The guest exposed
+GenuineIntel family 6, model 207, stepping 2 (06/cf) with one thread per core.
+Each process reported one worker, returned zero, and matched all four exact
+closing lines with its own build ID. The proof SHA-256 was
+efa762e20f72b64e183ad6f688eccf5b2b79649928d8e3a2a96645645dd08af9.
+
+From the checkout containing these patches, create two scratch worktrees:
+
+    repo=$(pwd)
+    patch_dir=$repo/research/spikes/request
+    run=$(mktemp -d)
+    git worktree add --detach "$run/before" 89e1df4
+    git worktree add --detach "$run/after" 9d00a32
+    git -C "$run/before" apply "$patch_dir/outer-timers.patch"
+    git -C "$run/after" apply --exclude=src/lin_own.bend "$patch_dir/outer-timers.patch"
+    git -C "$run/after" apply "$patch_dir/third-lin-timers.patch"
+    for side in before after; do
+      (cd "$run/$side" && make bootstrap upstream standalone && (
+        f=.upstream/FlashProve/examples/full-size
+        id=$(cat "$f/ID.txt")
+        env PATH='' ./build/verify-bend "$f/config" "$f/ivk" "$f/example.req" \
+          "$f/example.y" "$f/example.proof" -id "$id" -data build -j 1 -timing \
+          > "$run/$side.stdout" 2> "$run/$side.stderr"
+      )) || break
+    done
+    python3 "$patch_dir/tally-outer.py" "$run/before.stderr" "$run/after.stderr"
+
+For the original Linux affinity, prefix the env command with taskset -c 0.
+The instrumented build IDs were
+before 6e3c25a2d288784b939009a0c91db4c183913d7aa2c78a3cc3fad9c21aaf433d
+after  7c7d84c2f514dff1145d77f918a15c59dfe19f4f3a8936a1d0355d6de7b54e5a
+The new hunk moves the same three markers to the projected LIN call. All
+other clock boundaries use the original patch. Consecutive differences sum
+exactly to each request timer. The resulting table is frozen at
+docs/research/notes/third-request-outer.tsv. Each column represents one
+instrumented run. The release benchmark measures separate quiet executions.
+
+diff --git a/src/lin_own.bend b/src/lin_own.bend
+index 52477c5..dc33661 100644
+--- a/src/lin_own.bend
++++ b/src/lin_own.bend
+@@ -1,4 +1,5 @@
+ import Base
++import ./request_clock.bend as Clock
+ import ./leaf_shape.bend as S
+ import ./lin_shape.bend as Lin
+ import ./lin_shared.bend as Shared
+@@ -134,6 +135,9 @@ def check(events: Tr.Events, adopted: Shared.Adopted, first: First) -> IO(Unit):
+   do IO<Unit>:
+     +group : Run.Group <- Run.group(events)
+     geo : Geometry <- geometry(ss,w,m,omega)
++    c_own_inputs : Unit <- Clock.mark("own_inputs")
+     claim : F.Claim <- bat(geo,first,psi,s,y,Run.theta(group),coordinates(group),Project.base_width(ss))
++    c_own_claim : Unit <- Clock.mark("own_claim")
+     rest : Tr.Events <- Run.verify(group,Open.Second{U32.to_nat(w),U32.to_nat(m),U32.to_nat(omega)},ss,claim)
++    c_own_verify : Unit <- Clock.mark("own_verify")
+     Header.require(List.is_empty(&2,Tr.Observed,rest),"NO: lin-own-rounds")

@@ -1,0 +1,237 @@
+Partition one H821 request on 89e1df4 (issue #44). Slurm job 7743 on
+h100-nvl-1-1-cc exposed x86_64 GenuineIntel family 6 model 207, stepping 2,
+under KVM. The sampler and the verified process shared logical CPU 0. It
+observed one worker. The toolchain was Bend 2.0.40 and Ubuntu Clang 18.1.3.
+
+Apply in a fresh worktree at 89e1df4, then run
+
+    make bootstrap upstream standalone
+    f=.upstream/FlashProve/examples/full-size
+    model_id=$(cat "$f/ID.txt")
+    PATH='' ./build/verify-bend "$f/config" "$f/ivk" "$f/example.req" \
+      "$f/example.y" "$f/example.proof" -id "$model_id" -data build -j 1 -timing
+
+On Linux, placing 'taskset -c 0' before 'env PATH=' pins execution to CPU
+0 where the scheduler allows it. The instrumented source identity was
+6e3c25a2d288784b939009a0c91db4c183913d7aa2c78a3cc3fad9c21aaf433d.
+The run returned zero and emitted the four published exact-match lines,
+including the build digest and YES. Native process wall time was 86.425 s.
+
+Markers record monotonic wall milliseconds. Starting at request_entry,
+take consecutive differences up to request_return and sum by ending marker.
+The last row of docs/research/notes/request-outer-timing.tsv is their sum.
+This includes logging and destruction of intermediate values. The key
+also uses shared and own LIN, so discard every marker before request_entry.
+verdict_written follows the existing request timer and is excluded.
+The 25 serial links each emit segment_enter, segment_equations,
+physical_layout and advance_transport. chain_return includes final BATT.
+own_claim assembles the weighted table and masks. own_verify checks
+all its FOLD, CS and BASE rounds. The 791 ms at request_return includes
+the enclosing request return and releasing its reader, session and trace.
+
+Public inputs took 994 ms, key verification 3616 ms and leaf verification
+1454 ms. The request took 80174 ms and the internal whole call 86238 ms.
+These diagnostic intervals are from a single successful run on this host.
+
+diff --git a/src/lin_own.bend b/src/lin_own.bend
+index 32978b2..822cb99 100644
+--- a/src/lin_own.bend
++++ b/src/lin_own.bend
+@@ -1,4 +1,5 @@
+ import Base
++import ./request_clock.bend as Clock
+ import ./leaf_shape.bend as S
+ import ./lin_shape.bend as Lin
+ import ./lin_shared.bend as Shared
+@@ -120,6 +121,9 @@ def check(events: Tr.Events, adopted: Shared.Adopted, first: First) -> IO(Unit):
+   do IO<Unit>:
+     +group : Run.Group <- Run.group(events)
+     geo : Geometry <- geometry(ss,w,m,omega)
++    c_own_inputs : Unit <- Clock.mark("own_inputs")
+     claim : F.Claim <- bat(geo,first,psi,s,y,Run.theta(group))
++    c_own_claim : Unit <- Clock.mark("own_claim")
+     rest : Tr.Events <- Run.verify(group,Open.Second{U32.to_nat(w),U32.to_nat(m),U32.to_nat(omega)},ss,claim)
++    c_own_verify : Unit <- Clock.mark("own_verify")
+     Header.require(List.is_empty(&2,Tr.Observed,rest),"NO: lin-own-rounds")
+diff --git a/src/lin_shared.bend b/src/lin_shared.bend
+index 0fd5887..8a17cfd 100644
+--- a/src/lin_shared.bend
++++ b/src/lin_shared.bend
+@@ -1,4 +1,5 @@
+ import Base
++import ./request_clock.bend as Clock
+ import ./plan.bend as P
+ import ./fold_verify.bend as FV
+ import ./lin_run.bend as Run
+@@ -175,11 +176,16 @@ def groups(begin: Inputs & Tr.Events, +shape: Lin.Shape, table: L.Table, cfg: H.
+     +fold : Group <- group(us,n)
+     +om : Group <- group(oms,m)
+     +a : Run.Group <- Run.group(events)
++    c_shared_inputs : Unit <- Clock.mark("shared_inputs")
+     ca : F.Claim <- folded(shape,fold,x,table,cfg,Run.theta(a))
++    c_shared_fold_claim : Unit <- Clock.mark("shared_fold_claim")
+     rest : Tr.Events <- Run.verify(a,Open.Folded{U32.to_nat(n)},us,ca)
++    c_shared_fold_verify : Unit <- Clock.mark("shared_fold_verify")
+     +b : Run.Group <- Run.group(rest)
+     cb : F.Claim <- omega(om,matrix,x,Run.theta(b))
++    c_shared_omega_claim : Unit <- Clock.mark("shared_omega_claim")
+     closed : Tr.Events <- Run.verify(b,Open.Omega{U32.to_nat(m)},oms,cb)
++    c_shared_omega_verify : Unit <- Clock.mark("shared_omega_verify")
+     ok : Unit <- Header.require(end(closed),"NO: lin-seal")
+     return Adopted{psi,seed,y,shape}
+ 
+diff --git a/src/request_clock.bend b/src/request_clock.bend
+new file mode 100644
+index 0000000..829f5d6
+--- /dev/null
++++ b/src/request_clock.bend
+@@ -0,0 +1,11 @@
++import Base
++
++# Diagnostic boundaries for a serial request. The deltas between successive
++# timestamps partition the existing request timer, including logging overhead.
++def at(name: String,ms: Nat) -> IO(Unit):
++  IO.print_err("request-clock " ++ name ++ " " ++ Nat.show(ms))
++
++def mark(name: String) -> IO(Unit):
++  do IO<Unit>:
++    n : Nat <- IO.now()
++    at(name,n)
+diff --git a/src/request_stage.bend b/src/request_stage.bend
+index bfa79ee..dfd8541 100644
+--- a/src/request_stage.bend
++++ b/src/request_stage.bend
+@@ -1,4 +1,5 @@
+ import Base
++import ./request_clock.bend as Clock
+ import ./lin_own.bend as Own
+ import ./lin_shared.bend as Shared
+ import ./lin_bridge.bend as Lin
+@@ -89,9 +90,12 @@ def second(shared: R.Reader & Lin.Shared, ctx: Context, slot: Nat, binding: M.Di
+     omega : K.Root <- K.at(published,1n)
+     plan : P.Plan <- P.load(O.digest_bytes(cfg),PT.RequestSecond{},dir)
+     rb : R.Reader & H.Bytes <- R.take(r,32)
++    c_second_plan : Unit <- Clock.mark("second_plan")
+     traced : R.Reader & W.Traced <- W.begin_traced(rb,1179798788n,plan,stmt,cfg,table,
+       List.append(&2,K.Root,book,[omega]),session,G.schedule(profile,PT.RequestSecond{}),[own])
++    c_second_trace : Unit <- Clock.mark("second_trace")
+     result : R.Reader & W.End <- check_own(traced,adopted,pending)
++    c_own_return : Unit <- Clock.mark("own_return")
+     complete(result,slot,binding,first,seal)
+ 
+ def slot_number(lo: U32, +hi: U32) -> IO(Nat):
+@@ -115,10 +119,13 @@ def shared(pair: R.Reader & H.Bytes, +ctx: Context, book: K.Book, session: O.Ses
+     opened : O.Opened <- K.need(O.Opened,O.binding_record(depth,number,cfg,root,salt,
+       H.cat([seal,List.drop(&2,U32,path,8n)]),session),"NO: request-binding-vertex")
+     +plan : P.Plan <- P.load(O.digest_bytes(cfg),PT.RequestShared{},dir)
++    c_binding_and_shared_plan : Unit <- Clock.mark("binding_and_shared_plan")
+     trace : R.Reader & W.Traced <- W.begin_traced((r,O.digest_bytes(root)),1179798787n,plan,
+       H.cat([st,Item.item("the binding tree's root",O.digest_bytes(root))]),cfg,table,[],O.retained(opened),
+       G.schedule(profile,PT.RequestShared{}),[fold,omega])
++    c_shared_trace : Unit <- Clock.mark("shared_trace")
+     result : R.Reader & Lin.Shared <- Lin.check(trace,plan,Leaf.Table{table,record},O.digest_bytes(cfg))
++    c_shared_return : Unit <- Clock.mark("shared_return")
+     second(result,ctx,number,root,book,seal,pending)
+ 
+ def binding_result(pair: R.Reader & W.End, +ctx: Context, pending: Maybe<&2,Own.First>) -> IO(Trace):
+@@ -151,6 +158,7 @@ def model(pair: R.Reader & W.Traced,+ctx: Context,+st: S.Statement) -> IO(R.Read
+   S.Statement{_,_,_,tables,_,_,_,_} = st
+   do IO<R.Reader & FirstData>:
+     rows : Seg.Groups <- Seg.checks(SG.select(profile),events,0n,tables,[])
++    clock : Unit <- Clock.mark("forests")
+     return (r,FirstData{end,events,ctx,rows,st})
+ 
+ def continue_first(pair: R.Reader & FirstData) -> IO(Trace):
+@@ -170,7 +178,9 @@ def first(pair: R.Reader & H.Bytes, expected: U32, +st: S.Statement, +plan: P.Pl
+     statement : H.Bytes = H.cat([table_item,Item.item("stored copy",H.word(copy)),
+       Item.item("request",Item.blob(Config.word_bytes(words))),Item.item("the request file's words",Item.blob(Config.word_bytes(req)))])
+     rb : R.Reader & H.Bytes <- R.take(r,32)
++    c_first_setup : Unit <- Clock.mark("first_setup")
+     done : R.Reader & W.Traced <- RW.first(rb,plan,statement,cfg,table,session,G.schedule(profile,PT.RequestFirst{}),last,y,vocab)
++    c_first_trace : Unit <- Clock.mark("first_trace")
+     model(done,ctx,st)
+ 
+ def first_data(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Configured,
+@@ -195,8 +205,11 @@ def close_verified(pair: R.Reader & FirstData,items: List<&2,P.Item>) -> IO(Trac
+   (reader,FirstData{end,+events,+ctx,+forests,st}) = pair
+   Context{_,+profile,_,_,_,_,_} = ctx
+   do IO<Trace>:
++    c_first_return : Unit <- Clock.mark("first_return")
+     inputs : Inputs.Batches <- Inputs.batches(Inputs.shapes(SG.select(profile)),forests,0n,st,events,[])
++    c_input_slices : Unit <- Clock.mark("input_slices")
+     claim : Own.First <- Chain.verify(inputs,events,items,profile)
++    c_chain_return : Unit <- Clock.mark("chain_return")
+     result : Trace <- binding_checked((reader,end),ctx,claim)
+     return results(result,forests)
+ 
+diff --git a/src/segment_chain.bend b/src/segment_chain.bend
+index f5c5a89..93ef064 100644
+--- a/src/segment_chain.bend
++++ b/src/segment_chain.bend
+@@ -1,4 +1,5 @@
+ import Base
++import ./request_clock.bend as Clock
+ import ./segment_workers.bend as Workers
+ import ./segment_local.bend as Local
+ import ./segment_transport.bend as Transport
+@@ -143,9 +144,13 @@ def serial(models: Inputs.Batches,links: List<&2,Q.Link>,+ctx: Local.Context,+c:
+       +idx = i
+       do IO<State>:
+         ok : Unit <- Header.require(Nat.is_eq(idx,Local.number(model)),"NO: segment-link-order")
++        c_segment_enter : Unit <- Clock.mark("segment_enter")
+         logical : Local.Logical <- family(model,ctx,List.is_empty(&2,M.Inputs,tail))
++        c_segment_equations : Unit <- Clock.mark("segment_equations")
+         physical : Local.Local <- Local.physical(idx,ctx,logical)
++        c_physical_layout : Unit <- Clock.mark("physical_layout")
+         after : State <- step(link,physical,c,m,state,Nat.is_eq(idx,0n))
++        c_advance_transport : Unit <- Clock.mark("advance_transport")
+         serial(tail,rest,ctx,c,m,after,1n+idx)
+     case _ _: IO.die(State,1,"NO: segment-link-count")
+ 
+@@ -163,6 +168,7 @@ def finish(st: State,c: B.Code,m: B.Code,later: List<&2,S.Stage>,events: Trace.E
+   State{cur,rows} = st
+   do IO<Own.First>:
+     after : Trace.Events <- Fold.finish(Transport.restore(cur),c,m,later)
++    c_terminal_fold : Unit <- Clock.mark("terminal_fold")
+     Batt.checked(events,after,List.reverse(&2,Own.Pending,rows),items)
+ 
+ def basis(s: Transport.State) -> Project.Basis:
+@@ -175,10 +181,13 @@ def closed(ctx: Local.Context,models: Inputs.Batches,+events: Trace.Events,items
+       do IO<Own.First>:
+         +initial : Transport.State <- Transport.begin(events,c,later)
+         context : Local.Context = Local.Context{book,Q.Shape{c,m,links,later},geometry,profile,Some{basis(initial)}}
++        c_initialize_transport : Unit <- Clock.mark("initialize_transport")
+         done : State <- walk(models,links,context,c,m,State{initial,[]},0n)
++        c_finish_walk : Unit <- Clock.mark("finish_walk")
+         finish(done,c,m,later,events,items)
+ 
+ def verify(models: Inputs.Batches,events: Trace.Events,+items: List<&2,Plan.Item>,profile: PT.Profile) -> IO(Own.First):
+   do IO<Own.First>:
+     ctx : Local.Context <- Local.context(items,profile)
++    c_load_layout : Unit <- Clock.mark("load_layout")
+     closed(ctx,models,events,items)
+diff --git a/src/standalone.bend b/src/standalone.bend
+index 32b5290..bdebb32 100644
+--- a/src/standalone.bend
++++ b/src/standalone.bend
+@@ -1,4 +1,5 @@
+ import Base
++import ./request_clock.bend as Clock
+ import ./policy_statement.bend as S
+ import ./policy_config.bend as Config
+ import ./commitment.bend as Commitment
+@@ -53,10 +54,13 @@ def request(checked: Link.Checked, +call: Call, +copy: U32, +mark: Nat) -> IO(Un
+   Link.Checked{leaf,session,_} = checked
+   Call{_,proof,id,plans,build,+cfg,+st,+timing,start,_} = call
+   do IO<Unit>:
++    clock_start : Unit <- Clock.at("request_entry",mark)
+     evidence : Req.Trace <- Req.verify(proof,copy,st,cfg,plans,leaf,session)
+     +done : Nat <- lap(timing,"request",mark)
++    clock_end : Unit <- Clock.at("request_return",done)
+     whole : Unit <- report(timing,"timing: total " ++ Nat.show(Nat.sub(done,start)) ++ " ms")
+-    Result.print(st,digest(cfg),String.to_lower(id),copy,build)
++    verdict : Unit <- Result.print(st,digest(cfg),String.to_lower(id),copy,build)
++    Clock.mark("verdict_written")
+ 
+ def entry(key: Key.AttestedKey, +call: Call) -> IO(Unit):
+   Key.AttestedKey{+root,+record,_,_,_,session} = key

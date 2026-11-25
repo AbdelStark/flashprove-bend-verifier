@@ -3,6 +3,7 @@ import ./leaf_shape.bend as S
 import ./lin_shape.bend as Lin
 import ./lin_shared.bend as Shared
 import ./lin_run.bend as Run
+import ./lin_projection.bend as Project
 import ./key_stage_openings.bend as K
 import ./key_stage_trace.bend as Tr
 import ./fold_open.bend as Open
@@ -98,7 +99,16 @@ def result(batch: Batch, size: Nat) -> F.Claim:
   Batch{_,_,a,b,c} = batch
   F.Claim{a,F.expand(b,CS.zeros(size)),c}
 
-def bat(+geo: Geometry, first: First, psi: B.Elements, os: Sample.Seed, oy: E.E3, t: E.E3) -> IO(F.Claim):
+# Short and over-width forms keep the original placement and validation path.
+def weight_table(+terms: F.Form, +rows: Nat, +ell: Nat, +k: Nat, +off: Nat,
+                +gs: B.Elements, +base_bits: Nat) -> F.Form:
+  +r = Sample.row_bits(rows)
+  good = Project.fits(terms,r,CS.bits(ell),k,base_bits,F.count(E.E3,gs,0n))
+  choose = Bool.pick(Unit -> F.Form,good,
+    _ => Project.project(terms,gs,r,k,base_bits,off), _ => table(terms,rows,ell,k,off))
+  choose(Unit{})
+
+def bat(+geo: Geometry, first: First, psi: B.Elements, os: Sample.Seed, oy: E.E3, t: E.E3, gs: B.Elements, n_base: Nat) -> IO(F.Claim):
   Geometry{_,+w,+m,+n,+ell,+ell_mask,+k,+h} = geo
   First{Pending{weights,mine,+mask,target},Opened{iseed,iy,ws,wy}} = first
   +wa = Open.before_at(w,n)
@@ -107,7 +117,7 @@ def bat(+geo: Geometry, first: First, psi: B.Elements, os: Sample.Seed, oy: E.E3
   ma = Open.after_at(1n,m)
   bits = Nat.add(h,CS.bits(ell_mask))
   eval : Sample.Sample = Sample.Sample{table(eq(mine,F.one()),w,ell,k,wa),slots(mask,bits,h,ia),target}
-  dot : Sample.Sample = Sample.Sample{List.append(&2,F.Term,table(weights,n,ell,k,oa),table(eq(psi,A.negate(F.one())),w,ell,k,wa)),[],F.zero()}
+  dot : Sample.Sample = Sample.Sample{List.append(&2,F.Term,weight_table(weights,n,ell,k,oa,gs,n_base),table(eq(psi,A.negate(F.one())),w,ell,k,wa)),[],F.zero()}
   do IO<F.Claim>:
     ok : Unit <- Header.require(locked(mask,ell_mask),"NO: lin-index-mask-pad")
     i : Sample.Sample <- sample(Sample.Member{Shared.absent(),Sample.Part{1n,ell_mask,h,ia},False{}},iseed,iy)
@@ -115,11 +125,15 @@ def bat(+geo: Geometry, first: First, psi: B.Elements, os: Sample.Seed, oy: E.E3
     om : Sample.Sample <- sample(Sample.Member{Sample.Part{n,ell,k,oa},Shared.absent(),False{}},os,oy)
     return result(add(om,add(own,add(i,add(dot,add(eval,Batch{t,F.one(),[],[],F.zero()}))))),Nat.mul(CS.size(h),ell_mask))
 
+def coordinates(group: Run.Group) -> B.Elements:
+  Run.Group{_,rounds,_,_} = group
+  Project.gammas(rounds,[])
+
 def check(events: Tr.Events, adopted: Shared.Adopted, first: First) -> IO(Unit):
   Shared.Adopted{psi,s,y,Lin.Shape{_,_,_,Lin.Side{_,_,+omega,_},Lin.Side{_,_,+w,+m},_,+ss}} = adopted
   do IO<Unit>:
     +group : Run.Group <- Run.group(events)
     geo : Geometry <- geometry(ss,w,m,omega)
-    claim : F.Claim <- bat(geo,first,psi,s,y,Run.theta(group))
+    claim : F.Claim <- bat(geo,first,psi,s,y,Run.theta(group),coordinates(group),Project.base_width(ss))
     rest : Tr.Events <- Run.verify(group,Open.Second{U32.to_nat(w),U32.to_nat(m),U32.to_nat(omega)},ss,claim)
     Header.require(List.is_empty(&2,Tr.Observed,rest),"NO: lin-own-rounds")

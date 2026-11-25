@@ -1,0 +1,148 @@
+Replay ordinary and projected LIN weight placement on FlashProve's two exact-match
+key proofs. The diagnostic obtains the genuine second-chain events from the regular
+key verifier. It changes the third FOLD round after transcript authentication and
+runs the same FV.custom verifier with both weight representations. This isolates
+the algebraic checks from failures in message hashing or Merkle authentication.
+
+From a checkout containing this patch, create a separate worktree at the revision
+under review. Use the repository's normal native CPU build prerequisites.
+
+    git worktree add --detach build/lin-replay 9d00a32cb967a124159b562563cc7c5a9673bbcd
+    git -C build/lin-replay apply ../../research/spikes/request/lin-transcript-check.patch
+    cd build/lin-replay
+    make bootstrap upstream plans build/key-stage
+    for fixture in accepted-proof full-size; do
+      dir=.upstream/FlashProve/examples/$fixture
+      build/key-stage build/plans "$dir/config" "$dir/ivk/key.bin" || exit 1
+    done
+
+Each command must exit zero and print eligible True before the cases. The next
+columns are the case number, the ordinary verdict and the projected verdict.
+
+    7 False False    both coefficients replaced by zero
+    6 False False    gamma replaced by a different cubic field element
+    5 False False    round duplicated
+    4 False False    round removed
+    3 False False    round given an unknown name
+    2 False False    coefficient message truncated to zero bytes
+    1 False False    low bit of the first coefficient flipped
+    0 True True      original authenticated trace
+
+The descriptions at the right are explanatory. The last printed line is the
+regular key-transcript record. Both fixtures passed these 16 comparisons in a
+native Linux run. This experiment tests those rounds on those two proofs.
+
+diff --git a/src/key_stage.bend b/src/key_stage.bend
+index a0108ad..97eae0e 100644
+--- a/src/key_stage.bend
++++ b/src/key_stage.bend
+@@ -1,6 +1,7 @@
+ import Base
+ import ./key_stage_batt.bend as Batt
+ import ./lin_own.bend as Own
++import ./lin_projection_replay.bend as Replay
+ import ./lin_shared.bend as LinShared
+ import ./lin_bridge.bend as Lin
+ import ./leaf_stage.bend as Leaf
+@@ -67,7 +68,7 @@ def table_root(table: Table) -> M.Digest:
+ def own_result(pair: R.Reader & W.Traced, adopted: LinShared.Adopted, first: Own.First) -> IO(R.Reader & W.End):
+   (r,W.Traced{end,events,_}) = pair
+   do IO<R.Reader & W.End>:
+-    complete : Unit <- Own.check(events,adopted,first)
++    complete : Unit <- Replay.check(events,adopted,first)
+     return (r,end)
+ 
+ def second(pair: R.Reader & Lin.Shared, ctx: Context, first_book: K.Book, +first_seal: H.Bytes) -> IO(AttestedKey):
+diff --git a/src/lin_projection_replay.bend b/src/lin_projection_replay.bend
+new file mode 100644
+index 0000000..9f24c5d
+--- /dev/null
++++ b/src/lin_projection_replay.bend
+@@ -0,0 +1,87 @@
++import Base
++import ./lin_own.bend as Own
++import ./lin_run.bend as Run
++import ./lin_shape.bend as Lin
++import ./lin_shared.bend as Shared
++import ./lin_projection.bend as Proj
++import ./fold_verify.bend as FV
++import ./fold_cs.bend as CS
++import ./fold_open.bend as Open
++import ./leaf_walk.bend as W
++import ./key_stage_trace.bend as Tr
++import ./leaf_shape.bend as S
++import ./oracle_sample.bend as Sample
++import ./base_check.bend as B
++import ./extension.bend as X
++import ./fold.bend as F
++import ./hash_bytes.bend as H
++import ./transcript.bend as T
++import ./chain.bend as C
++import ./header.bend as Header
++
++# Only this diagnostic receives the already authenticated events. The original
++# key bytes, the stage layout, the opened columns and the other rounds stay fixed.
++def flipped(xs:H.Bytes) -> H.Bytes:
++  match xs:
++    case x <> tail: U32.xor(1,x) <> tail
++    case []: [1]
++def coords(s:T.Stream) -> T.Stream:
++  T.Stream{q,i,_} = s
++  T.Stream{q,i,[C.Bits64{0,23},C.Bits64{0,19},C.Bits64{0,17}]}
++def changed(kind:Nat,e: W.EntryRound,+tail:FV.Events) -> FV.Events:
++  match kind e:
++    case 1n W.EntryRound{n,msg,s,ps,cs,ex}: W.EntryRound{n,flipped(msg),s,ps,cs,ex} <> tail
++    case 2n W.EntryRound{n,_,s,ps,cs,ex}: W.EntryRound{n,[],s,ps,cs,ex} <> tail
++    case 3n W.EntryRound{_,msg,s,ps,cs,ex}: W.EntryRound{"invalid",msg,s,ps,cs,ex} <> tail
++    case 4n _: tail
++    case 5n +original: original <> original <> tail
++    case 6n W.EntryRound{n,msg,s,ps,cs,ex}: W.EntryRound{n,msg,coords(s),ps,cs,ex} <> tail
++    case 7n W.EntryRound{n,_,s,ps,cs,ex}: W.EntryRound{n,H.zero(48n),s,ps,cs,ex} <> tail
++    case _ original: original <> tail
++def edit(xs:FV.Events,+idx:Nat,+kind:Nat) -> FV.Events:
++  match xs:
++    case []: []
++    case W.EntryRound{+name,+msg,+s,+ps,+cs,+ex} <> +tail:
++      +e : W.EntryRound = W.EntryRound{name,msg,s,ps,cs,ex}
++      +is_round = String.eq(name,"FOLD round")
++      pick = Bool.pick(Unit -> FV.Events,is_round && Nat.is_eq(idx,0n),_ => changed(kind,e,tail),
++        _ => e <> edit(tail,Nat.sub(idx,Bool.pick(Nat,is_round,1n,0n)),kind))
++      pick(Unit{})
++def check_verdicts(+a:Bool,+b:Bool,+i:Nat) -> IO(Unit):
++  do IO<Unit>:
++    _ : Unit <- IO.print(Nat.show(i) ++ " " ++ Bool.show(a) ++ " " ++ Bool.show(b))
++    Header.require((a && b && Nat.is_eq(i,0n)) || (Bool.not(a) && Bool.not(b) && Nat.is_ne(i,0n)),"unexpected LIN replay")
++def excluded_width(geo:Own.Geometry) -> Nat:
++  Own.Geometry{_,_,_,_,ell,_,_,_} = geo
++  # Project.fits requires base_bits <= place_bits. The larger width forces
++  # Own.bat down its ordinary table-placement path in the comparison.
++  1n+CS.bits(ell)
++
++def run(n:Nat,+ad:Shared.Adopted,+first:Own.First,+g:Run.Group) -> IO(Unit):
++  match n:
++    case 0n: IO.pure(Unit,Unit{})
++    case 1n++i:
++      Shared.Adopted{+psi,+s,+y,Lin.Shape{_,_,_,Lin.Side{_,_,+omega,_},Lin.Side{_,_,+w,+m},_,+ss}} = ad
++      Run.Group{+theta,+rounds,+cols,_} = g
++      +events = edit(rounds,2n,i)
++      +gs = Proj.gammas(events,[])
++      +bits = Proj.base_width(ss)
++      +layout : Open.KeyGroup = Open.Second{U32.to_nat(w),U32.to_nat(m),U32.to_nat(omega)}
++      do IO<Unit>:
++        +geo : Own.Geometry <- Own.geometry(ss,w,m,omega)
++        +direct : F.Claim <- Own.bat(geo,first,psi,s,y,theta,[],excluded_width(geo))
++        +compact : F.Claim <- Own.bat(geo,first,psi,s,y,theta,gs,bits)
++        _ : Unit <- check_verdicts(FV.custom(direct,ss,events,Run.callback(layout,cols)),FV.custom(compact,ss,events,Run.callback(layout,cols)),i)
++        run(i,ad,first,g)
++def admitted(geo:Own.Geometry,f:Own.First,gs:B.Elements,n_base:Nat) -> Bool:
++  Own.Geometry{_,_,_,rows,ell,_,k,_} = geo
++  Own.First{Own.Pending{terms,_,_,_},_} = f
++  Proj.fits(terms,Sample.row_bits(rows),CS.bits(ell),k,n_base,F.count(X.E3,gs,0n))
++def check(events:Tr.Events,+ad:Shared.Adopted,+first:Own.First) -> IO(Unit):
++  Shared.Adopted{_,_,_,Lin.Shape{_,_,_,Lin.Side{_,_,+omega,_},Lin.Side{_,_,+w,+m},_,+ss}} = ad
++  do IO<Unit>:
++    +group : Run.Group <- Run.group(events)
++    geo : Own.Geometry <- Own.geometry(ss,w,m,omega)
++    ok : Unit <- Header.require(admitted(geo,first,Own.coordinates(group),Proj.base_width(ss)),"fixture did not exercise LIN projection")
++    _ : Unit <- IO.print("eligible True")
++    run(8n,ad,first,group)

@@ -1,0 +1,190 @@
+{
+  "host": {
+    "os": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+    "arch": "x86_64",
+    "cpu": "Intel(R) Xeon(R) Platinum 8480CL",
+    "git": "7ee36bdeb8d0cbd41c2578df1cfae59ab8e06224",
+    "cpu_affinity": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "upstream": [
+      "# Pinned upstream protocol source. Single source of truth for the FlashProve revision this",
+      "# verifier conforms to; read by scripts/fetch-upstream.sh and scripts/check-docs.py.",
+      "# Change it only through an ADR-referencing PR (see AGENTS.md).",
+      "FLASHPROVE_REPO=https://github.com/anthropics/FlashProve.git",
+      "FLASHPROVE_COMMIT=9e2bdd8ff5bf9c62f18263d7dac189b0400b260c",
+      "FLASHPROVE_VERSION=0.16.0-rc.26"
+    ],
+    "toolchain": [
+      "# Pinned toolchain. Single source of truth for the Bend version; read by scripts/bootstrap.sh",
+      "# and scripts/check-docs.py. Change it only through an ADR-referencing PR (see AGENTS.md).",
+      "# Checksums are the sha256 of the official release archives at",
+      "# https://github.com/bendlang/bend/releases/tag/v<BEND_VERSION>",
+      "BEND_VERSION=2.0.40",
+      "BEND_SHA256_DARWIN_ARM64=b2be003b041eb6cfc65326be18f79eb2e0bae2189be79a18c507e661b4b6900b",
+      "BEND_SHA256_DARWIN_X64=9229c8bdd0a93f63fa45cc5af5e9e56389ebb620d655920915daf966c6ca561c",
+      "BEND_SHA256_LINUX_ARM64=2f42a6fa34ecdaa71ae105e5fa734f9a07e129d333e45448ab6d2ff03a837570",
+      "BEND_SHA256_LINUX_X64=c9ff8d67bd903fb6ad9a26b43d8a62c01021de82a44d55ce4a3dcd4732113d6b"
+    ]
+  },
+  "harness_sha256": "2c933915b908bfb562434d3a81d4e8983a6c6ea5d7e3c692894d218680e28161",
+  "binaries": {
+    "verify-on-bytes": {
+      "sha256": "7f350fde8cac9e26ac6a654dd51bf796195d6d7f7edaf75ce63bec49cd945e3c",
+      "source_digest": "lean-verify-on-bytes",
+      "workers": 1
+    },
+    "verify-bend": {
+      "sha256": "0d9f88736aaf488c617314f23f37d379bef7481bdfecbb6bba5fbf0b7987e10c",
+      "source_digest": "4b01d0242a311d69ff3c3dce5637d695d1350030172ea51c7ff9873527d9c896",
+      "workers": 8
+    }
+  },
+  "fixtures": {
+    "full-size": {
+      "proof_bytes": 18779540,
+      "proof_sha256": "efa762e20f72b64e183ad6f688eccf5b2b79649928d8e3a2a96645645dd08af9",
+      "manifest_sha256": "50e8f55509a516389b54893caf80bef9a42f36faf1fb4259875c758eb3cda760"
+    }
+  },
+  "warmups": [
+    {
+      "fixture": "full-size",
+      "program": "verify-on-bytes",
+      "sample": 1,
+      "wall_s": 92.847608701,
+      "rss_kib": 5199784,
+      "cpu_s": 92.77,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the proved lemma; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=lean-verify-on-bytes",
+        "YES"
+      ]
+    },
+    {
+      "fixture": "full-size",
+      "program": "verify-bend",
+      "sample": 1,
+      "wall_s": 22.719303824,
+      "rss_kib": 2704128,
+      "cpu_s": 48.809999999999995,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the bound within a third of the distance; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=4b01d0242a311d69ff3c3dce5637d695d1350030172ea51c7ff9873527d9c896",
+        "YES"
+      ],
+      "workers_observed": 8
+    }
+  ],
+  "samples": [
+    {
+      "fixture": "full-size",
+      "program": "verify-on-bytes",
+      "sample": 1,
+      "wall_s": 93.349852042,
+      "rss_kib": 5195992,
+      "cpu_s": 93.29,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the proved lemma; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=lean-verify-on-bytes",
+        "YES"
+      ]
+    },
+    {
+      "fixture": "full-size",
+      "program": "verify-bend",
+      "sample": 1,
+      "wall_s": 23.381153747,
+      "rss_kib": 2698752,
+      "cpu_s": 49.6,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the bound within a third of the distance; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=4b01d0242a311d69ff3c3dce5637d695d1350030172ea51c7ff9873527d9c896",
+        "YES"
+      ]
+    },
+    {
+      "fixture": "full-size",
+      "program": "verify-bend",
+      "sample": 2,
+      "wall_s": 22.675710709,
+      "rss_kib": 2686208,
+      "cpu_s": 48.01,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the bound within a third of the distance; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=4b01d0242a311d69ff3c3dce5637d695d1350030172ea51c7ff9873527d9c896",
+        "YES"
+      ]
+    },
+    {
+      "fixture": "full-size",
+      "program": "verify-on-bytes",
+      "sample": 2,
+      "wall_s": 92.981660348,
+      "rss_kib": 5198604,
+      "cpu_s": 92.92,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the proved lemma; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=lean-verify-on-bytes",
+        "YES"
+      ]
+    },
+    {
+      "fixture": "full-size",
+      "program": "verify-on-bytes",
+      "sample": 3,
+      "wall_s": 93.466383296,
+      "rss_kib": 5196912,
+      "cpu_s": 93.41,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the proved lemma; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=lean-verify-on-bytes",
+        "YES"
+      ]
+    },
+    {
+      "fixture": "full-size",
+      "program": "verify-bend",
+      "sample": 3,
+      "wall_s": 23.47620985,
+      "rss_kib": 2677248,
+      "cpu_s": 49.300000000000004,
+      "exit": 0,
+      "record": [
+        "commitment: 86 closeness rounds of the one-time files rest on another source than the bound within a third of the distance; the table has a record: the binding of the weights rests on the theorem on codes (ePrint 2025/2055, Theorem 4.6), taken as given",
+        "proof of work: up to 32 bits counted in 71 rounds; with it the least round has 128.00 bits, without it 96.23 bits",
+        "result-v1 status=0 claim=exact-match id=7a285919b43961861d9839530c26725accf26aa6d74e3c2afa31b9dc6bcd18fe bits=128 work=32 work-rounds=71 least-round=128.00 least-round-without-work=96.23 commitment-assumed-rounds=86 record=1 r=23 e=1024 T=1024 tokens=24..1023 y=yes policy=exact-match C=256 theta=256 cap=0 s=15 sh=8 sT=4 F=24 above-clip=0 leaf=0 stages=key,leaf,request dw=8 build=4b01d0242a311d69ff3c3dce5637d695d1350030172ea51c7ff9873527d9c896",
+        "YES"
+      ]
+    }
+  ]
+}

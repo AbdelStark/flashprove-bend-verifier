@@ -12,6 +12,10 @@ The headline workload is one exact-match proof for a model with Llama 4 Maverick
 
 ## Measurements on record
 
+The current full-size head-to-head pairs the fastest measured Bend worker count on each host with native Lean OnBytes. The companion report preserves the worker screen, the quiet paired samples and the before/after comparison at fixed worker counts. [Latest measurements](../research/request-projection.md)
+
+### Earlier experiments
+
 | CPU and experiment | Median wall seconds per full-size proof | How to read the result |
 | --- | --- | --- |
 | Apple M4 Max, sparse U3 reads | 1 worker **46.034 → 38.279**. 16 workers **22.639 → 22.184**. | Previous Bend → new Bend, with matching worker counts. [Memory and samples](../research/sparse-u3.md) |
@@ -36,6 +40,7 @@ Start from the repository root with `make bootstrap upstream`. Each command belo
 
 | Question | Command or recipe | Where to read the result |
 | --- | --- | --- |
+| Which Bend worker count gives the lowest median on this CPU? | Run `make benchmark-workers BENCH_ARGS="--worker-counts 1 2 4 8 16"`. Add counts suited to the host. | The JSON records each verified warmup, every quiet call and the selected worker count. Use a fresh OnBytes pairing for the result you publish. |
 | Did a Bend change reduce latency? | Keep the earlier executable and its adjacent `.digest`, then run `make benchmark-revisions BENCH_ARGS="--before /absolute/path/to/verify-bend --workers 1"` on the new checkout. Repeat with 16 workers for the parallel case. | Both warmups check the observed pool size. Each timed call uses the same explicit worker count and checks the four-line verdict. [Harness](../../scripts/benchmark-standalone.py) |
 | How long do standalone Bend and Lean OnBytes take on the same full-size proof? | Run `make benchmark-onbytes` on macOS or Linux. To include an earlier Bend build, supply `BENCH_ARGS="--before /absolute/path/to/verify-bend"`. Keep its `.digest` beside it. | The printed directory contains `report.md`, the per-call timings and closing records in `results.json`, and raw stdout, stderr and system time reports. The [original M4 recipe](../research/m4-standalone.md#repeat-the-comparison) reproduces the historical pairing. |
 | How does standalone Bend compare with upstream C++? | `make benchmark-standalone` on macOS or Linux. It checks the small and full-size exact-match proofs. | Open `report.md` in the printed results directory for the times, median ratios and peak RSS in KiB. The individual samples and verdict records are in `results.json`. [Harness](../../scripts/benchmark-standalone.py) |

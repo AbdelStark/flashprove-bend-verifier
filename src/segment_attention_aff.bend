@@ -3,7 +3,6 @@ import ./u3_cells.bend as Cells
 import ./extension.bend as X
 import ./sumcheck.bend as E
 import ./fold.bend as F
-import ./row_tensor.bend as Tensor
 import ./oracle_sample.bend as Sample
 import ./key_stage_lookup.bend as Int
 import ./key_stage_lookup_rows.bend as L
@@ -55,7 +54,39 @@ def eqp(xs: B.Elements, ys: B.Elements, a: X.E3) -> X.E3:
     case Con{+x,rest} Con{y,tail}: eqp(rest,tail,E.mul(a,F.mix(F.sub(F.one(),x),x,y)))
     case _ _: a
 
-def eq(xs: B.Elements, i: Nat) -> X.E3: Tensor.entry(Tensor.eq(rev(xs)),i,F.one())
+# The point is high bit first. An address uses its low len(point) bits.
+def eq_low(z: B.Elements,+i: Nat, acc: X.E3) -> X.E3:
+  match z:
+    case []: acc
+    case +x <> rest:
+      v = Bool.pick(X.E3,Nat.is_eq(Nat.mod(i,2n),1n),x,F.sub(F.one(),x))
+      eq_low(rest,Nat.div(i,2n),E.mul(acc,v))
+
+def eq(xs: B.Elements,i: Nat) -> X.E3: eq_low(rev(xs),i,F.one())
+
+# Adjacent addresses share their high-bit value w. Their weights are w - w*x
+# and w*x. The requested interval can start or end in the middle of a pair.
+def pairs(ws: B.Elements,+x: X.E3,n: Nat,acc: B.Elements) -> B.Elements:
+  match ws n:
+    case Con{+w,tail} 1n+0n: rev(F.sub(w,E.mul(w,x)) <> acc)
+    case Con{+w,tail} 1n+1n+k:
+      +hi = E.mul(w,x)
+      pairs(tail,x,k,hi <> F.sub(w,hi) <> acc)
+    case _ _: rev(acc)
+
+def children(ws: B.Elements,+x: X.E3,n: Nat,odd: Bool) -> B.Elements:
+  match ws n odd:
+    case Con{w,tail} 1n+k True{}: pairs(tail,x,k,[E.mul(w,x)])
+    case all count _: pairs(all,x,count,[])
+
+def eq_range(low: B.Elements,+first: Nat,n: Nat) -> B.Elements:
+  match low n:
+    case _ 0n: []
+    case Nil{} count: F.fill(count,F.one(),[])
+    case Con{x,rest} +count:
+      +offset = Nat.mod(first,2n)
+      parents = Nat.div(Nat.add(1n+count,offset),2n)
+      children(eq_range(rest,Nat.div(first,2n),parents),x,count,Nat.is_eq(offset,1n))
 def ones(+xs: B.Elements) -> X.E3: eqp(xs,List.replicate(X.E3,List.length(&2,X.E3,xs),F.one()),F.one())
 def sum(xs: B.Elements, a: X.E3) -> X.E3:
   match xs:

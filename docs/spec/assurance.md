@@ -18,6 +18,8 @@ Bend's independent kernel accepted the translated definitions of the optimized G
 
 Upstream proves soundness for its Lean verifier under a random oracle and assumptions on the public setup. Its exact-match result concerns the integer model's top token. Under clipped gap, the corresponding result concerns compliance with the chosen policy. Upstream distinguishes the theorem from the parser and compiled run and from its separate OnBytes implementation. To transfer that theorem to Bend would require proving that Bend acceptance implies Lean acceptance for the same inputs, commitment, covered positions, policy and hash oracle. That correspondence remains open. [Upstream theorem and premises](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) · [OnBytes](../research/onbytes.md)
 
+The independent kernel also accepted the standalone definitions in `9d00a32`, the revision used in the current performance comparison. A separate fixed-transcript test compares the original and projected LIN equations on both accepted and altered inputs. [Checks on the benchmarked verifier](../research/request-projection.md#checking-the-verification-path)
+
 ## Requirements
 
 | Requirement | Obligation | Evidence required for completion |

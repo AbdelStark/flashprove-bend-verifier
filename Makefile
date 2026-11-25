@@ -162,7 +162,7 @@ profile: standalone upstream  ## sample one call's stacks and print where its ti
 fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend must never accept where C++ refuses (FUZZ_ARGS="-n N --seed S")
 	@python3 -B scripts/fuzz-differential.py $(FUZZ_ARGS)
 
-.PHONY: benchmark-standalone benchmark-onbytes benchmark-revisions benchmark-test
+.PHONY: benchmark-standalone benchmark-onbytes benchmark-revisions benchmark-workers benchmark-test
 benchmark-standalone: standalone oracle  ## compare standalone Bend with C++ on both exact-match proofs
 	@python3 -B scripts/benchmark-standalone.py $(BENCH_ARGS)
 
@@ -171,6 +171,9 @@ benchmark-onbytes: standalone lean-baseline  ## compare standalone Bend with nat
 
 benchmark-revisions: standalone upstream  ## compare two standalone Bend builds on the full-size proof (BENCH_ARGS="--before PATH --workers N")
 	@python3 -B scripts/benchmark-standalone.py --compare bend --fixture full-size $(BENCH_ARGS)
+
+benchmark-workers: standalone upstream  ## select a worker count on the full-size proof (BENCH_ARGS="--worker-counts 1 2 4 8 16")
+	@python3 -B scripts/benchmark-standalone.py --compare workers $(BENCH_ARGS)
 
 benchmark-test:  ## check worker counts and launch order in the paired benchmark
 	@python3 -B tests/test_benchmark_standalone.py

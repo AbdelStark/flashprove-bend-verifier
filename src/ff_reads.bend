@@ -49,12 +49,21 @@ def walk(w:B.Elements,n:Nat,+tensor:G.Tensor,+tab:Nat,+s2:Nat,+lam:Nat,col:Nat,a
 def weighted(n:Nat,w:B.Elements,+start:Nat,tensor:G.Tensor,tab:Nat,s2:Nat,lam:Nat,bias:Nat,acc:List<&2,Cells.Cell>) -> A.Aff:
   walk(List.drop(&2,X.E3,w,start),n,tensor,tab,s2,lam,Nat.sub(start,bias),acc)
 
-def weights(n:Nat,+z:B.Elements,+seg:G.Segment,+unit:Nat,acc:B.Elements) -> B.Elements:
-  match n:
-    case 0n: acc
-    case 1n+k:
-      +i = k
-      weights(i,z,seg,unit,A.eq(z,Nat.div(G.pos(seg,Nat.mul(unit,i)),unit)) <> acc)
+# Sample every unit-th logical column. A run may end between samples; skip
+# carries that remainder into the next run before converting to a physical index.
+def run_weights(rs: List<&2,G.Run>,+z: B.Elements,+unit: Nat,+skip: Nat,n: Nat,acc: B.Elements) -> B.Elements:
+  match rs n:
+    case _ 0n: acc
+    case Nil{} count: F.fill(count,A.eq_low(z,0n,F.one()),acc)
+    case Con{G.Run{start,+len},tail} +count:
+      +here = Nat.min(count,Nat.div(Nat.add(Nat.sub(len,skip),Nat.sub(unit,1n)),unit))
+      next = Nat.sub(Nat.add(skip,Nat.mul(here,unit)),len)
+      ws = A.eq_range(z,Nat.div(Nat.add(start,skip),unit),here)
+      F.cat(X.E3,ws,run_weights(tail,z,unit,next,Nat.sub(count,here),acc))
+
+def weights(n:Nat,z:B.Elements,seg:G.Segment,unit:Nat,acc:B.Elements) -> B.Elements:
+  G.Segment{_,_,_,_,runs} = seg
+  run_weights(runs,A.rev(z),unit,0n,n,acc)
 
 def width(s:G.Segment) -> Nat:
   G.Segment{_,n,_,_,_} = s
