@@ -8,17 +8,18 @@ We built the verifier to measure how Bend 2 handles the same proof as FlashProve
 
 The benchmark measures the time a client waits to check **one existing proof on its CPU**. In the full-size example, the first 24 tokens are the prompt. The proof covers the next 1,000 tokens in the reply and one proposed next token. A single `YES` means all 1,001 predictions match the committed integer model's first choice at their respective positions. [What the fixture proves](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md#what-the-yes-says)
 
-On the Apple M4 Max, we started the clock when we launched each compiled verifier. It read the 17.91 MiB proof and the other public inputs from local files, checked the model commitment and the token claims, printed its verdict and exited. Compilation, downloads, model inference and proof generation all happened before the timer started.
+We start the clock when the compiled verifier launches. It reads the 17.91 MiB proof and public inputs from local files, checks the commitment and token claims, prints its verdict and exits. The timer excludes compilation, downloads, model inference and proof generation.
 
-| Verifier on the M4 Max | Median wall time | Peak resident memory |
-| --- | ---: | ---: |
-| Optimized Bend, 1 worker | 39.309 s | 2.17 GiB |
-| Lean OnBytes, 1 worker | 59.329 s | 4.91 GiB |
-| Earlier Bend | 249.893 s | 10.84 GiB |
+The request proof includes equations that read individual cells of a table called U3. Bend now keeps each cell’s integer address when it combines those equations, saving a list allocation and traversal for each read. The table compares that change with the previous revision. Each result is the median of three fresh processes after a verified warmup per executable. Both builds used the same worker count within a row.
 
-With one worker, optimized Bend verified this proof **1.51× faster than native Lean OnBytes** and **6.36× faster than our earlier implementation**. A separately paired run with 16 Bend workers took **20.380 s** against **59.756 s** for sequential Lean. Each median covers three fresh processes after a verified warmup per executable. Peak memory is the largest measured resident set in each row. [Every sample, input and build identity](docs/research/cpu-optimization.md) · [Earlier benchmarks](docs/research/m4-standalone.md)
+| CPU | Bend workers | Previous Bend | Bend with sparse U3 reads | Peak RSS, previous → new |
+| --- | ---: | ---: | ---: | ---: |
+| Apple M4 Max | 1 | 46.034 s | 38.279 s | 2.17 → 2.00 GiB |
+| Apple M4 Max | 16 | 22.639 s | 22.184 s | 3.47 → 2.73 GiB |
+| Lucid Xeon Platinum 8480CL | 1 | 88.879 s | 74.625 s | 2.18 → 2.00 GiB |
+| Lucid Xeon Platinum 8480CL | 16 | 45.236 s | 41.122 s | 3.48 → 2.69 GiB |
 
-On a Lucid Xeon Platinum 8480CL the single-worker medians were much closer, **90.706 s for Bend and 93.978 s for Lean OnBytes**. [Paired Xeon samples](docs/research/cpu-optimization.md#repeating-the-comparison-on-a-xeon)
+**Against Lean on the same proof**, a separate one-worker M4 run took **38.412 s in Bend** and **64.619 s in native Lean OnBytes**. Lean took 1.68× as long by median wall time. The benchmark record includes every sample, verdict, binary hash and command. [Latest measurements](docs/research/sparse-u3.md) · [Earlier Bend, Lean and C++ comparisons](docs/research/cpu-optimization.md)
 
 OnBytes is FlashProve’s Lean implementation of the byte-level checks performed by its C++ verifier. The often-quoted **19-minute Lean result** times a different command on the Xeon. That driver builds a parser tool, links a helper and evaluates the verifier defined in the upstream soundness development. [Theorem-linked Linux measurements](docs/research/lucid.md#theorem-linked-verifier) · [Which benchmark to run](docs/spec/performance.md#reproduce-a-measurement)
 

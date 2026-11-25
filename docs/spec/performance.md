@@ -14,6 +14,9 @@ The headline workload is one exact-match proof for a model with Llama 4 Maverick
 
 | CPU and experiment | Median wall seconds per full-size proof | How to read the result |
 | --- | --- | --- |
+| Apple M4 Max, sparse U3 reads | 1 worker **46.034 → 38.279**. 16 workers **22.639 → 22.184**. | Previous Bend → new Bend, with matching worker counts. [Memory and samples](../research/sparse-u3.md) |
+| Lucid Xeon, sparse U3 reads | 1 worker **88.879 → 74.625**. 16 workers **45.236 → 41.122**. | Previous Bend → new Bend, with matching worker counts. [Memory and samples](../research/sparse-u3.md) |
+| Apple M4 Max, sparse U3 reads versus Lean | Bend **38.412**, Lean OnBytes **64.619** | Both used one worker on the same full-size exact-match proof. [Paired samples](../research/notes/sparse-m4-lean.json) |
 | Apple M4 Max, three-program run | Earlier Bend **249.893**, optimized Bend (1 worker) **39.309**, Lean OnBytes **59.329** | Each program ran once in every launch position. [Samples and build identities](../research/cpu-optimization.md) |
 | Same M4 Max, parallel run | Optimized Bend (16 workers) **20.380**, sequential Lean OnBytes **59.756** | Alternating pairs using the same executables and fixture. [Raw samples](../research/notes/m4-cpu-16-workers.json) |
 | Apple M4 Max, earlier paired runs | Standalone Bend **254.945**, Lean OnBytes **58.693** | Both binaries verified the same proof in three alternating pairs. Bend took 4.34 times as long by median. [Samples and binary identities](../research/m4-standalone.md) |
