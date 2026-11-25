@@ -51,15 +51,10 @@ def stream(c:Context,i:Nat) -> A.Aff:
   Context{s,_,_,_,_,w,_} = c
   Read.residual(s,w,"Z",i)
 
-def weighted(ws:B.Elements,+s:G.Shape,+name:String,+layer:Nat,i:Nat,acc:A.Aff) -> A.Aff:
-  match ws:
-    case []: acc
-    case v <> tail:
-      +j = i
-      weighted(tail,s,name,layer,1n+j,A.add(acc,Read.sh(s,name,"zt",layer,j),v))
 def short(c:Context,name:String,layer:Nat) -> A.Aff:
-  Context{s,_,_,_,ws,_,_} = c
-  weighted(ws,s,name,layer,0n,A.zero())
+  Context{+s,_,_,_,+ws,_,_} = c
+  +tensor = G.tensor(s,name)
+  Read.walk(ws,F.count(X.E3,ws,0n),tensor,Read.table(s,tensor,"zt"),1n,layer,0n,[])
 def at(c:Context,name:String,layer:Nat,index:Nat) -> A.Aff:
   Context{s,_,_,_,_,_,_} = c
   Read.sh(s,name,"zt",layer,index)

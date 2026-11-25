@@ -59,20 +59,22 @@ type Stage is Data:
 type Segment is Data:
   Segment{id:Nat,moe:Bool,full:B.Elements,blocks:B.Elements,w:X.E3,ec:X.E3,layer:F.Factors,pad:X.E3}
 
-def cuts(rs:List<&2,G.Run>, +v:B.Elements, +unit:Nat, acc:B.Elements) -> B.Elements:
+# The wide path selects independently clipped run slices of the padded table.
+def cuts(rs: List<&2,G.Run>,+low: B.Elements,+span: Nat,+unit: Nat) -> B.Elements:
   match rs:
-    case []: List.reverse(&2,X.E3,acc)
+    case []: []
     case G.Run{from,n} <> tail:
-      got = F.take(X.E3,List.drop(&2,X.E3,v,Nat.div(from,unit)),Nat.div(n,unit))
-      cuts(tail,v,unit,List.reverse.go(&2,X.E3,got,acc))
+      +start = Nat.div(from,unit)
+      count = Nat.min(Nat.div(n,unit),Nat.sub(span,start))
+      F.cat(X.E3,A.eq_range(low,start,count),cuts(tail,low,span,unit))
 
-def weights(+p:B.Elements, +seg:G.Segment, +log:Nat) -> B.Elements:
-  G.Segment{_,bits,+n,_,+rs} = seg
+def weights(+p:B.Elements,+seg:G.Segment,+log:Nat) -> B.Elements:
+  G.Segment{_,bits,+n,_,rs} = seg
   +u = A.size(log)
   +count = Nat.div(n,u)
   +zs = F.take(X.E3,p,Nat.sub(bits,log))
   run = Bool.pick(Unit -> B.Elements,Nat.is_lt(count,64n),
-    _ => Read.weights(count,zs,seg,u,[]), _ => cuts(rs,F.factor_table(T.eq(A.rev(zs)),F.one()),u,[]))
+    _ => Read.weights(count,zs,seg,u,[]), _ => cuts(rs,A.rev(zs),A.size(F.count(X.E3,zs,0n)),u))
   run(Unit{})
 
 def pad_value(c:S.Call) -> X.E3:

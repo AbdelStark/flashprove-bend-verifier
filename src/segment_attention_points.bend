@@ -21,32 +21,32 @@ def index(t: Tile, col: Bool) -> Nat:
   Tile{i,j} = t
   Bool.pick(Nat,col,j,i)
 
-# The last sg has no tile and contributes zero. The same map is used by the
-# lookup-key identity and by the two marginals in the U3 evaluation tables.
-def margin(n: Nat,+nt: Nat,+p: B.Elements,+sg: B.Elements,+col: Bool,+which: Nat,+acc: X.E3) -> X.E3:
-  match n:
-    case 0n: acc
-    case 1n+k:
-      +remaining = k
-      +i = Nat.div(remaining,Nat.sub(nt,1n))
-      +j = Nat.mod(remaining,Nat.sub(nt,1n))
-      w = E.mul(A.eq(p,i),A.eq(sg,j))
-      margin(remaining,nt,p,sg,col,which,Bool.pick(X.E3,Nat.is_eq(index(cover(i,j,nt),col),which),E.add(acc,w),acc))
-def marginal(+s: S.Shape,+z: B.Elements,col: Bool,index_: Nat) -> X.E3:
+# Each real tile contributes once to its row or column. The final sg has
+# no tile. The upstream cover enumerates p < nt/2 and sg < nt - 1.
+def tile_sums(ws: B.Elements,+p: Nat,+nt: Nat,+col: Bool,j: Nat,+weight: X.E3,a: Array<X.E3>) -> Array<X.E3>:
+  match ws:
+    case []: a
+    case x <> tail:
+      +sg = j
+      +at = U32.from_nat(index(cover(p,sg,nt),col))
+      tile_sums(tail,p,nt,col,1n+sg,weight,F.summed(Array.get(X.E3,a,at),at,E.mul(weight,x)))
+def tile_rows(ps: B.Elements,+sg: B.Elements,+nt: Nat,+col: Bool,i: Nat,a: Array<X.E3>) -> Array<X.E3>:
+  match ps:
+    case []: a
+    case w <> tail:
+      +p = i
+      tile_rows(tail,sg,nt,col,1n+p,tile_sums(sg,p,nt,col,0n,w,a))
+def marginals(+s: S.Shape,+z: B.Elements,col: Bool) -> B.Elements:
   +h = S.tiles(s)
   +a = Nat.sub(h,1n)
   +nt = A.size(h)
-  margin(Nat.mul(Nat.div(nt,2n),Nat.sub(nt,1n)),nt,middle(z,S.lg(s),a),middle(z,Nat.add(S.lg(s),a),h),col,index_,F.zero())
-def both(+s: S.Shape,diag: Bool,+z: B.Elements,+col: Bool,+i: Nat) -> X.E3:
-  choose = Bool.pick(Unit -> X.E3,diag,
-    _ => A.eq(middle(z,S.lg(s),S.tiles(s)),i), _ => marginal(s,z,col,i))
-  choose(Unit{})
-def weighted_marginal(n: Nat,+s: S.Shape,+z: B.Elements,+row: B.Elements,acc: X.E3) -> X.E3:
-  match n:
-    case 0n: acc
-    case 1n+k:
-      +i = k
-      weighted_marginal(i,s,z,row,E.add(acc,E.mul(A.eq(row,i),marginal(s,z,False{},i))))
+  ps = A.eq_range(A.rev(middle(z,S.lg(s),a)),0n,Nat.div(nt,2n))
+  sg = A.eq_range(A.rev(middle(z,Nat.add(S.lg(s),a),h)),0n,Nat.sub(nt,1n))
+  F.values(Array.to_list(X.E3,tile_rows(ps,sg,nt,col,0n,Array.new(X.E3,h,F.zero()))),[])
+
+def weighted_marginal(+s: S.Shape,z: B.Elements,row: B.Elements) -> X.E3:
+  ws = A.eq_range(A.rev(row),0n,A.size(S.tiles(s)))
+  Maybe.default(&2,X.E3,B.dot(ws,marginals(s,z,False{}),F.zero()),F.zero())
 
 def tile_weight(+s: S.Shape,d: Bool,+z: B.Elements,+r: B.Elements) -> X.E3:
   +n = S.tiles(s)
@@ -60,19 +60,18 @@ def tile_weight(+s: S.Shape,d: Bool,+z: B.Elements,+r: B.Elements) -> X.E3:
   E.mul(dot(take(z,g),take(r,g)),Bool.pick(X.E3,d,b,a))
 
 # Marginals are on the high tile index, eq(low) on the token within the tile.
-def add_margins(n: Nat,+s: S.Shape,+z: B.Elements,+col: Bool,+lo: F.Factors,acc: F.Form) -> F.Form:
-  match n:
-    case 0n: acc
-    case 1n+k:
-      +i = k
-      w = marginal(s,z,col,i)
-      fs = List.append(&2,F.Factor,lo,T.choice(S.tiles(s),i))
-      add_margins(i,s,z,col,lo,F.Term{w,fs} <> acc)
+def add_margins(ws: B.Elements,+bits: Nat,+lo: F.Factors,i: Nat) -> F.Form:
+  match ws:
+    case []: []
+    case w <> tail:
+      +j = i
+      fs = List.append(&2,F.Factor,lo,T.choice(bits,j))
+      F.Term{w,fs} <> add_margins(tail,bits,lo,1n+j)
 def equality(z: B.Elements) -> F.Form: [F.Term{F.one(),T.eq(A.rev(z))}]
 def token(+s: S.Shape,diag: Bool,+z: B.Elements,col: Bool,+lo: B.Elements) -> F.Form:
   choose = Bool.pick(Unit -> F.Form,diag,
     _ => equality(cat(middle(z,S.lg(s),S.tiles(s)),lo)),
-    _ => add_margins(A.size(S.tiles(s)),s,z,col,T.eq(A.rev(lo)),[]))
+    _ => add_margins(marginals(s,z,col),S.tiles(s),T.eq(A.rev(lo)),0n))
   choose(Unit{})
 def extend(forms: F.Form,+high: F.Factors) -> F.Form:
   match forms:

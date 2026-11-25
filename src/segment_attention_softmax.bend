@@ -30,7 +30,7 @@ def b(data: Values,index: Nat) -> A.Aff:
 def dot(+s:S.Shape,+d:Bool,+r:B.Elements,+w:S.Unit_) -> X.E3:
   +zi = Z.take(D.time(s,w,1n),S.tiles(s))
   decide = Bool.pick(Unit -> X.E3,d,
-    _ => Z.dot(zi,Z.middle(r,S.lg(s),S.tiles(s))),_ => Z.weighted_marginal(A.size(S.tiles(s)),s,r,zi,F.zero()))
+    _ => Z.dot(zi,Z.middle(r,S.lg(s),S.tiles(s))),_ => Z.weighted_marginal(s,r,zi))
   E.mul(decide(Unit{}),Z.dot(D.main_group(s,w,1n),Z.take(r,S.lg(s))))
 def rows(+s: S.Shape,+d: Bool,+check: P.Check,+w: S.Unit_,gam: X.E3,claim: A.Aff) -> A.Equations:
   +r = P.point(check)
