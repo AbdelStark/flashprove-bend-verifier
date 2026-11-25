@@ -1,0 +1,62 @@
+{
+  "baseline": {
+    "revision": "89e1df4d9c3215f5b501c38778c854aec05eafde",
+    "slurm": "7744|COMPLETED|00:29:03|0:0|8",
+    "passed_targets": [
+      "ci",
+      "extended",
+      "full",
+      "fuzz",
+      "stages"
+    ],
+    "source_digest": "58e7885d9d83a1cce8998f6c6d59e0d5f61440f24c2f91f3ac9f67b0004036d2",
+    "lanes": [
+      "PASS: 39 / 39",
+      "PASS: 39 / 39 (native)"
+    ],
+    "records": [
+      "accepted-proof: verified independently, YES",
+      "accepted-proof-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8",
+      "full-size: verified independently, YES",
+      "full-size-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=25856 theta=512 cap=1 s=15 sh=8"
+    ]
+  },
+  "final": {
+    "revision": "9d00a32cb967a124159b562563cc7c5a9673bbcd",
+    "slurm": "7762|COMPLETED|00:27:47|0:0|8",
+    "passed_targets": [
+      "ci",
+      "extended",
+      "full",
+      "fuzz",
+      "stages"
+    ],
+    "source_digest": "4b01d0242a311d69ff3c3dce5637d695d1350030172ea51c7ff9873527d9c896",
+    "lanes": [
+      "PASS: 42 / 42",
+      "PASS: 42 / 42 (native)"
+    ],
+    "records": [
+      "accepted-proof: verified independently, YES",
+      "accepted-proof-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8",
+      "full-size: verified independently, YES",
+      "full-size-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=25856 theta=512 cap=1 s=15 sh=8"
+    ]
+  },
+  "parity": {
+    "slurm": "7764|COMPLETED|00:09:21|0:0|16",
+    "sets": {
+      "fixtures": 6,
+      "tables": 20,
+      "fuzz": 64,
+      "ordering": 1
+    }
+  },
+  "independent_kernel": {
+    "entry": "src/standalone.bend",
+    "result": "ALL PROOFS CHECK",
+    "exit": 0,
+    "checker_sha256": "b8833793dd6a2fa9c9a580c8de4423fcccea8e4ada4ac38a3702ff6c90bb9ba6",
+    "slurm": "7763|COMPLETED|00:02:36|0:0|2"
+  }
+}
