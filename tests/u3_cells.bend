@@ -1,4 +1,6 @@
 import Base
+import ../src/segment_model.bend as M
+import ../src/segment_u3.bend as Dense
 import ../src/u3_cells.bend as C
 import ../src/extension.bend as X
 import ../src/fold.bend as F
@@ -17,6 +19,27 @@ def compare(+p: C.Points) -> Bool:
   terms = F.populate(C.expand(p),Array.new(X.E3,2n,F.zero()))
   same(Array.to_list(X.E3,direct),Array.to_list(X.E3,terms))
 
+def unrelated(xs: List<&2,M.Read>) -> Bool:
+  match xs:
+    case [M.Read{4n,"ZZ",[]}]: True{}
+    case _: False{}
+
+# Three genuine cells occupy a four-cell envelope. A symbolic contribution
+# cancels a sparse one at index 1; the zero in padding cannot affect coverage.
+def mixed() -> Bool:
+  points: C.Points = C.Points{[C.Cell{0n,F.one()},C.Cell{Nat.add(4294967295n,2n),F.one()},C.Cell{2n,F.one()}],2n,F.one()}
+  +cells: M.Read = M.U3Cells{4n,points}
+  tensor: M.Read = M.Read{4n,"U3",[F.Term{E.negate(F.one()),[F.High{},F.Low{}]}]}
+  +rs: List<&2,M.Read> = [cells,tensor,M.Read{4n,"ZZ",[]}]
+  +ref = Cover.u3(rs,[])
+  direct = Dense.populate(rs,Array.new(X.E3,2n,F.zero()))
+  expanded = F.populate(ref,Array.new(X.E3,2n,F.zero()))
+  Dense.local(rs,4n,2n,3n) && Bool.not(Dense.local(rs,5n,2n,3n)) &&
+    Bool.not(Dense.local(rs,4n,3n,3n)) && unrelated(Dense.others(rs)) &&
+    same(Array.to_list(X.E3,direct),Array.to_list(X.E3,expanded)) &&
+    Cover.form(Cover.u3([cells],[]),3n) && Bool.not(Cover.form(ref,3n)) &&
+    Bool.not(Cover.form(Cover.u3([cells],[]),5n))
+
 def main() -> IO(Unit):
   # Fixed addresses at 1 and 5 have the same two low bits. A cancellation
   # there must still fail the check on the final batched coefficients.
@@ -25,7 +48,7 @@ def main() -> IO(Unit):
     C.Cell{2n,F.one()},C.Cell{3n,x}],2n,F.one()}
   +scaled = C.scaled(ps,x)
   direct = C.write(scaled,Array.new(X.E3,2n,F.zero()))
-  IO.print(Bool.show(C.width(ps,2n) && Bool.not(C.width(ps,3n)) && compare(scaled) &&
+  IO.print(Bool.show(C.width(ps,2n) && Bool.not(C.width(ps,3n)) && compare(scaled) && mixed() &&
     Bool.not(Cover.all(4n,Array.to_list(X.E3,direct)))))
 
 #|True
