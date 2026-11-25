@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./segment_attention_aff.bend as A
 import ./segment_attention_shape.bend as S
 import ./segment_attention_points.bend as Z
@@ -44,15 +45,15 @@ def tensor(kind: TensorKind,+s: S.Shape, lam: Nat, +qhead: Nat, kv: Nat, +zc: B.
   +hi = Z.take(zc,Nat.sub(S.ld(s),S.lanes(s)))
   tensor_at(kind,s,l,h,d,dq,dk,blk,hi,qhead,kv)
 
-def block(n: Nat,+at: Nat,+z: B.Elements,+scale: X.E3,acc: List<&2,A.Cell>) -> List<&2,A.Cell>:
+def block(n: Nat,+at: Nat,+z: B.Elements,+scale: X.E3,acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   match n:
     case 0n: acc
     case 1n+k:
       +i = k
-      block(i,at,z,scale,A.Cell{Nat.add(at,i),E.mul(scale,A.eq(z,i))} <> acc)
+      block(i,at,z,scale,Cells.Cell{Nat.add(at,i),E.mul(scale,A.eq(z,i))} <> acc)
 
 def limbs(n: Nat,+off: Nat,+start: Nat,+stride: Nat,+blk: Nat,+hi: B.Elements,+scale: X.E3,
-   acc: List<&2,A.Cell>) -> List<&2,A.Cell>:
+   acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   match n:
     case 0n: acc
     case 1n+k:
@@ -62,12 +63,12 @@ def limbs(n: Nat,+off: Nat,+start: Nat,+stride: Nat,+blk: Nat,+hi: B.Elements,+s
       cs = block(A.size(List.length(&2,X.E3,hi)),pos,hi,w,acc)
       limbs(i,off,start,stride,blk,hi,scale,cs)
 
-def read_tensor(t: Tensor,layers: Nat,lam: Nat,offset: Nat,w: X.E3,acc: List<&2,A.Cell>) -> List<&2,A.Cell>:
+def read_tensor(t: Tensor,layers: Nat,lam: Nat,offset: Nat,w: X.E3,acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   Tensor{off,n,+width,block_size,f,hi} = t
   limbs(n,offset,Nat.add(Nat.add(off,Nat.mul(lam,width)),f),Nat.mul(layers,width),block_size,hi,w,acc)
 
 def heads(n: Nat,+s: S.Shape,+table: Nat,+kind: TensorKind,+b: Nat,+g: B.Elements,+zc: B.Elements,+w: X.E3,
-  acc: List<&2,A.Cell>) -> List<&2,A.Cell>:
+  acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   match n:
     case 0n: acc
     case 1n+k:
@@ -82,7 +83,7 @@ def read(+s: S.Shape,table: Nat,kind: TensorKind,b: Nat,g: B.Elements,zc: B.Elem
   A.Aff{heads(S.group(s),s,table,kind,b,g,zc,F.one(),[]),[],F.zero()}
 
 def batch(ws: B.Elements,+s: S.Shape,+table: Nat,+kind: TensorKind,+g: B.Elements,+zc: B.Elements,b: Nat,
-  acc: List<&2,A.Cell>) -> A.Aff:
+  acc: List<&2,Cells.Cell>) -> A.Aff:
   match ws:
     case []: A.Aff{acc,[],F.zero()}
     case w <> rest:

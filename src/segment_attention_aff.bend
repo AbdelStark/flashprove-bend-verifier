@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./extension.bend as X
 import ./sumcheck.bend as E
 import ./fold.bend as F
@@ -11,10 +12,8 @@ import ./segment_model.bend as Model
 
 # Sparse affine forms on a segment's U3 and its scalar masks. Cells are linear
 # indices in U3. The affine expression is required to be zero.
-type Cell is Data:
-  Cell{index: Nat, weight: X.E3}
 type Aff is Data:
-  Aff{cells: List<&2,Cell>, masks: L.Masks, constant: X.E3}
+  Aff{cells: List<&2,Cells.Cell>, masks: L.Masks, constant: X.E3}
 type Value is Data:
   Value{shown: X.E3, slot: Nat, factor: X.E3}
 
@@ -26,10 +25,10 @@ def hidden(x: Value) -> Aff:
   Value{v,i,b} = x
   Aff{[],[L.Mask{L.Multiplicities{},i,E.negate(b)}],v}
 
-def cells(xs: List<&2,Cell>, +s: X.E3, acc: List<&2,Cell>) -> List<&2,Cell>:
+def cells(xs: List<&2,Cells.Cell>, +s: X.E3, acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   match xs:
     case []: acc
-    case Cell{i,w} <> tail: cells(tail,s,Cell{i,E.mul(s,w)} <> acc)
+    case Cells.Cell{i,w} <> tail: cells(tail,s,Cells.Cell{i,E.mul(s,w)} <> acc)
 
 def add(sum: Aff, x: Aff, +s: X.E3) -> Aff:
   Aff{a,b,c} = sum
@@ -73,14 +72,12 @@ def weighted(+values: Values, weights: B.Elements, +step: Nat, +i: Nat, acc: Aff
     case []: acc
     case w <> tail: weighted(values,tail,step,Nat.add(i,step),add(acc,slot(values,i),w))
 
-def coefficients(xs: List<&2,Cell>, +bits: Nat, acc: F.Form) -> F.Form:
-  match xs:
-    case []: acc
-    case Cell{i,w} <> tail: coefficients(tail,bits,F.Term{w,Tensor.choice(bits,i)} <> acc)
+def coefficients(xs: List<&2,Cells.Cell>, +bits: Nat, acc: F.Form) -> F.Form:
+  Cells.terms(xs,bits,F.one(),acc)
 
 def equation(x: Aff, owner: Nat, n: Nat) -> Model.Aff:
   Aff{cells,masks,c} = x
-  Model.Aff{[Model.Read{owner,"U3",coefficients(cells,Sample.row_bits(n),[])}],masks,E.negate(c)}
+  Model.Aff{[Model.U3Cells{owner,Cells.Points{cells,Sample.row_bits(n),F.one()}}],masks,E.negate(c)}
 
 def equations(xs: Equations, +owner: Nat, +n: Nat, acc: Model.Equations) -> Model.Equations:
   match xs:

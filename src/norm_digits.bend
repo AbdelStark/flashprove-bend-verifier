@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./segment_attention_aff.bend as A
 import ./sumcheck.bend as E
 import ./fold.bend as F
@@ -11,7 +12,7 @@ def times(a: A.Aff,n: Nat) -> A.Aff: A.scale(a,A.nat(n))
 def two(k: Nat) -> Nat: Nat.pow(2n,k)
 
 # R11.2 five-limb ledger. Every committed cell holds the corresponding unsigned digit minus 128.
-def digit(t: Nat,j: Nat) -> A.Aff: A.plus(A.Aff{[A.Cell{Nat.add(t,j),F.one()}],[],F.zero()},integer(128n))
+def digit(t: Nat,j: Nat) -> A.Aff: A.plus(A.Aff{[Cells.Cell{Nat.add(t,j),F.one()}],[],F.zero()},integer(128n))
 
 def digits(+t: Nat,n: Nat,j: Nat,v: A.Aff,+scale: X.E3) -> A.Aff:
   match n:

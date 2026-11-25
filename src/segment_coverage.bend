@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./outer_source.bend as O
 import ./u3_series.bend as U
 import ./base_check.bend as B
@@ -58,6 +59,7 @@ def u3(xs: List<&2,M.Read>,acc: F.Form) -> F.Form:
       +prev = acc
       more = Bool.pick(Unit -> F.Form,column(name),_ => List.reverse.go(&2,F.Term,O.expand(s),prev),_ => prev)
       u3(tail,more(Unit{}))
+    case M.U3Cells{_,s} <> tail: u3(tail,List.reverse.go(&2,F.Term,Cells.expand(s),acc))
     case M.U3Run{_,s} <> tail: u3(tail,List.reverse.go(&2,F.Term,U.expand(s),acc))
     case M.Read{_,name,terms} <> tail:
       +prev = acc

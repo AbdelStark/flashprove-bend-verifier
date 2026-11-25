@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./ff_shape.bend as G
 import ./segment_attention_aff.bend as A
 import ./segment_attention_points.bend as Z
@@ -15,17 +16,17 @@ def name(mat: Nat) -> String:
     case 3n: "qa"
     case _: "xbI"
 
-def cell(id:Nat,w:X.E3) -> A.Aff: A.Aff{[A.Cell{id,w}],[],F.zero()}
+def cell(id:Nat,w:X.E3) -> A.Aff: A.Aff{[Cells.Cell{id,w}],[],F.zero()}
 
-def bytes(n:Nat,+base:Nat,+stride:Nat,+unit:Nat,+col:Nat,+offset:Nat,+scale:X.E3,acc:List<&2,A.Cell>) -> List<&2,A.Cell>:
+def bytes(n:Nat,+base:Nat,+stride:Nat,+unit:Nat,+col:Nat,+offset:Nat,+scale:X.E3,acc:List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   match n:
     case 0n: acc
     case 1n+k:
       +i = k
       id = Nat.add(Nat.add(offset,Nat.div(Nat.add(base,Nat.mul(i,stride)),unit)),col)
       w = E.mul(scale,A.nat(A.size(Nat.mul(8n,i))))
-      bytes(i,base,stride,unit,col,offset,scale,A.Cell{id,w} <> acc)
-def from(t:G.Tensor,table:Nat,unit:Nat,lam:Nat,col:Nat,w:X.E3,acc:List<&2,A.Cell>) -> List<&2,A.Cell>:
+      bytes(i,base,stride,unit,col,offset,scale,Cells.Cell{id,w} <> acc)
+def from(t:G.Tensor,table:Nat,unit:Nat,lam:Nat,col:Nat,w:X.E3,acc:List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   G.Tensor{_,off,n,count,+width} = t
   bytes(n,Nat.add(off,Nat.mul(lam,width)),Nat.mul(count,width),unit,col,table,w,acc)
 def table(s:G.Shape,t:G.Tensor,point:String) -> Nat:
@@ -37,7 +38,7 @@ def direct(+s:G.Shape,n:String,p:String,lam:Nat,col:Nat,unit:Nat) -> A.Aff:
 def sh(s:G.Shape,n:String,p:String,lam:Nat,col:Nat) -> A.Aff: direct(s,n,p,lam,col,1n)
 def long(+s:G.Shape,n:String,p:String,lam:Nat,col:Nat) -> A.Aff: direct(s,n,p,lam,col,G.field(s,"S2"))
 
-def walk(w:B.Elements,n:Nat,+tensor:G.Tensor,+tab:Nat,+s2:Nat,+lam:Nat,col:Nat,acc:List<&2,A.Cell>) -> A.Aff:
+def walk(w:B.Elements,n:Nat,+tensor:G.Tensor,+tab:Nat,+s2:Nat,+lam:Nat,col:Nat,acc:List<&2,Cells.Cell>) -> A.Aff:
   match w n:
     case _ 0n: A.Aff{acc,[],F.zero()}
     case Con{weight,tail} 1n+k:
@@ -45,7 +46,7 @@ def walk(w:B.Elements,n:Nat,+tensor:G.Tensor,+tab:Nat,+s2:Nat,+lam:Nat,col:Nat,a
       walk(tail,k,tensor,tab,s2,lam,1n+j,from(tensor,tab,s2,lam,j,weight,acc))
     case _ _: A.Aff{acc,[],F.zero()}
 
-def weighted(n:Nat,w:B.Elements,+start:Nat,tensor:G.Tensor,tab:Nat,s2:Nat,lam:Nat,bias:Nat,acc:List<&2,A.Cell>) -> A.Aff:
+def weighted(n:Nat,w:B.Elements,+start:Nat,tensor:G.Tensor,tab:Nat,s2:Nat,lam:Nat,bias:Nat,acc:List<&2,Cells.Cell>) -> A.Aff:
   walk(List.drop(&2,X.E3,w,start),n,tensor,tab,s2,lam,Nat.sub(start,bias),acc)
 
 def weights(n:Nat,+z:B.Elements,+seg:G.Segment,+unit:Nat,acc:B.Elements) -> B.Elements:

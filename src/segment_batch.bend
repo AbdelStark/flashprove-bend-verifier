@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./outer_source.bend as O
 import ./segment_outer.bend as Outer
 import ./segment_projection.bend as Project
@@ -32,6 +33,7 @@ def scaled(ts: List<&2,M.Read>,+power: X.E3,acc: List<&2,M.Read>) -> List<&2,M.R
   match ts:
     case []: acc
     case M.OuterRead{id,n,s} <> rest: scaled(rest,power,M.OuterRead{id,n,O.scaled(s,power)} <> acc)
+    case M.U3Cells{id,s} <> rest: scaled(rest,power,M.U3Cells{id,Cells.scaled(s,power)} <> acc)
     case M.U3Run{id,s} <> rest: scaled(rest,power,M.U3Run{id,U.scaled(s,power)} <> acc)
     case M.Read{link,name,terms} <> rest:
       scaled(rest,power,M.Read{link,name,V.scale(terms,power,[])} <> acc)
@@ -124,6 +126,10 @@ def place(rs: List<&2,M.Read>,+layout: Layout.Book,+shape: Q.Shape,+basis: Maybe
       do IO<Frame.Forms>:
         table : Layout.Matrix <- Layout.lookup(Map.get(Maybe<&2,Layout.Matrix>,None{},layout,Layout.key(owner,name)))
         on : Frame.On <- Outer.located(shape,table,source,owner,basis)
+        place(tail,layout,shape,basis,on <> acc)
+    case M.U3Cells{owner,p} <> tail:
+      do IO<Frame.Forms>:
+        on : Frame.On <- Layout.on_main(layout,shape,owner,"U3",Cells.expand(p))
         place(tail,layout,shape,basis,on <> acc)
     case M.U3Run{owner,s} <> tail:
       do IO<Frame.Forms>:

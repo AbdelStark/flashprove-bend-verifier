@@ -1,4 +1,5 @@
 import Base
+import ../../src/u3_cells.bend as Cells
 import ../../src/outer_source.bend as O
 import ../../src/u3_series.bend as U
 import ../../src/segment_inputs.bend as Inputs
@@ -28,6 +29,7 @@ def reads(xs:List<&2,Model.Read>,acc:X.E3) -> X.E3:
   match xs:
     case []: acc
     case Model.OuterRead{_,_,s} <> tail: reads(tail,terms(O.expand(s),acc))
+    case Model.U3Cells{_,s} <> tail: reads(tail,terms(Cells.expand(s),acc))
     case Model.U3Run{_,s} <> tail: reads(tail,terms(U.expand(s),acc))
     case Model.Read{_,_,fs} <> tail: reads(tail,terms(fs,acc))
 def rows(xs:Model.Equations,acc:X.E3) -> IO(X.E3):

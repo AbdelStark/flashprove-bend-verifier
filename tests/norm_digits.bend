@@ -1,4 +1,5 @@
 import Base
+import ../src/u3_cells.bend as Cells
 import ../src/norm_digits.bend as D
 import ../src/segment_attention_aff.bend as A
 import ../src/extension.bend as X
@@ -19,10 +20,10 @@ def raw(i:Nat,+changed:Bool) -> Nat:
     case 85n: 3n
     case _: 0n
 
-def eval(cs:List<&2,A.Cell>,+changed:Bool,acc:X.E3) -> X.E3:
+def eval(cs:List<&2,Cells.Cell>,+changed:Bool,acc:X.E3) -> X.E3:
   match cs:
     case []: acc
-    case A.Cell{i,w} <> tail:
+    case Cells.Cell{i,w} <> tail:
       v = F.sub(A.nat(raw(i,changed)),A.nat(128n))
       eval(tail,changed,E.add(acc,E.mul(w,v)))
 
