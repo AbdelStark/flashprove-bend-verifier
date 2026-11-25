@@ -45,11 +45,14 @@ def expected(case, digest):
 
 
 def machine():
-    cpu = platform.processor()
+    cpu = platform.processor() or platform.machine()
     if platform.system() == "Darwin":
         cpu = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True).strip()
     elif Path("/proc/cpuinfo").is_file():
-        cpu = re.search(r"^model name\s*:\s*(.+)$", Path("/proc/cpuinfo").read_text(), re.M)[1]
+        # Some Linux arm64 kernels report only the CPU implementer and part number.
+        model = re.search(r"^model name\s*:\s*(.+)$", Path("/proc/cpuinfo").read_text(), re.M)
+        if model:
+            cpu = model[1]
     revision = os.environ.get("BENCH_CHECKOUT_REVISION") or subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     return {"os": platform.platform(), "arch": platform.machine(), "cpu": cpu, "git": revision,

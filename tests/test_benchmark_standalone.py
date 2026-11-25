@@ -16,6 +16,15 @@ spec.loader.exec_module(bench)
 
 
 class PairedRevisions(unittest.TestCase):
+    def test_linux_arm_cpuinfo_can_omit_the_model_name(self):
+        with patch.object(bench.platform, "system", return_value="Linux"), \
+             patch.object(bench.platform, "processor", return_value=""), \
+             patch.object(bench.platform, "machine", return_value="aarch64"), \
+             patch.object(Path, "is_file", return_value=True), \
+             patch.object(Path, "read_text", return_value="CPU implementer : 0x41"), \
+             patch.dict(bench.os.environ, BENCH_CHECKOUT_REVISION="test"):
+            self.assertEqual(bench.machine()["cpu"], "aarch64")
+
     def test_both_revisions_get_same_worker_count_and_verified_warmups(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
