@@ -1,4 +1,5 @@
 import Base
+import ./u3_cells.bend as Cells
 import ./outer_source.bend as O
 import ./u3_series.bend as U
 import ./extension.bend as X
@@ -13,6 +14,7 @@ import ./policy_statement.bend as S
 # power-of-two envelope of the array, low row bits then high column bits.
 type Read is Data:
   Read{owner: Nat, array: String, form: F.Form}
+  U3Cells{owner: Nat, points: Cells.Points}
   U3Run{owner: Nat, series: U.Series}
   OuterRead{owner: Nat,array: String,source: O.Source}
 

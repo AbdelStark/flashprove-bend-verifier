@@ -1,4 +1,5 @@
 import Base
+import ../../src/u3_cells.bend as Cells
 import ../../src/ff_lookup.bend as Lookup
 import ../../src/ff_shape.bend as G
 import ../../src/ff_catalog.bend as Catalog
@@ -13,10 +14,10 @@ import ../../src/head_catalog.bend as C
 import ../../src/plan_types.bend as PT
 import ./segment_projection.bend as Out
 
-def project(xs: List<&2,A.Cell>, a: X.E3) -> X.E3:
+def project(xs: List<&2,Cells.Cell>, a: X.E3) -> X.E3:
   match xs:
     case []: a
-    case A.Cell{i,w} <> tail: project(tail,E.add(a,Int.power(32n,i,A.nat(3n),w)))
+    case Cells.Cell{i,w} <> tail: project(tail,E.add(a,Int.power(32n,i,A.nat(3n),w)))
 
 def show(row: A.Aff) -> IO(Unit):
   A.Aff{cs,ms,t} = row
