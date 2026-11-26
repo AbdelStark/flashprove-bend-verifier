@@ -79,26 +79,26 @@ def decimal(n: Maybe<&2, Nat>) -> IO(U32):
   match n:
     case Some{+k}:
       do IO<U32>:
-        checked : Unit <- require(Nat.is_le(k, 4294967295n), "policy-range")
+        checked : Unit <- require(Nat.is_le(k, 4294967295n), "NO: policy-range")
         IO.pure(U32, U32.from_nat(k))
-    case None{}: IO.die(U32, 1, "policy-number")
+    case None{}: IO.die(U32, 1, "NO: policy-number")
 
 def field(value: Maybe<&2, String>, offset: Nat) -> IO(U32):
   match value:
     case Some{line}: decimal(Nat.read(String.drop(line, offset)))
-    case None{}: IO.die(U32, 1, "policy-field")
+    case None{}: IO.die(U32, 1, "NO: policy-field")
 
 def policy_fields(lines: List<&2, String>) -> IO(U32 & U32):
   match lines:
     case first <> +tail:
       do IO<U32 & U32>:
-        checked : Unit <- require(String.eq(first, "version H821"), "version-unknown (policy)")
+        checked : Unit <- require(String.eq(first, "version H821"), "NO: version-unknown (policy)")
         +lt : U32 <- field(List.find(String, line => String.starts_with(line, "lt "), tail), 3n)
         +vocab : U32 <- field(List.find(String, line => String.starts_with(line, "V "), tail), 2n)
         checked : Unit <- require(U32.is_ge(lt, 4) && U32.is_le(lt, 16), "NO: shape-words")
         checked : Unit <- require(U32.is_ge(vocab, 2) && U32.is_le(vocab, 16777216), "NO: shape-V")
         IO.pure(U32 & U32, (U32.shln(1, U32.to_nat(lt)), vocab))
-    case _: IO.die(U32 & U32, 1, "policy-empty")
+    case _: IO.die(U32 & U32, 1, "NO: policy-empty")
 
 def dimensions(path: String) -> IO(U32 & U32):
   do IO<U32 & U32>:
@@ -117,11 +117,11 @@ def check_files(dims: U32 & U32, +ivk: String, proof: String, request: String, t
     y : U32 <- token_word(ybytes)
     checked : Unit <- request_result(request_status(req, 0, length, vocab, y, True{}))
     key : List<&2, U32> <- bytes(ivk ++ "/key.bin", 8)
-    checked : Unit <- require(key_head(key), "cp-key-head")
+    checked : Unit <- require(key_head(key), "NO: cp-key-head")
     head : List<&2, U32> <- bytes(proof, 12)
     index : U32 <- leaf_index(head)
     leaf : List<&2, U32> <- bytes(ivk ++ "/leaf/" ++ U32.show(index) ++ ".bin", 8)
-    require(leaf_head(leaf), "cp-entry-head")
+    require(leaf_head(leaf), "NO: cp-entry-head")
 
 def check(config: String, ivk: String, proof: String, request: String, token: String) -> IO(Unit):
   do IO<Unit>:

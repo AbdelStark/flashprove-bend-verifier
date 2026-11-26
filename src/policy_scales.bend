@@ -27,8 +27,8 @@ def rows(left: Nat, xs: Fr.Words, +forms: Forms, +layer: U32, +mask: U32, group_
         ok : Unit <- Header.require(U32.is_le(rp,1), "NO: KL-rp")
         ok : Unit <- Header.require(Fr.within(sh,4,12), "NO: af-policy-sh")
         ok : Unit <- Header.require(U32.is_le(soft_size,U32.shrn(16711680,U32.to_nat(U32.min(sh,12)))), "NO: af-policy-C")
-        ok : Unit <- Header.require(first || U32.is_eq(sh,group_sh), "unsupported parameter form: attention-shifts")
-        ok : Unit <- Header.require(U32.is_le(k1,m1) && U32.is_le(k2,m2), "unsupported parameter form: norm-shifts")
+        ok : Unit <- Header.require(first || U32.is_eq(sh,group_sh), "NO: unsupported parameter form: attention-shifts")
+        ok : Unit <- Header.require(U32.is_le(k1,m1) && U32.is_le(k2,m2), "NO: unsupported parameter form: norm-shifts")
         rows(p,tail,forms,U32.add(layer,1),mask,sh,soft_size)
     case _ _: IO.die(Fr.Words,1,"NO: KL-length")
 
@@ -69,5 +69,5 @@ def load(+lines: P.Lines, config: String, soft_size: U32) -> IO(Fr.Words):
     +mF : U32 <- P.field(lines,"MF")
     +kF : U32 <- P.field(lines,"KF")
     ok : Unit <- Header.require(norm(mF,kF), "NO: policy-norm-F")
-    ok : Unit <- Header.require(U32.is_le(kF,mF), "unsupported parameter form: norm-shifts")
+    ok : Unit <- Header.require(U32.is_le(kF,mF), "NO: unsupported parameter form: norm-shifts")
     return words
