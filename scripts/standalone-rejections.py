@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 
-from e2e import inputs
+from fixtures import inputs
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,7 +31,7 @@ def reject(example, altered, identity, policy, proof_name="example.proof", parit
     proof = altered / proof_name
     cmd = [BUILD / "verify-bend", use("config"), use("ivk"), use("example.req"), use("example.y"),
            proof if proof.exists() else example / "example.proof", "-id", identity, "-data", BUILD, *policy]
-    env = {**os.environ, "PATH": "", "BEND_THREADS": "1"}
+    env = {**os.environ, "PATH": ""}
     run = run_cli(cmd, cwd=altered, env=env, timeout=600, parity_dir=parity_dir,
                   case=f"{altered.parent.name}-{altered.name}")
     lines = (run.stdout + run.stderr).splitlines()

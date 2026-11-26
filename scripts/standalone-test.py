@@ -6,7 +6,7 @@ import re
 import shutil
 import tempfile
 
-from e2e import inputs, stated_policy
+from fixtures import inputs, stated_policy
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +14,7 @@ EXAMPLES = ROOT / ".upstream/FlashProve/examples"
 
 
 def run(binary, directory, args, status, expected, workers=None, parity_dir=None, case=None):
-    env = {"PATH": str(directory / "empty-path"), "BEND_THREADS": "1"}
+    env = {"PATH": str(directory / "empty-path")}
     result = run_cli([binary, *args], cwd=directory, env=env, timeout=3600, parity_dir=parity_dir, case=case)
     if workers is not None:
         stderr = result.stderr.splitlines()

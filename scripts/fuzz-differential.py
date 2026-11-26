@@ -22,7 +22,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from e2e import stated_policy
+from fixtures import stated_policy
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,7 +100,7 @@ def run_case(example: Path, identity: str, policy: list[str], work: str, seed: s
         for label, cmd, env in (
             ("cpp", [BUILD / "cp_verify", *inputs, *policy], {**os.environ}),
             ("bend", [BUILD / "verify-bend", *inputs, "-data", BUILD, *policy],
-             {**os.environ, "PATH": "", "BEND_THREADS": "1"}),
+             {**os.environ, "PATH": ""}),
         ):
             try:
                 run = run_cli(cmd, cwd=case, env=env, timeout=timeout,

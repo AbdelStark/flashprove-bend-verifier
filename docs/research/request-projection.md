@@ -10,10 +10,10 @@ Each row below is a separate head-to-head experiment. Time is median wall time a
 
 | CPU | Bend workers | Bend wall | Lean wall | Bend peak RSS | Lean peak RSS | Evidence |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Apple M4 Max | 16 | 11.183 s | 59.711 s | 2.61 GiB | 4.91 GiB | [Paired calls](notes/request-m4/lean.json) |
-| Apple M4 Max | 1 | 21.336 s | 59.367 s | 1.89 GiB | 4.91 GiB | [Paired calls](notes/request-m4/lean-j1.json) |
-| Intel Xeon Platinum 8480CL | 8 | 23.381 s | 93.350 s | 2.57 GiB | 4.96 GiB | [Paired calls](notes/request-xeon/lean.json) |
-| Intel Xeon Platinum 8480CL | 1 | 45.863 s | 93.156 s | 1.89 GiB | 4.96 GiB | [Paired calls](notes/request-xeon/lean-j1.json) |
+| Apple M4 Max | 16 | 11.183 s | 59.711 s | 2.61 GiB | 4.91 GiB | [Paired calls](data/request-m4/lean.json) |
+| Apple M4 Max | 1 | 21.336 s | 59.367 s | 1.89 GiB | 4.91 GiB | [Paired calls](data/request-m4/lean-j1.json) |
+| Intel Xeon Platinum 8480CL | 8 | 23.381 s | 93.350 s | 2.57 GiB | 4.96 GiB | [Paired calls](data/request-xeon/lean.json) |
+| Intel Xeon Platinum 8480CL | 1 | 45.863 s | 93.156 s | 1.89 GiB | 4.96 GiB | [Paired calls](data/request-xeon/lean-j1.json) |
 
 ### Worker selection
 
@@ -21,8 +21,8 @@ The candidates had the following full-size median wall times. Several counts are
 
 | CPU | Workers and median elapsed time | Selected | Evidence |
 | --- | --- | ---: | --- |
-| Apple M4 Max | 1 at 21.674 s · 2 at 19.370 s · 4 at 13.954 s · 8 at 11.538 s · 12 at 11.404 s · 16 at 11.335 s | 16 | [Screen](notes/request-m4/workers.json) |
-| Intel Xeon Platinum 8480CL | 1 at 45.855 s · 2 at 41.947 s · 4 at 27.512 s · 8 at 22.830 s · 16 at 23.316 s | 8 | [Screen](notes/request-xeon/workers.json) |
+| Apple M4 Max | 1 at 21.674 s · 2 at 19.370 s · 4 at 13.954 s · 8 at 11.538 s · 12 at 11.404 s · 16 at 11.335 s | 16 | [Screen](data/request-m4/workers.json) |
+| Intel Xeon Platinum 8480CL | 1 at 45.855 s · 2 at 41.947 s · 4 at 27.512 s · 8 at 22.830 s · 16 at 23.316 s | 8 | [Screen](data/request-xeon/workers.json) |
 
 ### Before and after at fixed worker counts
 
@@ -30,21 +30,21 @@ Both programs in each pair were standalone Bend. Both used the same worker count
 
 | CPU | Fixture | Workers | Before | After | Less wall time | Evidence |
 | --- | --- | ---: | ---: | ---: | ---: | --- |
-| Apple M4 Max | full-size | 1 | 33.109 s | 21.361 s | 35.5% | [Paired calls](notes/request-m4/full-size-j1.json) |
-| Apple M4 Max | full-size | 16 | 19.490 s | 11.264 s | 42.2% | [Paired calls](notes/request-m4/full-size-j16.json) |
-| Apple M4 Max | accepted-proof | 1 | 2.603 s | 1.921 s | 26.2% | [Paired calls](notes/request-m4/accepted-proof-j1.json) |
-| Intel Xeon Platinum 8480CL | full-size | 1 | 74.702 s | 46.067 s | 38.3% | [Paired calls](notes/request-xeon/full-size-j1.json) |
-| Intel Xeon Platinum 8480CL | full-size | 16 | 41.551 s | 23.570 s | 43.3% | [Paired calls](notes/request-xeon/full-size-j16.json) |
-| Intel Xeon Platinum 8480CL | full-size | 8 | 40.932 s | 22.926 s | 44.0% | [Paired calls](notes/request-xeon/full-size-j8.json) |
-| Intel Xeon Platinum 8480CL | accepted-proof | 1 | 5.251 s | 3.755 s | 28.5% | [Paired calls](notes/request-xeon/accepted-proof-j1.json) |
+| Apple M4 Max | full-size | 1 | 33.109 s | 21.361 s | 35.5% | [Paired calls](data/request-m4/full-size-j1.json) |
+| Apple M4 Max | full-size | 16 | 19.490 s | 11.264 s | 42.2% | [Paired calls](data/request-m4/full-size-j16.json) |
+| Apple M4 Max | accepted-proof | 1 | 2.603 s | 1.921 s | 26.2% | [Paired calls](data/request-m4/accepted-proof-j1.json) |
+| Intel Xeon Platinum 8480CL | full-size | 1 | 74.702 s | 46.067 s | 38.3% | [Paired calls](data/request-xeon/full-size-j1.json) |
+| Intel Xeon Platinum 8480CL | full-size | 16 | 41.551 s | 23.570 s | 43.3% | [Paired calls](data/request-xeon/full-size-j16.json) |
+| Intel Xeon Platinum 8480CL | full-size | 8 | 40.932 s | 22.926 s | 44.0% | [Paired calls](data/request-xeon/full-size-j8.json) |
+| Intel Xeon Platinum 8480CL | accepted-proof | 1 | 5.251 s | 3.755 s | 28.5% | [Paired calls](data/request-xeon/accepted-proof-j1.json) |
 
 ## Where time went
 
-The earlier profile left part of the request unaccounted for. We instrumented the release at `89e1df4` and recorded consecutive timestamps from request entry to return, on one observed worker. The intervals sum to **80.174 s** in this run. Across 25 links, constructing the segment equations took 32.495 s, placing them in the physical layout took 3.950 s and advancing the carried claim took 12.154 s. At the end, constructing the deferred linear weight claim (LIN) took 3.491 s and verifying its FOLD, code-switch and BASE rounds took 16.487 s. Reading the first transcript took 5.295 s. The remaining intervals, including destruction of the request state, are in the table. These times include instrumentation and come from a separate run. [Every interval](notes/request-outer-timing.tsv) · [Replay patch and source digest](../../research/spikes/request/outer-timers.patch)
+The earlier profile left part of the request unaccounted for. We instrumented the release at `89e1df4` and recorded consecutive timestamps from request entry to return, on one observed worker. The intervals sum to **80.174 s** in this run. Across 25 links, constructing the segment equations took 32.495 s, placing them in the physical layout took 3.950 s and advancing the carried claim took 12.154 s. At the end, constructing the deferred linear weight claim (LIN) took 3.491 s and verifying its FOLD, code-switch and BASE rounds took 16.487 s. Reading the first transcript took 5.295 s. The remaining intervals, including destruction of the request state, are in the table. These times include instrumentation and come from a separate run. [Every interval](data/request-outer-timing.tsv) · [Replay patch and source digest](../../research/spikes/request/outer-timers.patch)
 
-On a second VM, we ran the instrumented baseline (`89e1df4`) and candidate (`9d00a32`) back to back on the same logical CPU. The full request fell from 74.658 to 47.055 s. Constructing the deferred claim took 2.952 s before and 2.940 s after. Checking its FOLD, code-switch and BASE rounds fell from 13.733 to 0.050 s. The largest remaining costs were constructing local segment equations (22.713 s) and advancing the carried claim (10.882 s). Together they account for 71% of the optimized request in this run. [Paired intervals](notes/third-request-outer.tsv) · [Replay instructions](../../research/spikes/request/third-lin-timers.patch)
+On a second VM, we ran the instrumented baseline (`89e1df4`) and candidate (`9d00a32`) back to back on the same logical CPU. The full request fell from 74.658 to 47.055 s. Constructing the deferred claim took 2.952 s before and 2.940 s after. Checking its FOLD, code-switch and BASE rounds fell from 13.733 to 0.050 s. The largest remaining costs were constructing local segment equations (22.713 s) and advancing the carried claim (10.882 s). Together they account for 71% of the optimized request in this run. [Paired intervals](data/third-request-outer.tsv) · [Replay instructions](../../research/spikes/request/third-lin-timers.patch)
 
-To isolate the LIN change, we also compiled the baseline with only the terminal contraction applied. With one worker, full-size median wall time fell from 87.327 to 65.717 s. With 16, it fell from 51.829 to 36.966 s. Each result uses three alternating, uninstrumented pairs after a verified warmup on the same CPU allocation. To build this variant, cherry-pick `bd976de` onto `89e1df4`. These runs used a different VM from the headline Xeon comparison. [One-worker samples](notes/request-lin/one-worker.json) · [16-worker samples](notes/request-lin/16-workers.json)
+To isolate the LIN change, we also compiled the baseline with only the terminal contraction applied. With one worker, full-size median wall time fell from 87.327 to 65.717 s. With 16, it fell from 51.829 to 36.966 s. Each result uses three alternating, uninstrumented pairs after a verified warmup on the same CPU allocation. To build this variant, cherry-pick `bd976de` onto `89e1df4`. These runs used a different VM from the headline Xeon comparison. [One-worker samples](data/request-lin/one-worker.json) · [16-worker samples](data/request-lin/16-workers.json)
 
 ## Changes to the verifier
 
@@ -58,7 +58,7 @@ To isolate the LIN change, we also compiled the baseline with only the terminal 
 
 ## Checking the verification path
 
-Both source revisions passed `make ci`, `make stages-full`, `make standalone-full`, `make standalone-extended` and `make fuzz FUZZ_ARGS="-n 64 --seed speed-third-pass"` on Linux. The candidate passed 42 expectation tests on each Bend lane. Both revisions returned the published verdicts under both policies at both model sizes, rejected the extended altered-file corpus, and agreed with C++ on all 128 seeded mutations. `make worker-parity` confirmed the candidate’s output and exit status across the scheduling checks. On the same candidate sources, `bend src/standalone.bend --verdict` returned `ALL PROOFS CHECK` using the independent kernel. The larger proof obligation relating Bend acceptance to the upstream Lean theorem remains open. [Validation jobs and checker identity](notes/request-xeon/conformance.json) · [Assurance contract](../spec/assurance.md)
+Both source revisions passed `make ci`, `make stages-full`, `make standalone-full`, `make standalone-extended` and `make fuzz FUZZ_ARGS="-n 64 --seed speed-third-pass"` on Linux. The candidate passed 42 expectation tests on each Bend lane. Both revisions returned the published verdicts under both policies at both model sizes, rejected the extended altered-file corpus, and agreed with C++ on all 128 seeded mutations. `make worker-parity` confirmed the candidate’s output and exit status across the scheduling checks. On the same candidate sources, `bend src/standalone.bend --verdict` returned `ALL PROOFS CHECK` using the independent kernel. The larger proof obligation relating Bend acceptance to the upstream Lean theorem remains open. [Validation jobs and checker identity](data/request-xeon/conformance.json) · [Assurance contract](../spec/assurance.md)
 
 A separate diagnostic takes the third FOLD round of the authenticated key transcript and changes its message, length, name, multiplicity or challenge. It checks the same round sequence with the original and projected LIN weights. On both the small and full-size exact-match keys, both paths accepted the genuine transcript and rejected every one of the seven alterations. Holding the authenticated input fixed reaches checks that a byte flip could mask behind an earlier hash failure. [Replay and expected results](../../research/spikes/request/lin-transcript-check.patch)
 

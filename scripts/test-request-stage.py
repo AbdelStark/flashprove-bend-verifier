@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 from compile_bend import native
-from e2e import stated_policy
+from fixtures import stated_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / ".upstream/FlashProve"

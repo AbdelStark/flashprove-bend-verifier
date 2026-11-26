@@ -2,7 +2,7 @@
 
 > Status: living
 
-The standalone CPU executable, `build/verify-bend`, checks FlashProve H821 proofs over field 2 (Goldilocks). It accepts four public configurations, one for each combination of model size and token policy in the published examples. For each configuration the implementation must check the key, leaf, request and proof supplied with the call. The earlier hybrid executable, `build/verify`, uses a C++ worker with Bend kernels. The unmodified upstream C++ executable, `cp_verify`, serves as the reference in our tests. [Protocol revision](../../upstream.lock) · [Implementation plan](../plan/implementation.md)
+The standalone CPU executable, `build/verify-bend`, checks FlashProve H821 proofs over field 2 (Goldilocks). It accepts four public configurations, one for each combination of model size and token policy in the published examples. For each configuration the implementation must check the key, leaf, request and proof supplied with the call. The unmodified upstream C++ executable, `cp_verify`, serves as the reference in our tests. [Protocol revision](../../upstream.lock) · [Implementation plan](../plan/implementation.md)
 
 ## What a proof claims
 
@@ -38,8 +38,7 @@ The pinned format and its companion files for §§8–11 define the wire rules. 
 
 | Requirement | Obligation | Evidence |
 |---|---|---|
-| **REQ-E2E-1** | Build the unmodified reference verifier at the pin. Verify fixture checksums and use its whole-call interface. | `make e2e-full` checks the published outputs and exit codes for four genuine sets and the altered-copy cases. Record the build identity. |
-| **REQ-KERNEL-1** | The hybrid must execute checked, native Bend kernels during verification and fail if a build or kernel self-test fails. | `make verifier` checks the native integration. Run the known answers and `make e2e-full` with separate hybrid and reference build identities. |
+| **REQ-E2E-1** | Build the unmodified reference verifier at the pin. Verify fixture checksums and use its whole-call interface. | `make standalone-extended` and `make fuzz` run the unmodified `cp_verify` beside Bend on the same inputs and compare exit codes and verdicts. Record the build identity. |
 | **REQ-INPUT-1** | Bound parsing and allocation before using file-controlled lengths. Apply the grammar and arithmetic and shape checks in §§8–10, 12 and 13.8. Reconstruct and compare the ID. | `make public-input-test` compares public intermediates. Keep cases for short and trailing input, unsupported versions, noncanonical elements, mismatched ID or policy, and out-of-range positions or tokens. |
 | **REQ-TRANSCRIPT-1** | Match both hash constructions, label encodings, canonical base and extension field arithmetic, challenge sampling, work nonces, tree domains and authentication paths. Consume exactly the planned bytes. | Run vectors and independent known answers on both lanes with `make test` and `make test-native`. Compare real chain intermediates and refuse changes to a nonce, path, leaf or encoding. |
 | **REQ-PLAN-1** | Bind shapes, round order, counts, codes, error accounting and sizes to the configuration. Check wide arithmetic and the digests of all four public tables. | `make plans-reproduce`, `make plan-test` and `make public-input-test` compare public data across all four profiles and exercise changes to its contents and associations. |

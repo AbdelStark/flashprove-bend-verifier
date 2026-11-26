@@ -19,7 +19,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from e2e import inputs, stated_policy
+from fixtures import inputs, stated_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"

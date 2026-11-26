@@ -17,7 +17,7 @@ if not __debug__:
     raise SystemExit("run without -O: these checks use assert")
 sys.path.insert(0, str(UPSTREAM / "docs/format"))
 import format_rules
-from e2e import stated_policy
+from fixtures import stated_policy
 
 
 def check_call(args, code, expected):

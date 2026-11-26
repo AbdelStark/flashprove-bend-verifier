@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import time
 
-from e2e import BUILD, EXAMPLES, ROOT, SHA, build_digests, inputs
+from fixtures import BUILD, EXAMPLES, ROOT, SHA, inputs, reference_digest
 
 
 def sha256(path):
@@ -218,7 +218,7 @@ def main():
         return
     digests = {}
     if args.compare == "cpp":
-        digests = build_digests(True)
+        digests = {"cp_verify": reference_digest()}
     elif args.compare == "lean":
         digests = {"verify-on-bytes": "lean-verify-on-bytes"}
     workers = {name: 1 for name in digests}

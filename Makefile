@@ -25,48 +25,20 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 	@python3 scripts/check-docs.py
 	@python3 tests/test_docs_check.py
 
-spikes: bootstrap upstream  ## reproduce the feasibility measurements of docs/research (needs bootstrap + upstream)
+spikes: bootstrap upstream  ## time Bend kernels against C and Python references
 	@sh research/spikes/run.sh
 
-ci: docs-check benchmark-test check test test-native e2e plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
+ci: docs-check benchmark-test check test test-native plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
 
-.PHONY: benchmark verifier oracle e2e e2e-full e2e-extended generated-check
-
-verifier: build/verify build/bend_verify.digest  ## build the hybrid Bend CLI and its C++ worker
-
-WORKER_MODULES := $(addprefix src/,hashlib.bend goldilocks.bend extension.bend merkle.bend chain.bend sumcheck.bend)
-WORKER_NATIVE := $(wildcard src/native/*.patch src/native/*.inc src/native/*.h) src/native/bridge.c src/native/entry.bend.in
-
-build/verify: $(wildcard src/policy*.bend src/layout*.bend) src/verify.bend src/header.bend src/commitment.bend src/hash_bytes.bend src/record_seeds.bend src/hashlib.bend src/native/exec_verifier.c src/native/exec_verifier.js src/native/verify_main.c scripts/build-cli.sh toolchain.lock | bootstrap
-	@sh scripts/build-cli.sh
-
-build/bend_verify: $(WORKER_NATIVE) $(WORKER_MODULES) tests/native_sumcheck.cpp scripts/build-verifier.sh upstream.lock toolchain.lock | bootstrap upstream
-	@sh scripts/build-verifier.sh
-
-build/bend_verify.digest: | build/bend_verify
-	@test -s $@ || sh scripts/build-verifier.sh
+.PHONY: oracle generated-check
 
 oracle: build/cp_verify  ## build the unmodified pinned C++ verifier
 
 build/cp_verify: scripts/oracle-build.sh upstream.lock | upstream
 	@sh scripts/oracle-build.sh
 
-e2e: verifier oracle  ## compare the two small proof sets and their rejection suites
-	@python3 scripts/e2e.py
-	@python3 scripts/verify-test.py
-
-e2e-full: verifier oracle  ## compare all four proof sets and the rejection suites
-	@python3 scripts/e2e.py --full-size
-	@python3 scripts/verify-test.py --full-size
-
-e2e-extended: verifier oracle  ## run 102 additional item and record rejection cases per worker
-	@python3 scripts/e2e.py --extended
-
 generated-check:  ## compare the checked-in hash kernel to the generator
 	@mkdir -p build && python3 research/spikes/blake2b/gen.py kernel > build/hashlib.gen && cmp build/hashlib.gen src/hashlib.bend
-
-benchmark: verifier oracle  ## compare the historical hybrid CLI with C++ on both exact-match proofs
-	@python3 scripts/e2e.py --benchmark 3 --full-size
 
 .PHONY: lean-baseline benchmark-lean
 
