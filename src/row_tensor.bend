@@ -98,7 +98,9 @@ def side_bit(terms: F.Form, +rows: Nat, +side: Member) -> F.Form:
       ordered = List.append(&2,F.Factor,List.take(&2,F.Factor,fs,rows),member_bit(side,List.drop(&2,F.Factor,fs,rows)))
       F.Term{w,ordered} <> side_bit(tail,rows,side)
 
-def scale(terms: F.Form, +s: Ext.E3, acc: F.Form) -> F.Form:
+def scale_by(+mode: U32, terms: F.Form, +s: Ext.E3, acc: F.Form) -> F.Form:
   match terms:
     case []: acc
-    case F.Term{w,fs} <> rest: scale(rest,s,F.Term{E.mul(w,s),fs} <> acc)
+    case F.Term{w,fs} <> rest: scale_by(mode,rest,s,F.Term{E.by(mode,s,w),fs} <> acc)
+
+def scale(terms: F.Form, +s: Ext.E3, acc: F.Form) -> F.Form: scale_by(E.unit(s),terms,s,acc)

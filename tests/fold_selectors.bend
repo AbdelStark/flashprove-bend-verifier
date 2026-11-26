@@ -42,12 +42,26 @@ def addresses(n: Nat,+gs: B.Elements) -> Bool:
       +i = k
       positions(6n,gs,T.choice(6n,i)) && addresses(i,gs)
 
+# Three chunks of gammas, two general factors at every pair of positions.
+def pairs(n: Nat,+m: Nat,+gs: B.Elements,+fs: F.Factors) -> Bool:
+  match n:
+    case 0n: True{}
+    case 1n+k:
+      +i = k
+      positions(m,gs,interrupt(fs,i)) && pairs(i,m,gs,fs)
+
+def nine() -> B.Elements:
+  [E.E3{0,5,0,1,0,0},E.E3{1,2,3,4,5,6},F.one(),F.zero(),E.E3{0,9,0,0,0,0},
+   E.E3{7,0,0,3,0,1},E.E3{0,2,0,2,0,2},E.E3{0,11,0,0,0,13},E.E3{4,4,0,0,0,1}]
+
 def main() -> IO(Unit):
   +coords: B.Elements = [F.one(),E.E3{0,8,0,3,0,0},F.zero(),E.E3{0,0,0,4,0,5},F.one()]
   do IO<Unit>:
     IO.print(Bool.show(addresses(64n,coords)))
     IO.print(Bool.show(agree(coords,T.choice(2n,1n))))
     IO.print(Bool.show(agree([],T.choice(3n,5n))))
+    IO.print(Bool.show(pairs(11n,11n,nine(),T.choice(11n,1337n)) && pairs(11n,11n,nine(),T.choice(11n,682n))))
+#|True
 #|True
 #|True
 #|True

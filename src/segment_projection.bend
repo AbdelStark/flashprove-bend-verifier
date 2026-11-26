@@ -64,16 +64,27 @@ def load(events: Tr.Events,ell: Nat,stages: List<&2,S.Stage>) -> IO(Basis):
     case _ <> rest: load(events,ell,rest)
     case []: IO.die(Basis,1,"NO: request-terminal-stages")
 
+def deposit_unless(zero: Bool,fs: F.Factors,w: X.E3,buf: Array<X.E3>) -> Array<X.E3>:
+  match zero:
+    case True{}: buf
+    case False{}: F.deposit(List.reverse(&2,F.Factor,fs),0,w,buf)
+
 def write(term: F.Term,buf: Array<X.E3>) -> Array<X.E3>:
   F.Term{+w,fs} = term
-  branch = Bool.pick(Array<X.E3> -> Array<X.E3>,B.equal(w,F.zero()),a => a,
-    a => F.deposit(List.reverse(&2,F.Factor,fs),0,w,a))
-  branch(buf)
+  deposit_unless(B.equal(w,F.zero()),fs,w,buf)
 
-def reduce(xs: F.Form,+cs: F.Chunks,buf: Array<X.E3>) -> Array<X.E3>:
+# The projector is threaded through the terms; last is the previous term.
+def reduce_with(xs: F.Form,last: F.Projected,buf: Array<X.E3>) -> Array<X.E3>:
   match xs:
-    case []: buf
-    case term <> tail: reduce(tail,cs,write(F.project(cs,term),buf))
+    case []:
+      F.Projected{t,_} = last
+      write(t,buf)
+    case term <> tail:
+      F.Projected{t,p} = last
+      reduce_with(tail,F.project_with(p,term),write(t,buf))
+
+def reduce(xs: F.Form,cs: F.Chunks,buf: Array<X.E3>) -> Array<X.E3>:
+  reduce_with(xs,F.Projected{F.Term{F.zero(),[]},F.projector(cs)},buf)
 
 def merge(+basis: Basis,local: F.Form,old: B.Elements,scale: X.E3) -> B.Elements:
   Basis{gs,_,n} = basis

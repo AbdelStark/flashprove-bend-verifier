@@ -205,17 +205,17 @@ def multiply(p:X.E3,w:X.E3) -> X.E3:
     case X.E3{0,1,0,0,0,0}: w
     case +v: E.mul(w,v)
 
-def upper_value(fs:F.Factors,+index:Nat,w:X.E3) -> X.E3:
-  match fs:
-    case []: w
-    case f <> tail:
+# A zero endpoint ends the walk with weight zero.
+def upper_value(fs:F.Factors,dead:Bool,+index:Nat,w:X.E3) -> X.E3:
+  match fs dead:
+    case _ True{}: F.zero()
+    case [] False{}: w
+    case Con{f,tail} False{}:
       +p = F.at_bit(f,Nat.is_eq(Nat.mod(index,2n),1n))
-      go = Bool.pick(Unit -> X.E3,B.equal(p,F.zero()),_ => F.zero(),
-        _ => upper_value(tail,Nat.div(index,2n),multiply(p,w)))
-      go(Unit{})
+      upper_value(tail,B.equal(p,F.zero()),Nat.div(index,2n),multiply(p,w))
 
 def upper(fs:F.Factors,at:Nat,+keep:Nat,w:X.E3) -> X.E3:
-  upper_value(List.drop(&2,F.Factor,fs,keep),Nat.div(at,Nat.pow(2n,keep)),w)
+  upper_value(List.drop(&2,F.Factor,fs,keep),False{},Nat.div(at,Nat.pow(2n,keep)),w)
 
 type Axes is Data:
   Axes{weight:X.E3,rows:F.Factors,columns:F.Factors}
@@ -224,12 +224,16 @@ def axes(term:F.Term,+n:Nat) -> Axes:
   F.Term{w,+fs} = term
   Axes{w,List.take(&2,F.Factor,fs,n),List.drop(&2,F.Factor,fs,n)}
 
+def then_upper(zero:Bool,cols:F.Factors,c:Nat,bc:Nat,v:X.E3) -> X.E3:
+  match zero:
+    case True{}: F.zero()
+    case False{}: upper(cols,c,bc,v)
+
 def weight(b:Block,a:Axes) -> X.E3:
   Block{i,c,_,_,bi,bc,_,_,_} = b
   Axes{w,rows,cols} = a
   +v = upper(rows,i,bi,w)
-  go = Bool.pick(Unit -> X.E3,B.equal(v,F.zero()),_ => F.zero(),_ => upper(cols,c,bc,v))
-  go(Unit{})
+  then_upper(B.equal(v,F.zero()),cols,c,bc,v)
 
 def project(b:Block,a:Axes,dest_rows:Nat,dest_columns:Nat,w:X.E3) -> F.Term:
   Block{_,_,r,p,bi,bc,+br,+bp,low} = b
@@ -245,14 +249,17 @@ def tile(+b:Block,term:F.Term,row_bits:Nat,dest_rows:Nat,dest_columns:Nat) -> F.
   +a = axes(term,row_bits)
   project(b,a,dest_rows,dest_columns,weight(b,a))
 
+def tile_unless(zero:Bool,b:Block,a:Axes,dr:Nat,dc:Nat,w:X.E3,out:F.Form) -> F.Form:
+  match zero:
+    case True{}: out
+    case False{}: project(b,a,dr,dc,w) <> out
+
 def tiles(bs:List<&2,Block>,+a:Axes,+dr:Nat,+dc:Nat,acc:F.Form) -> F.Form:
   match bs:
     case []: acc
     case +b <> tail:
       +w = weight(b,a)
-      +out = acc
-      go = Bool.pick(Unit -> F.Form,B.equal(w,F.zero()),_ => out,_ => project(b,a,dr,dc,w) <> out)
-      tiles(tail,a,dr,dc,go(Unit{}))
+      tiles(tail,a,dr,dc,tile_unless(B.equal(w,F.zero()),b,a,dr,dc,w,acc))
 
 def translate(ts:F.Form,+bs:List<&2,Block>,+src:Nat,+dr:Nat,+dc:Nat,acc:F.Form) -> F.Form:
   match ts:
