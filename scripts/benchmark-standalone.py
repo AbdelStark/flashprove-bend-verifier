@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import time
 
-from e2e import BUILD, EXAMPLES, ROOT, SHA, build_digests
+from e2e import BUILD, EXAMPLES, ROOT, SHA, build_digests, inputs
 
 
 def sha256(path):
@@ -64,7 +64,7 @@ def machine():
 def measure(program, case, digest, sample, work, logs, workers, observe_workers=False):
     stem = f"{case.name}-{program.name}-{sample}"
     timing = logs / f"{stem}.time"
-    common = [case / name for name in ("config", "ivk", "example.req", "example.y", "example.proof")]
+    common = inputs(case)
     cmd = [program]
     lean = program.name == "verify-on-bytes"
     if lean:

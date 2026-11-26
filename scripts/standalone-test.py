@@ -6,6 +6,7 @@ import re
 import shutil
 import tempfile
 
+from e2e import stated_policy
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,7 +44,6 @@ def main():
         for name in fixtures:
             case = EXAMPLES / name
             expected_id = (case / "ID.txt").read_text().strip()
-            policy = re.search(r" -policy (clipped-gap,[0-9,]+)", (case / "README.md").read_text())
             with tempfile.TemporaryDirectory(dir=work) as inputs:
                 files = Path(inputs)
                 shutil.copytree(case / "config", files / "configuration")
@@ -51,7 +51,7 @@ def main():
                 for original, dest in (("example.req","tokens"), ("example.y","next"), ("example.proof","payload")):
                     shutil.copyfile(case / original, files / dest)
                 call = [files / p for p in ("configuration", "verification-key", "tokens", "next", "payload")]
-                options = ["-data", "data", *(["-policy", policy[1]] if policy else [])]
+                options = ["-data", "data", *stated_policy(case)]
                 expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+",
                                      (case / "README.md").read_text(), re.M)[0]
                 expected = expected.replace("<64 hex digits>", digest)

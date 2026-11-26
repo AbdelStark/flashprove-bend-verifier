@@ -19,6 +19,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from e2e import inputs, stated_policy
+
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "build"
 EXAMPLES = ROOT / ".upstream/FlashProve/examples"
@@ -31,11 +33,9 @@ def main() -> int:
     ap.add_argument("--seconds", type=int, default=6, help="how long to sample")
     args = ap.parse_args()
     example = EXAMPLES / args.fixture
-    stated = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())
-    cmd = [str(BUILD / "verify-bend"), *(str(example / f) for f in
-           ("config", "ivk", "example.req", "example.y", "example.proof")),
+    cmd = [str(BUILD / "verify-bend"), *map(str, inputs(example)),
            "-id", (example / "ID.txt").read_text().strip(), "-data", str(BUILD), "-j", "1", "-timing",
-           *(["-policy", stated[1]] if stated else [])]
+           *stated_policy(example)]
     if platform.system() != "Darwin":
         print("profile: stack sampling here uses macOS `sample`. On Linux run:\n  perf record -g -- "
               + " ".join(cmd) + "\n  perf report --no-children --sort symbol", file=sys.stderr)

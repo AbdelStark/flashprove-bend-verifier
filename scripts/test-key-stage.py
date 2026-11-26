@@ -18,6 +18,8 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / ".upstream/FlashProve"
 sys.dont_write_bytecode = True
+if not __debug__:
+    raise SystemExit("run without -O: these checks use assert")
 sys.path.insert(0, str(UP / "docs/format"))
 import format_rules as ref
 
@@ -133,7 +135,8 @@ def reference(folder, plans):
 def run(exe, plans, folder, key, success, want, *options):
     proc = subprocess.run([exe, *options, plans, folder / "config", key], text=True, capture_output=True, timeout=240)
     out = (proc.stdout + proc.stderr).strip()
-    if (proc.returncode == 0) != success or want not in out:
+    # A refusal must end on its exact reason, so a crash that mentions the reason does not pass.
+    if (proc.returncode == 0) != success or (want not in out if success else out.splitlines()[-1:] != ["NO: " + want]):
         raise AssertionError(f"{key}: exit {proc.returncode}, wanted {want!r}, got {out!r}")
 
 
@@ -154,8 +157,8 @@ def main():
         print(case, expected, flush=True)
         if case != "accepted-proof":
             continue
-        for option, gate in (("--changed-range-target", "NO: key-range-proximity"),
-                             ("--changed-dot-weight", "NO: lin-own-proximity")):
+        for option, gate in (("--changed-range-target", "key-range-proximity"),
+                             ("--changed-dot-weight", "lin-own-proximity")):
             run(args.exe, args.plans, folder, key, False, gate, option)
         print("refused changed range target and changed Dot weight on unchanged key bytes", flush=True)
         original = key.read_bytes()

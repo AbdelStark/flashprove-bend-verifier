@@ -65,10 +65,14 @@ def main() -> int:
     files: list[Path] = []
     for p in map(Path, args.paths):
         files += sorted(p.rglob("*.bend")) if p.is_dir() else [p]
-    tests = [f for f in files if expected_lines(f) is not None]
-    if not tests:
-        print("bend-test: no test found (a test is a .bend file with `#|` expectation lines)", file=sys.stderr)
+    # A test file without expectations would otherwise drop out of the count unnoticed.
+    missing = [f for f in files if expected_lines(f) is None]
+    if missing or not files:
+        for f in missing:
+            print(f"bend-test: {f} has no `#|` expectation lines", file=sys.stderr)
+        print("bend-test: every .bend file given must be a test with `#|` expectation lines", file=sys.stderr)
         return 2
+    tests = files
     with ThreadPoolExecutor(max_workers=args.j) as pool:
         results = list(pool.map(lambda f: run(f, args.native, args.timeout), tests))
     failed = 0

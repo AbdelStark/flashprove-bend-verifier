@@ -13,8 +13,11 @@ from tempfile import TemporaryDirectory
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM = ROOT / ".upstream/FlashProve"
 sys.dont_write_bytecode = True
+if not __debug__:
+    raise SystemExit("run without -O: these checks use assert")
 sys.path.insert(0, str(UPSTREAM / "docs/format"))
 import format_rules
+from e2e import stated_policy
 
 
 def check_call(args, code, expected):
@@ -32,7 +35,7 @@ def coverage_boundaries(work, driver, tables):
         config = example / "config"
         policy = (config / "policy.txt").read_text()
         identifier = (example / "ID.txt").read_text().strip()
-        named = re.search(r" -policy (clipped-gap,[0-9,]+)",(example / "README.md").read_text())
+        named = stated_policy(example)
         token_bytes = (example / "example.req").read_bytes()[:-8]
         tokens = struct.unpack("<64I",token_bytes)
         for first, end in ((63,64), (62,64), (62,63), (0,1)):
@@ -88,7 +91,7 @@ def main():
                                                      (config / "KL.bin").read_bytes(), req.read_bytes())
             args = [driver, config, req, example / "example.y", tables]
             if "clipped-gap" in name:
-                claim = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())[1]
+                claim = stated_policy(example)[1]
                 check_call(args, 1, "NO: policy")
                 args.append(claim)
             check_call(args, 0, expected.hex())

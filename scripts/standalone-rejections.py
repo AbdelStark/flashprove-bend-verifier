@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 
+from e2e import inputs
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,7 +61,7 @@ def records(work, parity_dir=None):
     runner = EXAMPLES.parent / "verifier/tests/record_altered_sets_test.py"
     identity = (example / "ID.txt").read_text().strip()
     oracle([sys.executable, "-I", "-B", runner, BUILD / "cp_verify",
-            *(example / path for path in ("config", "ivk", "example.req", "example.y", "example.proof")),
+            *inputs(example),
             identity, work], f"{runner.name}: 7 calls on the honest set and its unaltered copy, 23 altered sets: all as expected")
     samples = sorted(p for p in work.iterdir() if p.is_dir() and p.name.startswith(("whole.", "key.", "leaf.")))
     if len(samples) != 23:

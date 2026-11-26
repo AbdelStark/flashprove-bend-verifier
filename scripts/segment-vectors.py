@@ -6,6 +6,8 @@ import re
 import subprocess
 import tempfile
 
+from e2e import inputs, stated_policy
+
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / ".upstream/FlashProve"
 VECTORS = ROOT / "tests/data/segment-forests.tsv"
@@ -31,10 +33,8 @@ def project(text):
 def command(binary, name):
     folder = UP / "examples" / name
     readme = (folder / "README.md").read_text()
-    args = [binary, folder / "config", folder / "ivk", folder / "example.req", folder / "example.y",
-            folder / "example.proof", "-id", re.search(r"\bid=([a-f0-9]{64})\b",readme)[1], "-q", "-j", "1"]
-    policy = re.search(r" -policy (clipped-gap,[0-9,]+)",readme)
-    return args + (["-policy",policy[1]] if policy else [])
+    return [binary, *inputs(folder), "-id", re.search(r"\bid=([a-f0-9]{64})\b",readme)[1], "-q", "-j", "1",
+            *stated_policy(folder)]
 
 
 def instrument(path, anchor, replacement):

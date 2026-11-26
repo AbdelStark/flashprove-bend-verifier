@@ -3,19 +3,18 @@
 
 Each case alters one input file of a genuine proof set (one bit, one byte, a zeroed or
 swapped word, a truncation or an extension) and runs both verifiers on the same bytes.
-A sound verifier never accepts where the reference refuses, so the only outcome that
-fails the run is `bend=accept` beside any other reference result. A case is reproducible
-from its seed and index.
+A sound verifier never accepts where the reference refuses. The run fails on such a case,
+on any crash, timeout or unexpected exit from either verifier, and when the unchanged set
+is not accepted by both. A case is reproducible from its seed and index.
 
     scripts/fuzz-differential.py [-n N] [--seed S] [-j J] [--out FILE] [FIXTURE ...]
 
-Default fixtures: the two small proof sets. Exit status: 0 if no case is unsound, 1 otherwise.
+Default fixtures: the two small proof sets. Exit status: 0 if every case passes, 1 otherwise.
 """
 import argparse
 import json
 import os
 import random
-import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +22,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from e2e import stated_policy
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,8 +79,9 @@ def classify(code: int, lines: list[str]) -> str:
 
 def run_case(example: Path, identity: str, policy: list[str], work: str, seed: str, index: int,
              timeout: int, parity_dir=None) -> dict:
+    # A negative index is the control: the genuine set, unchanged.
     rng = random.Random(f"{seed}:{example.name}:{index}")
-    name = rng.choices(FILES, WEIGHTS)[0]
+    name = rng.choices(FILES, WEIGHTS)[0] if index >= 0 else None
     with tempfile.TemporaryDirectory(dir=work) as tmp:
         case = Path(tmp)
         for sub in ("config", "ivk/leaf"):
@@ -88,8 +89,11 @@ def run_case(example: Path, identity: str, policy: list[str], work: str, seed: s
         for other in FILES:
             if other != name:
                 (case / other).symlink_to(example / other)
-        mutated, what = mutate(bytearray((example / name).read_bytes()), rng)
-        (case / name).write_bytes(mutated)
+        if name:
+            mutated, what = mutate(bytearray((example / name).read_bytes()), rng)
+            (case / name).write_bytes(mutated)
+        else:
+            what = "none"
         inputs = [case / "config", case / "ivk", case / "example.req", case / "example.y",
                   case / "example.proof", "-id", identity]
         out = {"fixture": example.name, "index": index, "file": name, "mutation": what}
@@ -127,8 +131,11 @@ def main() -> int:
         for name in args.fixtures:
             example = EXAMPLES / name
             identity = (example / "ID.txt").read_text().strip()
-            stated = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())
-            policy = ["-policy", stated[1]] if stated else []
+            policy = stated_policy(example)
+            control = run_case(example, identity, policy, work, args.seed, -1, args.timeout)
+            if (control["bend"], control["cpp"]) != ("accept", "accept"):
+                print(f"{name}: the unchanged set is not accepted by both: {json.dumps(control)}")
+                return 1
             with ThreadPoolExecutor(max_workers=args.j) as pool:
                 rows = list(pool.map(lambda i: run_case(example, identity, policy, work, args.seed, i,
                                                         args.timeout, args.parity_dir), range(args.n)))
@@ -144,13 +151,16 @@ def main() -> int:
     if args.out:
         args.out.write_text(json.dumps(results, indent=1))
     unsound = [r for r in results if r["bend"] == "accept" and r["cpp"] != "accept"]
-    other = [r for r in results if r["bend"] != r["cpp"] and r not in unsound]
-    for title, rows in (("UNSOUND: Bend accepts, the reference does not", unsound), ("other disagreements", other)):
+    broken = [r for r in results if not {r["bend"], r["cpp"]} <= {"accept", "reject"}]
+    other = [r for r in results if r["bend"] != r["cpp"] and r not in unsound and r not in broken]
+    for title, rows in (("UNSOUND: Bend accepts, the reference does not", unsound),
+                        ("FAILED: a verifier crashed, timed out or exited unexpectedly", broken),
+                        ("other disagreements", other)):
         if rows:
             print(f"{title}: {len(rows)}")
             for r in rows[:40]:
                 print("  " + json.dumps(r))
-    return 1 if unsound else 0
+    return 1 if unsound or broken else 0
 
 
 if __name__ == "__main__":
