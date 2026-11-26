@@ -12,7 +12,7 @@ The headline workload is one exact-match proof for a model with Llama 4 Maverick
 
 ## Measurements on record
 
-The current full-size head-to-head pairs the fastest measured Bend worker count on each host with native Lean OnBytes. The companion report preserves the worker screen, the quiet paired samples and the before/after comparison at fixed worker counts. [Latest measurements](../research/request-projection.md)
+The current full-size head-to-head pairs the fastest measured Bend worker count on each host with native Lean OnBytes. The M4 report holds the latest paired samples, including Lean OnBytes and C++ at one worker. The earlier report keeps the Xeon runs and worker screens. [Latest measurements](../research/speed-pass.md) · [Xeon and worker screens](../research/request-projection.md)
 
 Lean OnBytes is a native executable built from a Lean translation of the C++ file checks. The theorem-linked Linux driver runs the verifier defined in the upstream Lean development. Checking that development's theorem is a separate activity from either timed invocation. Read ratios within a paired experiment; the M4 and Xeon runs use different CPUs and native compilers. [Upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) · [Assurance contract](assurance.md)
 

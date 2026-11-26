@@ -7,7 +7,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/AbdelStark/flashprove-bend-verifier/verify.yml?branch=main&style=for-the-badge&label=conformance)](https://github.com/AbdelStark/flashprove-bend-verifier/actions/workflows/verify.yml)
 [![Bend](https://img.shields.io/badge/Bend-2.0.40-7c3aed?style=for-the-badge)](toolchain.lock)
 [![FlashProve](https://img.shields.io/badge/FlashProve-0.16.0--rc.26-0ea5e9?style=for-the-badge)](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c)
-[![vs Lean](https://img.shields.io/badge/vs%20Lean-5.34%C3%97%20faster-22c55e?style=for-the-badge)](#full-size-proof-17-mib-1001-tokens)
+[![vs Lean](https://img.shields.io/badge/vs%20Lean-5.87%C3%97%20faster-22c55e?style=for-the-badge)](#full-size-proof-17-mib-1001-tokens)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)](LICENSE)
 
 </div>
@@ -29,12 +29,12 @@ Wall time for one fresh process, launch to exit: file reads, all three verificat
 
 | CPU | Bend workers | Bend | Speedup vs. 1 worker | Lean OnBytes | Bend vs. Lean |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Apple M4 Max | 1 | 21.34 s | 1.00× | 59.37 s | 2.78× |
-| Apple M4 Max | 16 | **11.18 s** | 1.91× | 59.71 s | **5.34×** |
+| Apple M4 Max | 1 | 18.60 s | 1.00× | 60.11 s | 3.23× |
+| Apple M4 Max | 16 | **10.24 s** | 1.82× | 60.14 s | **5.87×** |
 | Intel Xeon Platinum 8480CL | 1 | 45.86 s | 1.00× | 93.16 s | 2.03× |
 | Intel Xeon Platinum 8480CL | 8 | **23.38 s** | 1.96× | 93.35 s | **3.99×** |
 
-Medians of three alternating Bend/Lean pairs after one warmup each, proof in the file cache. Both worker counts on a CPU use the same binary; a separate trial picked the parallel count. [Samples, worker selection, peak memory](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
+Medians of three alternating Bend/Lean pairs after one warmup each, proof in the file cache. Both worker counts on a CPU use the same binary; a separate trial picked the parallel count. The M4 rows measure `b4a8c4b`; the Xeon rows measure the earlier `9d00a32`. [M4 samples](docs/research/speed-pass.md) · [Xeon samples, worker selection](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
 
 ## Quick start
 
