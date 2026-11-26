@@ -7,7 +7,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/AbdelStark/flashprove-bend-verifier/verify.yml?branch=main&style=for-the-badge&label=conformance)](https://github.com/AbdelStark/flashprove-bend-verifier/actions/workflows/verify.yml)
 [![Bend](https://img.shields.io/badge/Bend-2.0.40-7c3aed?style=for-the-badge)](toolchain.lock)
 [![FlashProve](https://img.shields.io/badge/FlashProve-0.16.0--rc.26-0ea5e9?style=for-the-badge)](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c)
-[![vs Lean](https://img.shields.io/badge/vs%20Lean-5.87%C3%97%20faster-22c55e?style=for-the-badge)](#full-size-proof-17-mib-1001-tokens)
+[![vs Lean](https://img.shields.io/badge/vs%20Lean-5.89%C3%97%20faster-22c55e?style=for-the-badge)](#full-size-proof-17-mib-1001-tokens)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge)](LICENSE)
 
 </div>
@@ -29,12 +29,12 @@ The times below are for one fresh process, from launch to exit: reading the file
 
 | CPU | Bend workers | Bend | Speedup vs. 1 worker | Lean OnBytes | Bend vs. Lean |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Apple M4 Max | 1 | 18.60 s | 1.00× | 60.11 s | 3.23× |
-| Apple M4 Max | 16 | **10.24 s** | 1.82× | 60.14 s | **5.87×** |
+| Apple M4 Max | 1 | 17.64 s | 1.00× | 57.86 s | 3.28× |
+| Apple M4 Max | 16 | **9.90 s** | 1.78× | 58.26 s | **5.89×** |
 | Intel Xeon Platinum 8480CL | 1 | 45.86 s | 1.00× | 93.16 s | 2.03× |
 | Intel Xeon Platinum 8480CL | 8 | **23.38 s** | 1.96× | 93.35 s | **3.99×** |
 
-Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary, and a separate trial chose the parallel worker count. The M4 rows measure `b4a8c4b`. The Xeon rows measure the earlier `9d00a32`. The upstream C++ verifier is still faster: 8.19 s on the M4 with `-j 1`. [M4 samples](docs/research/speed-pass.md) · [Xeon samples and worker selection](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
+Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary. On the M4, 12 and 16 workers tie (5.89× in both pairings), and a separate screen chose the Xeon's count. The M4 rows measure `05b2268`. The Xeon rows measure the earlier `9d00a32`. The upstream C++ verifier is still faster: 8.06 s on the M4 with `-j 1`, against Bend's 18.03 s. [M4 samples and conformance](docs/research/rerun-2026-11-26.md) · [Xeon samples and worker selection](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
 
 ## Quick start
 
@@ -96,7 +96,8 @@ The whole pipeline is ordinary Bend. Bend compiles it to C, and Clang compiles t
 
 - ✅ Bend and Lean OnBytes agree on all four published fixtures.
 - ✅ A fresh proof from the H100 prover passed both Bend and C++ under a new commitment. [Record](docs/research/fresh-proof.md)
-- ✅ Bend's independent kernel checked the standalone definitions of the latest measured revision against their declared types. [Details](docs/spec/assurance.md#what-has-been-formally-checked)
+- ✅ Bend's independent kernel checked the standalone definitions of the measured revision against their declared types. [Details](docs/spec/assurance.md#what-has-been-formally-checked)
+- ✅ On the measured revision, all four published proofs pass, Bend and C++ both reject all 122 altered sets and 256 fuzzed proofs, and 1 and 16 workers agree on 91 of 91 comparisons. [Rerun](docs/research/rerun-2026-11-26.md#conformance)
 - ✅ Every commit runs conformance tests and seeded fuzzing. Bend must never accept a mutated proof that C++ refuses.
 - ⏳ **Open:** a proof that Bend acceptance implies Lean acceptance for *every* supported input.
 
