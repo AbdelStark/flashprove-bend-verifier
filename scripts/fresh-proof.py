@@ -89,7 +89,7 @@ def check_commitment(checkout, work, env, binary, data, digest, pin):
     if not re.fullmatch("[0-9a-f]{64}", ident) or ident == (checkout / "examples/accepted-proof/ID.txt").read_text().strip():
         raise ValueError("expected a fresh 256-bit commitment ID")
     actual = subprocess.run([binary, *INPUTS, "-id", ident, "-data", data, "-q"], cwd=provider,
-                            env={"BEND_THREADS": "1", "PATH": ""}, capture_output=True,
+                            env={"PATH": ""}, capture_output=True,
                             text=True, timeout=3600)
     if actual.returncode:
         detail = (actual.stderr or actual.stdout).strip().splitlines()

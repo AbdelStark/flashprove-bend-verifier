@@ -1,5 +1,5 @@
 #!/bin/sh
-# Reproduces the feasibility measurements quoted in docs/research/bend2-assessment.md.
+# Times Bend kernels (BLAKE2b, Goldilocks and cubic-extension multiplication, parsing) against C and Python references.
 # Needs: `make bootstrap upstream`, clang, python3. Builds into a temp dir; prints a report.
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)

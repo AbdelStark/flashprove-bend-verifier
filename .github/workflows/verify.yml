@@ -12,6 +12,6 @@ jobs:
       # A new seed per commit: the cases differ from run to run and a failure names its seed.
       - run: make fuzz FUZZ_ARGS="-n 32 --seed ${{ github.sha }}"
       - if: github.event_name == 'workflow_dispatch'
-        run: make e2e-full e2e-extended standalone-extended
+        run: make standalone-full standalone-extended
       - if: github.event_name == 'workflow_dispatch'
         run: make fuzz FUZZ_ARGS="-n 250 --seed ${{ github.sha }}-extended"

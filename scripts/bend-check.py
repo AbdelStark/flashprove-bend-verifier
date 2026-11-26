@@ -20,15 +20,6 @@ ENV = {**os.environ, "BEND_NO_TELEMETRY": "1"}
 def check(path: Path) -> tuple[bool, str]:
     proc = subprocess.run([BEND, path, "--check-only"], capture_output=True, text=True, env=ENV)
     out = proc.stdout + proc.stderr
-    if path.resolve() == ROOT / "src" / "verify.bend" and proc.returncode == 1:
-        # Pinned Bend reports foreign effects and their dependants here. Match its
-        # entire output so any other failing definition, type or proof still fails CI.
-        audited = (
-            "SOME PROOFS FAIL\n"
-            "Error: 5 defs rely on unsafe or foreign code:\n"
-            "defs that depend on foreign effects: Backend.exec, whole, valid_call, run, main"
-        )
-        return out.strip() == audited, out
     return proc.returncode == 0 and "SOME PROOFS FAIL" not in out, out
 
 

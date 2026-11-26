@@ -6,7 +6,7 @@ import re
 import subprocess
 import tempfile
 
-from e2e import inputs, stated_policy
+from fixtures import inputs, stated_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / ".upstream/FlashProve"
