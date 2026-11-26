@@ -4,7 +4,7 @@
 
 **Check that an LLM's reply came from the model it claims, on a CPU, without the weights.**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/AbdelStark/fv-flashprove-bend-verifier/verify.yml?branch=main&style=for-the-badge&label=conformance)](https://github.com/AbdelStark/fv-flashprove-bend-verifier/actions/workflows/verify.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/AbdelStark/flashprove-bend-verifier/verify.yml?branch=main&style=for-the-badge&label=conformance)](https://github.com/AbdelStark/flashprove-bend-verifier/actions/workflows/verify.yml)
 [![Bend](https://img.shields.io/badge/Bend-2.0.40-7c3aed?style=for-the-badge)](toolchain.lock)
 [![FlashProve](https://img.shields.io/badge/FlashProve-0.16.0--rc.26-0ea5e9?style=for-the-badge)](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c)
 [![vs Lean](https://img.shields.io/badge/vs%20Lean-5.34%C3%97%20faster-22c55e?style=for-the-badge)](#full-size-proof-17-mib-1001-tokens)
