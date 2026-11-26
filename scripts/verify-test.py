@@ -1,36 +1,26 @@
 #!/usr/bin/env python3
 """Exercise the public Bend CLI against pinned inputs and caller-selected claims."""
 import argparse
-import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 sys.dont_write_bytecode = True
-from e2e import build_digests, honest
+from e2e import build_digests, check_run, honest, inputs, stated_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / ".upstream" / "FlashProve" / "examples"
 
 
-def call(argv, expected_code, expected_text):
-    run = subprocess.run(argv, capture_output=True, text=True, timeout=600)
-    output = (run.stdout + run.stderr).rstrip()
-    if run.returncode != expected_code or not output.endswith(expected_text):
-        raise RuntimeError(f"{argv[0]} exited {run.returncode}\n{output[-2000:]}")
-    return run.stdout
+def call(argv, expected_code, expected_line):
+    return check_run(argv, expected_code, expected_line).stdout
 
 
 def example_args(binary, example):
     # The checked-in fixture expectations stand in for the caller's trusted inputs.
     model_id = (example / "ID.txt").read_text().strip()
-    args = [binary, example / "config", example / "ivk", example / "example.req",
-            example / "example.y", example / "example.proof", "-id", model_id]
-    policy = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())
-    if policy:
-        args.extend(["-policy", policy[1]])
-    return args
+    return [binary, *inputs(example), "-id", model_id, *stated_policy(example)]
 
 
 def main():

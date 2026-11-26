@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 from compile_bend import native
+from e2e import stated_policy
 
 ROOT = Path(__file__).resolve().parents[1]
 UP = ROOT / ".upstream/FlashProve"
@@ -97,7 +98,7 @@ def main():
             expected, walk = oracle(tmp / name,plans,example,name,copy)
             cmd = [binary,example,proof,example / "example.req",y,tables,plans]
             if name.endswith("-clipped-gap"):
-                cmd.append(re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())[1])
+                cmd.append(stated_policy(example)[1])
             output = run(cmd).splitlines()
             projections = [line.removeprefix("forest ") for line in output[:-1] if line.startswith("forest ")]
             attention = [line.removeprefix("attention ") for line in output[:-1] if line.startswith("attention ")]

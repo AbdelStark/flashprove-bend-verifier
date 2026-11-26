@@ -1,6 +1,7 @@
 #!/bin/sh
 # Installs the pinned Bend toolchain into .toolchain/ (repo-local, nothing global).
-# A cached installation must report the pinned version. Usage: scripts/bootstrap.sh
+# A cached installation must come from the pinned archive and report the pinned version.
+# Usage: scripts/bootstrap.sh
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 . "$root/toolchain.lock"
@@ -24,7 +25,8 @@ esac
 
 dest="$root/.toolchain/bend-$BEND_VERSION"
 link="$root/.toolchain/bend"
-if [ -x "$dest/bin/bend" ]; then
+# The archive checksum recorded at install time ties the cache to the current lock entry.
+if [ -x "$dest/bin/bend" ] && [ "$(cat "$dest/.archive-sha256" 2>/dev/null)" = "$sum" ]; then
   version=$("$dest/bin/bend" version)
   if [ "$version" != "bend $BEND_VERSION" ]; then
     echo "bootstrap: $dest reports '$version', expected bend $BEND_VERSION" >&2
@@ -54,5 +56,6 @@ mkdir -p "$tmp/x" "$root/.toolchain"
 tar -xzf "$tmp/$name" -C "$tmp/x"
 rm -rf "$dest"
 mv "$tmp/x/bend" "$dest"
+echo "$sum" > "$dest/.archive-sha256"
 ln -sfn "bend-$BEND_VERSION" "$link"
 echo "bootstrap: installed bend $("$link/bin/bend" version) at $link"

@@ -16,6 +16,29 @@ ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / ".upstream/FlashProve/examples"
 BUILD = ROOT / "build"
 SHA = r"[0-9a-f]{64}"
+INPUTS = ("config", "ivk", "example.req", "example.y", "example.proof")
+
+
+def inputs(example):
+    """The five positional input paths of a fixture, in command-line order."""
+    return [example / name for name in INPUTS]
+
+
+def stated_policy(example):
+    """The `-policy` option a fixture's README publishes; a clipped-gap fixture must state one."""
+    found = re.search(r" -policy (clipped-gap,[0-9,]+)", (example / "README.md").read_text())
+    if "clipped-gap" in example.name and not found:
+        raise SystemExit(f"{example.name}: README states no -policy")
+    return ["-policy", found[1]] if found else []
+
+
+def check_run(command, code, last, timeout=600, **kwargs):
+    """Run `command`; require exit `code` and `last` as the exact final line of stdout and stderr."""
+    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, **kwargs)
+    lines = (result.stdout + result.stderr).splitlines()
+    if result.returncode != code or lines[-1:] != [last]:
+        raise SystemExit(f"{command[0]} exited {result.returncode}, wanted {code} and {last!r}\n" + "\n".join(lines[-20:]))
+    return result
 
 
 def build_digests(reference_only):
@@ -34,11 +57,7 @@ def honest(binary, example, digest, benchmark=False, threads=1):
     readme = (example / "README.md").read_text()
     expected = re.search(r"^commitment: [^\n]+\nproof of work: [^\n]+\nresult-v1 [^\n]+\n[^\n]+", readme, re.M)[0]
     model_id = re.search(r"\bid=(" + SHA + r")\b", expected)[1]
-    args = [binary, example / "config", example / "ivk", example / "example.req",
-            example / "example.y", example / "example.proof", "-id", model_id, "-q", "-j", str(threads)]
-    policy = re.search(r" -policy (clipped-gap,[0-9,]+)", readme)
-    if policy:
-        args.extend(["-policy", policy[1]])
+    args = [binary, *inputs(example), "-id", model_id, "-q", "-j", str(threads), *stated_policy(example)]
 
     if benchmark and Path("/usr/bin/time").is_file():
         # Each call gets its own measurement (RUSAGE_CHILDREN in this process is cumulative).
@@ -68,20 +87,12 @@ def claim_options(binary):
         example = EXAMPLES / fixture
         if "-id" in extra:
             extra.insert(1, (example / "ID.txt").read_text().strip())
-        result = subprocess.run(
-            [binary, example / "config", example / "ivk", example / "example.req",
-             example / "example.y", example / "example.proof", "-q", *extra],
-            capture_output=True, text=True, timeout=600,
-        )
-        if result.returncode != code or result.stdout.splitlines()[-1:] != [verdict]:
-            raise SystemExit(f"{binary.name} {fixture} {extra} returned {result.returncode}\n{result.stdout}")
+        check_run([binary, *inputs(example), "-q", *extra], code, verdict)
     print(f"{binary.name} withheld ID, omitted policy and mismatched policy: all refused", flush=True)
 
 
 def mutation_result(command, expected):
-    result = subprocess.run(command, text=True, capture_output=True, timeout=1200)
-    if result.returncode or result.stdout.splitlines()[-1:] != [expected]:
-        raise SystemExit(f"Mutation suite exited {result.returncode}\n{result.stdout}\n{result.stderr}")
+    check_run(command, 0, expected, timeout=1200)
 
 
 def altered(binary, fixture, table=None):
@@ -103,9 +114,7 @@ def extended(binary):
     model_id = (example / "ID.txt").read_text().strip()
     expected = f"{runner.name}: 7 calls on the honest set and its unaltered copy, 23 altered sets: all as expected"
     with tempfile.TemporaryDirectory() as work:
-        mutation_result([sys.executable, "-I", "-B", runner, binary, example / "config", example / "ivk",
-                         example / "example.req", example / "example.y", example / "example.proof",
-                         model_id, Path(work) / "copies"], expected)
+        mutation_result([sys.executable, "-I", "-B", runner, binary, *inputs(example), model_id, Path(work) / "copies"], expected)
     print(f"{binary.name} {expected}", flush=True)
 
 

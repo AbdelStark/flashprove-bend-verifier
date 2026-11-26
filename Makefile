@@ -63,7 +63,7 @@ e2e-extended: verifier oracle  ## run 102 additional item and record rejection c
 	@python3 scripts/e2e.py --extended
 
 generated-check:  ## compare the checked-in hash kernel to the generator
-	@python3 research/spikes/blake2b/gen.py kernel | cmp - src/hashlib.bend
+	@mkdir -p build && python3 research/spikes/blake2b/gen.py kernel > build/hashlib.gen && cmp build/hashlib.gen src/hashlib.bend
 
 benchmark: verifier oracle  ## compare the historical hybrid CLI with C++ on both exact-match proofs
 	@python3 scripts/e2e.py --benchmark 3 --full-size
