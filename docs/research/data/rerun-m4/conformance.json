@@ -1,0 +1,78 @@
+{
+ "revision": "05b22683a87725702f0e55d37ebad9462d4a5fcf",
+ "host": "Apple M4 Max, macOS 26.6.2, Apple Clang 21.0.0",
+ "date": "2026-11-26",
+ "durations_s": {
+  "standalone-full": 106,
+  "standalone-extended": 136,
+  "stages-full": 371,
+  "worker-parity": 153,
+  "fuzz": 53
+ },
+ "fuzz_seed": "results-2026-11-26",
+ "logs": {
+  "standalone-full": [
+   "accepted-proof: verified independently, YES",
+   "accepted-proof-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8",
+   "full-size: verified independently, YES",
+   "full-size-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=25856 theta=512 cap=1 s=15 sh=8",
+   "refused omitted and mismatched policy, malformed shapes and a truncated request"
+  ],
+  "standalone-extended": [
+   "Standalone rejected all 23 altered record sets and a leaf from another commitment",
+   "accepted-proof, altered_copies.tsv: both verifiers rejected 10 cases",
+   "accepted-proof-clipped-gap, altered_copies_clipped_gap.tsv: both verifiers rejected 10 cases",
+   "accepted-proof, every_kind_of_item.tsv: both verifiers rejected 79 cases"
+  ],
+  "stages-full": [
+   "accepted-proof key-transcript f1b996950f36837771503b263c43c9485fbf4bd285b8ec7d11212606a199deed 2ea16cacc37393a1034eacfff9a392145528f3cbd619f9f4847a0beff44ec8c0 68bcd7b26149255dd9b5744c2394766b5bac9f087f0a48e8cdf878542b2fd0c3",
+   "refused changed range target and changed Dot weight on unchanged key bytes",
+   "refused slot, nonce, record, sibling, trailing",
+   "accepted-proof-clipped-gap key-transcript e3b0abf95bc671d8b6c6801bcb5c40347afb43ba8e0f6a5981a7f65e75a4fbd5 73db9489a8efae6c350b0e49429645060f960b6dfaad831387bb30a2090ba99b e5e0bbc1a1fabdd64468f34361a4e34e3754062b2ea36da32c37b52758e277b0",
+   "full-size key-transcript aa4110677eaf1585a521dc7aa84093d1c05995752585b344dfdc7495ca905b6c 9266b119ec9e49180b1f0e60221fe58509094059e590993da49ca7102af26148 32b16b61149a02b99d2ed8163a2e8bbcb9496ba9738e48c1a319405f98eeeaf8",
+   "full-size-clipped-gap key-transcript b1355c1303d9416bf6ff55e8de3e691fefc8ea66cbd4d9f13d5075a0c1b99915 ae49d6b973b4d2ef704241e4f8b8c8fe4dc4e946a73b0dcaf428f08853ee9935 5c52b6d28155572ad7ffd299b92a41e2fc6a48c0620c8b1617a7c2d3f134f178",
+   "accepted-proof leaf LINK equations passed, changed BAT target rejected, rho=a5fc707d0714114c4440eddb25390d868522a819cbd3ebfe845cf5e9d4416fc3",
+   "accepted-proof-clipped-gap leaf LINK equations passed, changed BAT target rejected, rho=c4be3a49fb9fcf629e269cd08866a77c47639bb0f781c50c71393421d317d253",
+   "full-size leaf LINK equations passed, changed BAT target rejected, rho=e88d8475fb3e83929e48e910dd8392a732e002d9395b9a2a07f51198a298f5b9",
+   "full-size-clipped-gap leaf LINK equations passed, changed BAT target rejected, rho=c337968ba52de1f8c411a2077c77aa072b237bae84cf5eab495ac0f773d003e8",
+   "accepted-proof: 10 forest and 2 attention projections, 5 placed G/A/H batch equations, reached EOF, slot 28, binding root 89432683f6c657d9605a9315c71a85bca889fd47231f3974e79770a7c8b45f51",
+   "Rejected altered LOC, BASE, REPLY, caller y and trailing data.",
+   "accepted-proof-clipped-gap: 10 forest and 2 attention projections, 5 placed G/A/H batch equations, reached EOF, slot 54, binding root 2e5d9fb07f6db0d6c19d854a2d3c8e990f76032d2972888334b502e8a51ddafe",
+   "full-size: 50 forest and 12 attention projections, 25 placed G/A/H batch equations, reached EOF, slot 16, binding root c410f6a680dd2bab1645785b1352f75f485af9472c41ad4fcab3948676029deb",
+   "full-size-clipped-gap: 50 forest and 12 attention projections, 25 placed G/A/H batch equations, reached EOF, slot 62, binding root e368608c8262727753f8e593a57a8bef452020683025eac96f602e6a4bbb0b07"
+  ],
+  "worker-parity": [
+   "Worker parity evidence: build/worker-parity-wrkrdb2l",
+   "accepted-proof: verified independently, YES",
+   "accepted-proof-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=9244130 theta=323343 cap=1 s=16 sh=8",
+   "full-size: verified independently, YES",
+   "full-size-clipped-gap: verified independently, WITHIN LIMITS: clipped-gap C=25856 theta=512 cap=1 s=15 sh=8",
+   "refused omitted and mismatched policy, malformed shapes and a truncated request",
+   "accepted-proof, altered_copies.tsv: both verifiers rejected 10 cases",
+   "accepted-proof-clipped-gap, altered_copies_clipped_gap.tsv: both verifiers rejected 10 cases",
+   "accepted-proof: 32 cases, seed speed-first-pass",
+   "  bend=reject   cpp=reject   32",
+   "accepted-proof-clipped-gap: 32 cases, seed speed-first-pass",
+   "  bend=reject   cpp=reject   32",
+   "fixtures: 6 worker comparisons passed",
+   "tables: 20 worker comparisons passed",
+   "fuzz: 64 worker comparisons passed",
+   "ordering: 1 worker comparisons passed"
+  ],
+  "fuzz": [
+   "accepted-proof: 128 cases, seed results-2026-11-26",
+   "  bend=reject   cpp=reject   128",
+   "accepted-proof-clipped-gap: 128 cases, seed results-2026-11-26",
+   "  bend=reject   cpp=reject   128"
+  ]
+ },
+ "kernel_check": {
+  "command": "bend src/standalone.bend --verdict",
+  "lean": "4.34.0 release archive, sha256 69f263fa6e21bbc2466bbfb1affcd92479ee2714c883a07de548e099a5922932",
+  "output_head": [
+   "ALL PROOFS CHECK",
+   "       96.25 real       104.02 user         4.31 sys",
+   "          8977383424  maximum resident set size"
+  ]
+ }
+}
