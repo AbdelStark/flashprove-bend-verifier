@@ -46,9 +46,31 @@ def all(n: Nat,values: List<X.E3>) -> Bool:
     case 1n+k x <> rest: Bool.not(T.is_zero(x)) && all(k,rest)
     case _ _: False{}
 
+def nonzero(x: X.E3) -> Bool: Bool.not(T.is_zero(x))
+
+def endpoints(fs: F.Factors) -> Bool:
+  match fs:
+    case []: True{}
+    case +f <> tail: nonzero(F.at_bit(f,False{})) && nonzero(F.at_bit(f,True{})) && endpoints(tail)
+
+# One tensor term over a full power-of-two table has entry w * prod f_b(bit_b)
+# at every index. F_p[X]/(X^3-2) is a field (2 is not a cube mod p), so all
+# entries are nonzero exactly when w and every endpoint are.
+def single(terms: F.Form,+length: Nat,+bits: Nat) -> Maybe<&2,Bool>:
+  match terms:
+    case [F.Term{w,fs}]:
+      +full = Nat.is_eq(Nat.pow(2n,bits),length)
+      Bool.pick(Maybe<&2,Bool>,full,Some{nonzero(w) && endpoints(fs)},None{})
+    case _: None{}
+
+def dense(+terms: F.Form,+length: Nat,+bits: Nat,shortcut: Maybe<&2,Bool>) -> Bool:
+  match shortcut:
+    case Some{ok}: ok
+    case None{}: all(length,Array.to_list(X.E3,F.populate(terms,Array.new(X.E3,bits,F.zero()))))
+
 def form(+terms: F.Form,+length: Nat) -> Bool:
   +bits = Sample.row_bits(length)
-  F.fits(terms,bits) && all(length,Array.to_list(X.E3,F.populate(terms,Array.new(X.E3,bits,F.zero()))))
+  F.fits(terms,bits) && dense(terms,length,bits,single(terms,length,bits))
 
 def column(axis: String) -> Bool: String.eq(axis,"U3")
 

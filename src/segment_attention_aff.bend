@@ -24,10 +24,13 @@ def hidden(x: Value) -> Aff:
   Value{v,i,b} = x
   Aff{[],[L.Mask{L.Multiplicities{},i,E.negate(b)}],v}
 
-def cells(xs: List<&2,Cells.Cell>, +s: X.E3, acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
+def scaled_cells(+mode: U32, xs: List<&2,Cells.Cell>, +s: X.E3, acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
   match xs:
     case []: acc
-    case Cells.Cell{i,w} <> tail: cells(tail,s,Cells.Cell{i,E.mul(s,w)} <> acc)
+    case Cells.Cell{i,w} <> tail: scaled_cells(mode,tail,s,Cells.Cell{i,E.by(mode,s,w)} <> acc)
+
+def cells(xs: List<&2,Cells.Cell>, +s: X.E3, acc: List<&2,Cells.Cell>) -> List<&2,Cells.Cell>:
+  scaled_cells(E.unit(s),xs,s,acc)
 
 def add(sum: Aff, x: Aff, +s: X.E3) -> Aff:
   Aff{a,b,c} = sum

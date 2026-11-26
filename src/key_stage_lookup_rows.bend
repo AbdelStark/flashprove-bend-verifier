@@ -58,10 +58,12 @@ def take(tape: Tape, expected: String) -> IO(Read):
         return Read{m,d,Tape{tail,a,b,rows}}
     case _: IO.die(Read,1,"NO: short-key-lookup")
 
-def scale(terms: Masks, +s: E.E3) -> Masks:
+def scaled(+mode: U32, terms: Masks, +s: E.E3) -> Masks:
   match terms:
     case []: []
-    case Mask{o,i,w} <> tail: Mask{o,i,A.mul(w,s)} <> scale(tail,s)
+    case Mask{o,i,w} <> tail: Mask{o,i,A.by(mode,s,w)} <> scaled(mode,tail,s)
+
+def scale(terms: Masks, +s: E.E3) -> Masks: scaled(A.unit(s),terms,s)
 
 def next(slots: B.Elements, +oracle: Oracle, at: Nat) -> Masks:
   match slots:

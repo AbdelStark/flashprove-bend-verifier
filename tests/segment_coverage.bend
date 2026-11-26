@@ -22,7 +22,26 @@ def cancellation() -> Bool:
   cancel: F.Term = F.Term{E.negate(F.one()),[F.Factor{F.zero(),F.one()}]}
   C.form([all],2n) && Bool.not(C.form([all,cancel],2n))
 
-def main() -> IO(Unit):
-  IO.print(Bool.show(used() && powers() && cancellation()))
+# One tensor term: the endpoint shortcut agrees with the full table, whose
+# entries are products of one endpoint per bit (cubic coefficients included).
+def g(+x: U32) -> X.E3: X.E3{0,x,0,0,0,0}
 
-#|True
+def agree(+t: F.Term,+length: Nat,+bits: Nat) -> String:
+  +got = C.form([t],length)
+  +want = F.fits([t],bits) && C.dense([t],length,bits,None{})
+  Bool.show(Bool.not(Bool.xor(got,want))) ++ "/" ++ Bool.show(got)
+
+def single() -> String:
+  +a: F.Factor = F.Factor{X.E3{0,3,0,5,0,7},g(2)}
+  +b: F.Factor = F.Factor{g(9),X.E3{0,0,0,1,0,0}}
+  +w: X.E3 = X.E3{0,6,0,0,0,13}
+  String.join([
+    agree(F.Term{w,[a,b,a]},8n,3n), agree(F.Term{w,[a,F.Low{},b]},8n,3n),
+    agree(F.Term{w,[F.High{},a]},4n,2n), agree(F.Term{w,[a,F.Factor{g(1),F.zero()}]},4n,2n),
+    agree(F.Term{F.zero(),[a,b]},4n,2n), agree(F.Term{w,[a,b]},8n,3n),
+    agree(F.Term{w,[a,F.Low{}]},2n,1n), agree(F.Term{w,[a,b]},3n,2n)]," ")
+
+def main() -> IO(Unit):
+  IO.print(Bool.show(used() && powers() && cancellation()) ++ " " ++ single())
+
+#|True True/True True/False True/False True/False True/False True/False True/False True/True

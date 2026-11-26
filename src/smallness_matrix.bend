@@ -39,7 +39,7 @@ def prepare(shapes: List<&2,G.Matrix>, +powers: B.Elements, state: State) -> Sta
     case +g <> rest State{ms,s,+r,c,+f}:
       +m = rows(g)
       +k = cols(g)
-      +got = C.columns(k,powers,s,[])
+      +got = C.columns(k,powers,s)
       sym = Nat.div(Nat.add(m,2n),3n)
       span = Nat.mul(128n,Nat.pow(2n,Sample.row_bits(sym)))
       next: State = State{Matrix{g,T.value(B.Elements,got),r,f} <> ms,T.after(B.Elements,got),Nat.add(r,m),Nat.add(c,k),Nat.add(f,span)}

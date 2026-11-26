@@ -60,27 +60,61 @@ def signed(bit: U32, acc: X.E3, term: X.E3) -> X.E3:
     case 3: F.sub(acc,term)
     case _: acc
 
-def limb(p: B.Elements, +x: U32, total: X.E3) -> X.E3:
-  match p:
-    case []: total
-    case y <> tail: limb(tail,U32.shrn(x,2n),signed(U32.and(x,3),total,y))
+# The 128 powers sit in an array threaded through every column, so each
+# trit reads one entry instead of taking a cell of a shared list. Missing
+# powers read as zero, as a shorter list contributed nothing.
+type Acc is Type:
+  Acc{powers: Array<X.E3>, sum: X.E3}
+type Col is Type:
+  Col{powers: Array<X.E3>, sum: X.E3, stream: T.Stream}
 
-def end_word(w: Word.Bits64, +ps: B.Elements, sum: X.E3) -> X.E3:
+def table(ps: B.Elements, +i: U32, buf: Array<X.E3>) -> Array<X.E3>:
+  match ps:
+    case []: buf
+    case y <> tail: table(tail,U32.add(i,1),Array.set(X.E3,buf,i,y))
+
+def powers_table(ps: B.Elements) -> Array<X.E3>:
+  table(List.take(&2,X.E3,ps,128n),0,Array.new(X.E3,7n,F.zero()))
+
+# Fold 16 trits of x against the powers from i on.
+def limb(n: Nat, +i: U32, +x: U32, total: X.E3, got: Array<X.E3> & X.E3) -> Acc:
+  match n:
+    case 0n:
+      (a,_) = got
+      Acc{a,total}
+    case 1n+k:
+      (a,y) = got
+      +j = U32.add(i,1)
+      limb(k,j,U32.shrn(x,2n),signed(U32.and(x,3),total,y),Array.get(X.E3,a,j))
+
+def high(r: Acc, +i: U32, +hi: U32) -> Acc:
+  Acc{a,s} = r
+  limb(16n,i,hi,s,Array.get(X.E3,a,i))
+
+# Low limb first: trits i..i+15, then i+16..i+31.
+def word(w: Word.Bits64, +i: U32, r: Acc) -> Acc:
   Word.Bits64{hi,lo} = w
-  limb(List.drop(&2,X.E3,ps,16n),hi,limb(List.take(&2,X.E3,ps,16n),lo,sum))
+  Acc{a,s} = r
+  high(limb(16n,i,lo,s,Array.get(X.E3,a,i)),U32.add(i,16),hi)
 
-def vector(n: Nat, ps: B.Elements, stream: T.Stream, sum: X.E3) -> T.Read<X.E3>:
+def vector(n: Nat, +i: U32, r: Acc, stream: T.Stream) -> Col:
   match n:
-    case 0n: T.Read{sum,stream}
+    case 0n:
+      Acc{a,s} = r
+      Col{a,s,stream}
     case 1n+k:
-      +powers = ps
       +v = T.next_word(stream)
-      next = end_word(T.value(Word.Bits64,v),List.take(&2,X.E3,powers,32n),sum)
-      vector(k,List.drop(&2,X.E3,powers,32n),T.after(Word.Bits64,v),next)
+      vector(k,U32.add(i,32),word(T.value(Word.Bits64,v),i,r),T.after(Word.Bits64,v))
 
-def columns(n: Nat, +ps: B.Elements, stream: T.Stream, acc: B.Elements) -> T.Read<B.Elements>:
+# last carries the previous column's sum; the seed's is dropped at the end.
+def columns_with(n: Nat, acc: B.Elements, last: Col) -> T.Read<B.Elements>:
   match n:
-    case 0n: T.Read{List.reverse(&2,X.E3,acc),stream}
+    case 0n:
+      Col{_,s,stream} = last
+      T.Read{List.drop(&2,X.E3,List.reverse(&2,X.E3,s <> acc),1n),stream}
     case 1n+k:
-      +c = vector(4n,ps,stream,F.zero())
-      columns(k,ps,T.after(X.E3,c),T.value(X.E3,c) <> acc)
+      Col{a,s,stream} = last
+      columns_with(k,s <> acc,vector(4n,0,Acc{a,F.zero()},stream))
+
+def columns(n: Nat, ps: B.Elements, stream: T.Stream) -> T.Read<B.Elements>:
+  columns_with(n,[],Col{powers_table(ps),F.zero(),stream})
