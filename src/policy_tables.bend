@@ -60,7 +60,7 @@ def load(+lines: P.Lines, +dir: String) -> IO(Tables):
     ok : Unit <- Header.require(U32.is_eq(eg, 8) && U32.is_eq(smax, 4095) && U32.is_eq(gcl, 1) &&
       U32.is_ne(experts, 0) && U32.is_eq(S, 12) && U32.is_eq(rx, 8) && U32.is_eq(cs, 12) &&
       U32.is_eq(dh, 128) && U32.is_zero(hi) && ((U32.is_eq(lt, 6) && U32.is_eq(theta, 10000)) ||
-      (U32.is_eq(lt, 10) && U32.is_eq(theta, 500000))), "unsupported public table geometry")
+      (U32.is_eq(lt, 10) && U32.is_eq(theta, 500000))), "NO: unsupported public table geometry")
     hs : H.Bytes <- expected(8n, "tsilu", lines)
     hg : H.Bytes <- expected(8n, "tsig", lines)
     hr : H.Bytes <- expected(8n, "trope", lines)

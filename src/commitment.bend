@@ -25,7 +25,7 @@ def record_chunk(record: Bool, xs: H.Bytes) -> Bool:
 def read_chunk(pair: File & H.Bytes, ctx: H.Context, wanted: Nat, record: Bool) -> IO(File & H.Context):
   (f, +xs) = pair
   do IO<File & H.Context>:
-    checked : Unit <- Header.require(Nat.is_eq(List.length(&2, U32, xs), wanted), "short file")
+    checked : Unit <- Header.require(Nat.is_eq(List.length(&2, U32, xs), wanted), "NO: short file")
     checked : Unit <- Header.require(record_chunk(record, xs), "NO: key-refused")
     return (f, H.update(ctx, xs))
 
@@ -85,7 +85,7 @@ type Shape is Data:
 def table(line: Maybe<&2, String>) -> IO(List<&2, String>):
   match line:
     case Some{text}: IO.pure(List<&2, String>, String.split(text, ' '))
-    case None{}: IO.die(List<&2, String>, 1, "policy-table")
+    case None{}: IO.die(List<&2, String>, 1, "NO: policy-table")
 
 def shape(values: List<&2, String>, salt: U32) -> IO(Shape):
   match values:
@@ -104,14 +104,14 @@ def shape(values: List<&2, String>, salt: U32) -> IO(Shape):
           Nat.is_lt(Nat.add(U32.to_nat(message), U32.to_nat(random)), Nat.pow(2n, U32.to_nat(bits))),
           "NO: parameter-table-shape")
         return Shape{rows, bits, message, random, salt}
-    case _: IO.die(Shape, 1, "policy-table")
+    case _: IO.die(Shape, 1, "NO: policy-table")
 
 def parse_shape(+lines: List<&2, String>) -> IO(Shape):
   do IO<Shape>:
     +salt : U32 <- Header.field(List.find(String, line => String.starts_with(line, "salt "), lines), 5n)
     check : Unit <- Header.require(U32.is_ge(salt, 40) && U32.is_le(salt, 64) && U32.is_zero(U32.and(salt, 7)), "NO: parameter-range")
     answers : U32 <- Header.field(List.find(String, line => String.starts_with(line, "answers "), lines), 8n)
-    check : Unit <- Header.require(U32.is_eq(answers, 1), "policy-answers")
+    check : Unit <- Header.require(U32.is_eq(answers, 1), "NO: policy-answers")
     values : List<&2, String> <- table(List.find(String, line => String.starts_with(line, "table "), lines))
     shape(values, salt)
 

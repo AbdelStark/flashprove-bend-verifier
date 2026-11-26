@@ -6,7 +6,7 @@ import re
 import shutil
 import tempfile
 
-from e2e import stated_policy
+from e2e import inputs, stated_policy
 from worker_parity import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +70,39 @@ def main():
                         "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-j WORKERS] [-timing]",
                         parity_dir=args.parity_dir, case="reserved-argument")
             print(f"{name}: verified independently, {expected.splitlines()[-1]}", flush=True)
+        refusals(binary, work)
+
+
+def refusals(binary, work):
+    """Caller inputs the verifier must refuse, each with a `NO:` line naming the check."""
+    clipped = EXAMPLES / "accepted-proof-clipped-gap"
+    call = [*inputs(clipped), "-id", (clipped / "ID.txt").read_text().strip(), "-data", "data"]
+    run(binary, work, call, 1, "NO: policy")
+    run(binary, work, [*call, "-policy", "clipped-gap,9244130,323343,0,16,8"], 1, "NO: policy")
+    exact = EXAMPLES / "accepted-proof"
+    config, ivk, req, y, proof = inputs(exact)
+    tail = ["-id", (exact / "ID.txt").read_text().strip(), "-data", "data"]
+    changed = work / "changed config"
+    shutil.copytree(config, changed)
+    original = (config / "policy.txt").read_text()
+    for old, new, rejection in [
+        ("lt 6", "lt 3", "NO: unsupported public table geometry"),
+        ("lt 6", "lt 17", "NO: unsupported public table geometry"),
+        ("V 512", "V 1", "NO: shape-V"),
+        ("V 512", "V 16777217", "NO: shape-V"),
+        ("table 8 23", "table 21 23", "NO: parameter-table-shape"),
+        ("524288 65535 0 11", "8388607 1 0 11", "NO: parameter-table-shape"),
+        ("65535 0 11", "65535 1 11", "NO: parameter-table-shape"),
+        ("65535 0 11", "65535 0 7", "NO: parameter-table-shape"),
+    ]:
+        if original.count(old) != 1:
+            raise RuntimeError(f"fixture does not contain a unique {old!r}")
+        (changed / "policy.txt").write_text(original.replace(old, new))
+        run(binary, work, [changed, ivk, req, y, proof, *tail], 1, rejection)
+    short = work / "truncated request"
+    short.write_bytes(req.read_bytes()[:-1])
+    run(binary, work, [config, ivk, short, y, proof, *tail], 1, "NO: statement-range")
+    print("refused omitted and mismatched policy, malformed shapes and a truncated request", flush=True)
 
 
 if __name__ == "__main__":
