@@ -18,7 +18,6 @@ def route(+kind: Nat) -> Bool: Nat.is_eq(kind,6n) || Nat.is_eq(kind,7n) || Nat.i
 def weighted(+k:Nat) -> Bool: Nat.is_lt(k,8n) || Nat.is_eq(k,10n) || Nat.is_eq(k,11n)
 def second(+k:Nat) -> Bool: Nat.is_le(6n,k)
 def moe_only(+k:Nat) -> Bool: Nat.is_eq(k,5n) || Nat.is_le(12n,k)
-def virtual(+k:Nat) -> Bool: Nat.is_eq(k,3n) || Nat.is_eq(k,10n)
 
 def name(+k: Nat) -> String:
   match k:

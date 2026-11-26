@@ -14,18 +14,18 @@
 
 ---
 
-A [FlashProve](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c) proof says: *given this prompt, every covered token is the committed integer model's first choice.* This repo checks that claim in [Bend 2](https://github.com/bendlang/bend). You hand it a model commitment, the tokens and the proof. It hands back `YES` or a refusal.
+A [FlashProve](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c) proof says: *given this prompt, every covered token is the committed integer model's first choice.* This repository checks that claim in [Bend 2](https://github.com/bendlang/bend). You give it a model commitment, the tokens and the proof. It answers `YES` or refuses.
 
-- **No weights.** The verifier only sees the commitment, the tokens and the proof bytes.
-- **Standalone.** The key, the selected leaf and the request are all checked in Bend. No external verifier at runtime.
-- **Parallel.** The same executable runs on one worker or many.
-- **Real sizes.** Supports the four published H821 configurations: two model sizes, two acceptance policies. The larger model has Llama 4 Maverick's dimensions (synthetic weights). [Configurations](docs/adr/public-plans.md)
+- **No weights.** The verifier sees only the commitment, the tokens and the proof bytes.
+- **Standalone.** Bend checks the key, the selected leaf and the request itself. Nothing else runs at verification time.
+- **Parallel.** One executable runs on one worker or many, and prints the same answer either way.
+- **Real sizes.** It supports all four published H821 configurations: two model sizes, each under two acceptance policies. The larger model has Llama 4 Maverick's dimensions, with synthetic weights. [Configurations](docs/adr/public-plans.md)
 
 ## Full-size proof: 17 MiB, 1,001 tokens
 
-A 24-token prompt, a 17.91 MiB proof covering the next 1,000 tokens plus one proposed next token. `YES` means all 1,001 predictions match the committed model's first choice. [Fixture](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md#what-the-yes-says)
+The prompt is 24 tokens. The 17.91 MiB proof covers the next 1,000 tokens plus one proposed next token. `YES` means all 1,001 predictions match the committed model's first choice. [Fixture](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/full-size/README.md#what-the-yes-says)
 
-Wall time for one fresh process, launch to exit: file reads, all three verification stages, the verdict. Inference and proving happen beforehand. **Lean OnBytes** is FlashProve's own native Lean verifier for the same files.
+The times below are for one fresh process, from launch to exit: reading the files, all three verification stages and printing the verdict. Inference and proving happen beforehand. **Lean OnBytes** is FlashProve's own native Lean verifier, run on the same files.
 
 | CPU | Bend workers | Bend | Speedup vs. 1 worker | Lean OnBytes | Bend vs. Lean |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -34,11 +34,11 @@ Wall time for one fresh process, launch to exit: file reads, all three verificat
 | Intel Xeon Platinum 8480CL | 1 | 45.86 s | 1.00× | 93.16 s | 2.03× |
 | Intel Xeon Platinum 8480CL | 8 | **23.38 s** | 1.96× | 93.35 s | **3.99×** |
 
-Medians of three alternating Bend/Lean pairs after one warmup each, proof in the file cache. Both worker counts on a CPU use the same binary; a separate trial picked the parallel count. The M4 rows measure `b4a8c4b`; the Xeon rows measure the earlier `9d00a32`. [M4 samples](docs/research/speed-pass.md) · [Xeon samples, worker selection](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
+Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary, and a separate trial chose the parallel worker count. The M4 rows measure `b4a8c4b`. The Xeon rows measure the earlier `9d00a32`. The upstream C++ verifier is still faster: 8.19 s on the M4 with `-j 1`. [M4 samples](docs/research/speed-pass.md) · [Xeon samples and worker selection](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
 
 ## Quick start
 
-You need macOS or Linux, Git, make, Clang, curl and Python 3.11+. The build pulls the pinned Bend compiler into the repo, checks the upstream fixture hashes and writes everything to `build/`.
+You need macOS or Linux with Git, make, Clang, curl and Python 3.11 or newer. The build downloads the pinned Bend compiler into the repository, checks the hashes of the upstream fixtures and writes everything else to `build/`.
 
 ```sh
 make bootstrap upstream standalone
@@ -48,7 +48,7 @@ build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
   "$example/example.y" "$example/example.proof" -id "$id" -data build
 ```
 
-Exit code 0, last line `YES`. The line above it is the `result-v1` record: `tokens=61..63 y=yes` means the proof covers the request's last three tokens and the proposed next token, ID 199. [Expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/accepted-proof/README.md)
+The command exits with status 0 and its last line is `YES`. The line above it is the `result-v1` record. There, `tokens=61..63 y=yes` means the proof covers the request's last three tokens and the proposed next token, ID 199. [Expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/accepted-proof/README.md)
 
 | Flag | Effect |
 | --- | --- |
@@ -56,13 +56,13 @@ Exit code 0, last line `YES`. The line above it is the `result-v1` record: `toke
 | `-j 1` | serial path |
 | `-timing` | worker count and per-stage times on stderr |
 
-**Using it for real:** get the commitment ID from a source you trust *before* you send the prompt. Pass the tokens you sent and received, the range to check and the policy you accept. Then check the exit status and confirm the ID, claim, policy and coverage in `result-v1`. [Verification contract](docs/spec/verifier.md)
+**Using it for real.** Get the commitment ID from a source you trust, and get it *before* you send the prompt. Pass the tokens you sent and received, the range to check and the policy you accept. Then check the exit status and confirm that the ID, claim, policy and coverage in `result-v1` are the ones you asked for. [Verification contract](docs/spec/verifier.md)
 
 ## When the reply isn't the top token
 
-Floating-point inference and the committed integer model can rank two tokens differently. FlashProve's **clipped-gap** policy tolerates that: it scores each covered reply token by how far its logit falls below the best one (with a tie rule), then caps the average clipped cost and the count of costs above the clip. You pass the policy you accept. A covered *next* token must still be the model's first choice.
+Floating-point inference and the committed integer model can rank two tokens differently. FlashProve's **clipped-gap** policy allows for this. It scores each covered reply token by how far its logit falls below the best one, with a tie rule. It then caps both the average clipped cost and the number of costs above the clip. You choose the policy you accept and pass it in. A covered *next* token must still be the model's first choice.
 
-In this example, 4 of 32 reply tokens aren't the first choice, and the proof still passes:
+In this example, 4 of the 32 reply tokens are not the first choice, and the proof still passes:
 
 ```sh
 example=.upstream/FlashProve/examples/accepted-proof-clipped-gap
@@ -71,17 +71,36 @@ build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
   -policy clipped-gap,9244130,323343,1,16,8 -data build
 ```
 
-Last line: `WITHIN LIMITS`. The record says `tokens=16..47 y=no`: the reply is covered, the following token isn't claimed. The ID and policy belong to this fixture. [How the cost is computed](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/prover/examples/target_small_f2_gap/README.md)
+The last line is `WITHIN LIMITS`. The record says `tokens=16..47 y=no`: the reply is covered and no next token is claimed. This ID and policy belong to this fixture. [How the cost is computed](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/prover/examples/target_small_f2_gap/README.md)
 
-## What's been checked, and what hasn't
+## How it works
+
+The verifier first hashes the public configuration and finds it in a catalog of the four supported configurations. That fixes every round count, code size and table digest before the proof is read. Then it runs three stages:
+
+1. **Key.** Check the model commitment and rebuild the commitment ID from it. A different ID is refused here.
+2. **Leaf.** Check the leaf the proof selects, and its link to the key.
+3. **Request.** Replay the transcript, then check the feed-forward, attention and output-head equations for every covered token, and the claims that tie them to the committed weights.
+
+The whole pipeline is ordinary Bend. Bend compiles it to C, and Clang compiles that at `-O3`. The C entry point is a 45-line file that only passes the command-line arguments in.
+
+| Path | Contents |
+| --- | --- |
+| [`src/`](src) | The verifier: 151 Bend modules and the C entry point. Start at [`standalone.bend`](src/standalone.bend). |
+| [`tests/`](tests) | Known-answer tests, run on Bend's JS and native backends. |
+| [`scripts/`](scripts) | Build, conformance, fuzzing and benchmark drivers. `scripts/probes/` exposes single stages for comparison. |
+| [`profiles/`](profiles) | The four configuration-bound public plans, generated from the pinned upstream source. |
+| [`docs/`](docs) | The contracts the code must meet, plus frozen measurement reports. |
+| [`research/spikes/`](research/spikes) | Kernel experiments and the patches behind the recorded profiles. |
+
+## What has been checked, and what hasn't
 
 - ✅ Bend and Lean OnBytes agree on all four published fixtures.
 - ✅ A fresh proof from the H100 prover passed both Bend and C++ under a new commitment. [Record](docs/research/fresh-proof.md)
-- ✅ Bend's kernel checked the standalone definitions in the measured revision (`9d00a32`) against their declared types. [Details](docs/research/request-projection.md#checking-the-verification-path)
-- ✅ Every commit runs conformance plus seeded fuzzing: Bend must never accept a mutated proof that C++ refuses.
+- ✅ Bend's independent kernel checked the standalone definitions of the latest measured revision against their declared types. [Details](docs/spec/assurance.md#what-has-been-formally-checked)
+- ✅ Every commit runs conformance tests and seeded fuzzing. Bend must never accept a mutated proof that C++ refuses.
 - ⏳ **Open:** a proof that Bend acceptance implies Lean acceptance for *every* supported input.
 
-`bits=128` in the output is the verifier's accounting target and assumes proof-of-work and commitment binding. Read the [assurance contract](docs/spec/assurance.md) and the [upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) before you rely on it.
+`bits=128` in the output is the verifier's accounting target. It assumes proof of work and commitment binding. Read the [assurance contract](docs/spec/assurance.md) and the [upstream theorem](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/lean/THEOREM.md) before you rely on it.
 
 ## Development
 
@@ -93,7 +112,7 @@ make standalone-extended  # 122 altered sets vs. the C++ reference
 make fuzz                 # random byte mutations, Bend vs. C++
 ```
 
-Start with the [protocol source map](docs/research/protocol.md), which ties each format rule to its code and tests, and the [implementation plan](docs/plan/implementation.md) for what's next.
+The [protocol source map](docs/research/protocol.md) ties each format rule to its code and tests. The [implementation plan](docs/plan/implementation.md) says what comes next, and [Working with Bend](docs/agents/BEND_NOTES.md) covers the compiler's habits.
 
 ---
 
