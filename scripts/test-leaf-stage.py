@@ -67,7 +67,7 @@ def main():
                 original = leaf.read_bytes()
                 mutations = [(original + b"\0", "NO: trailing-data"),
                              (original[:40] + b"\xff"*8 + original[48:], "NO: leaf-record"),
-                             (original[:-1] + bytes([original[-1] ^ 1]), "NO: key-opening")]
+                             (original[:-1] + bytes([original[-1] ^ 1]), "NO: opening")]
                 for raw, expected in mutations:
                     bad = directory/"changed.bin"
                     bad.write_bytes(raw)

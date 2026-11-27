@@ -48,7 +48,7 @@ def dual_fault(out):
                    (example / "ID.txt").read_text().strip(), "-data", BUILD]
         result = run_cli(command, parity_dir=out, case="key-and-request", workers=(1, 2, 4, 8, 16),
                          env={**os.environ, "PATH": ""}, timeout=600)
-        if result.returncode != 1 or (result.stdout + result.stderr).splitlines() != ["NO: key-header"]:
+        if result.returncode != 1 or (result.stdout + result.stderr).splitlines()[-2:] != ["stage: key, file: IVK/key.bin", "NO: key-header"]:
             raise RuntimeError("expected the key-header failure before the request failure")
 
 

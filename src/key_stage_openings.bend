@@ -19,7 +19,7 @@ def need(-A: Data, value: Maybe<&2,A>, error: String) -> IO(A):
     case None{}: IO.die(A,1,error)
 
 def digest(raw: H.Bytes) -> IO(M.Digest):
-  need(M.Digest,O.read_digest(raw),"NO: key-digest")
+  need(M.Digest,O.read_digest(raw),"NO: digest")
 
 def add(count: Nat, +raw: H.Bytes, +run: M.Digest, book: Book, +next: Nat) -> IO(Book):
   match count:
@@ -31,7 +31,7 @@ def add(count: Nat, +raw: H.Bytes, +run: M.Digest, book: Book, +next: Nat) -> IO
           List.append(&2,Root,book,[Root{root,U32.from_nat(next),run}]),1n+next)
 
 def at(book: Book, place: Nat) -> IO(Root):
-  need(Root,List.get(&2,Root,book,place),"NO: key-tree-place")
+  need(Root,List.get(&2,Root,book,place),"NO: tree-place")
 
 type Published is Data:
   Published{shape: O.Shape, root: M.Digest}
@@ -52,7 +52,7 @@ def verified(pair: R.Reader & H.Bytes, shape: O.Shape, config: M.Digest, root: M
   xs: O.Places, session: O.Session) -> IO(R.Reader & O.Opened):
   (r,raw) = pair
   do IO<R.Reader & O.Opened>:
-    checked : O.Opened <- need(O.Opened,O.verify(shape,config,root,xs,raw,session),"NO: key-opening")
+    checked : O.Opened <- need(O.Opened,O.verify(shape,config,root,xs,raw,session),"NO: opening")
     return (r,checked)
 
 def open_at(published: Published, +config: M.Digest, places: O.Places, r: R.Reader, session: O.Session) -> IO(R.Reader & O.Opened):
@@ -60,7 +60,7 @@ def open_at(published: Published, +config: M.Digest, places: O.Places, r: R.Read
   O.Shape{_,_,d,_,_,_} = shape
   +xs = O.positions(d,places)
   do IO<R.Reader & O.Opened>:
-    size : Nat <- need(Nat,O.encoded_size(shape,xs),"NO: key-opening-size")
+    size : Nat <- need(Nat,O.encoded_size(shape,xs),"NO: opening-size")
     data : R.Reader & H.Bytes <- R.take(r,U32.from_nat(size))
     verified(data,shape,config,root,xs,session)
 

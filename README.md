@@ -60,7 +60,7 @@ build/verify-bend "$example/config" "$example/ivk" "$example/example.req" \
   "$example/example.y" "$example/example.proof" -id "$id" -data build
 ```
 
-The command exits with status 0 and its last line is `YES`. The line above it is the `result-v1` record. There, `tokens=61..63 y=yes` means the proof covers the request's last three tokens and the proposed next token, ID 199. [Expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/accepted-proof/README.md)
+The command exits with status 0 and its last line is `YES`. The line above it is the `result-v1` record. On stderr, each stage names itself as it starts, so after a refusal the line before `NO:` names the stage and the file that failed. There, `tokens=61..63 y=yes` means the proof covers the request's last three tokens and the proposed next token, ID 199. [Expected output](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/examples/accepted-proof/README.md)
 
 | Flag | Effect |
 | --- | --- |

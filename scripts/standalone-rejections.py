@@ -34,7 +34,7 @@ def reject(example, altered, identity, policy, proof_name="example.proof", parit
     env = {**os.environ, "PATH": ""}
     run = run_cli(cmd, cwd=altered, env=env, timeout=600, parity_dir=parity_dir,
                   case=f"{altered.parent.name}-{altered.name}")
-    lines = (run.stdout + run.stderr).splitlines()
+    lines = [line for line in (run.stdout + run.stderr).splitlines() if not line.startswith("stage: ")]
     if run.returncode != 1 or not lines or not lines[-1].startswith("NO: "):
         raise RuntimeError(f"{altered.name}: expected a verifier rejection, got {run.returncode} {lines[-3:]}")
 

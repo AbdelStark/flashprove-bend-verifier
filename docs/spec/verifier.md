@@ -32,6 +32,18 @@ The `bits=128` field gives the target used to check each round's error accountin
 
 None of these is an acceptance: malformed or unsupported input, a policy mismatch, a failed or incomplete stage, a timeout, a signal or truncated output. When you report a result, keep a proof refusal distinct from an execution failure. The format permits some differences in failure order and diagnostic names. [Format §13.7](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/docs/format/FORMAT.md#137-from-the-stages-to-the-result)
 
+A refusal exits with status 1 and ends with a `NO: <check>` line on stderr. As each stage starts, the verifier prints its name and the caller's file to stderr, so the line before `NO:` says where the refusal arose. Standard output carries only the closing records. Each stage maps to a refusal class of the reference verifier:
+
+| Stage line | Files read | Reference class |
+| --- | --- | --- |
+| `stage: public, files: CONFIG, REQUEST, Y, DIR` | the configuration, the request, the next token and the public tables | a public-input check, such as `policy` or `statement-range` |
+| `stage: key, file: IVK/key.bin` | the key, and the commitment ID formed from it | `key-refused`, or `model-statement` for a different ID |
+| `stage: leaf, file: PROOF` | the proof's header, which names the leaf | `entry-refused` |
+| `stage: leaf, file: IVK/leaf/<k>.bin` | the leaf the proof names | `entry-refused` |
+| `stage: request, file: PROOF` | the rest of the proof, then the verdict | `proof-refused` |
+
+Some checks are shared between stages, such as Merkle openings (`opening`) and trailing bytes (`trailing-data`). Their names do not include a stage, so read the stage line to tell where they arose. `make fuzz` tallies Bend's refusals by altered file and stage. It fails if a fault in the proof or the leaf is refused before the leaf stage.
+
 ## Requirements and test evidence
 
 The pinned format and its companion files for §§8–11 define the wire rules. Where the format delegates behavior to code, cite the pinned implementation, capture a differential case and record any known divergence. Format §17 lists known discrepancies. Section 18 describes the assumptions made when a verifier takes plans or shapes as inputs. [Format](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/docs/format) · [Implementation map](https://github.com/anthropics/FlashProve/blob/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c/verifier/docs/source-map.md)

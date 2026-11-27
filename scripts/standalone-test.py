@@ -13,7 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / ".upstream/FlashProve/examples"
 
 
-def run(binary, directory, args, status, expected, workers=None, parity_dir=None, case=None):
+PUBLIC = "stage: public, files: CONFIG, REQUEST, Y, DIR"
+
+
+def run(binary, directory, args, status, expected, workers=None, parity_dir=None, case=None, stage=None):
+    """Compare the output less the stage lines. A refusal's last stage line must be `stage`."""
     env = {"PATH": str(directory / "empty-path")}
     result = run_cli([binary, *args], cwd=directory, env=env, timeout=3600, parity_dir=parity_dir, case=case)
     if workers is not None:
@@ -23,8 +27,14 @@ def run(binary, directory, args, status, expected, workers=None, parity_dir=None
         lines = result.stdout.strip().splitlines()
     else:
         lines = (result.stdout + result.stderr).strip().splitlines()
+    stages = [line for line in lines if line.startswith("stage: ")]
+    lines = [line for line in lines if not line.startswith("stage: ")]
     if result.returncode != status or lines != expected.splitlines():
         raise RuntimeError(f"expected {status} {expected!r}, got {result.returncode} {lines[-4:]!r}")
+    if status == 0 and stages and (stages[0] != PUBLIC or stages[-1] != "stage: request, file: PROOF"):
+        raise RuntimeError(f"an accepted call must pass every stage, got {stages!r}")
+    if stage and (not stages or stages[-1] != stage):
+        raise RuntimeError(f"expected the refusal in {stage!r}, got {stages[-1:]!r}")
 
 
 def main():
@@ -65,7 +75,7 @@ def main():
                     run(binary, work, [*call, *options, "-j", "--help"], 2,
                         "verify-bend: -j expects a worker count from 1 to 128")
                     run(binary, work, [*call, "-id", "0" * 64, *options], 1, "NO: model-statement",
-                        parity_dir=args.parity_dir, case="wrong-id")
+                        parity_dir=args.parity_dir, case="wrong-id", stage="stage: key, file: IVK/key.bin")
                     run(binary, work, [*call, "+RTS", "--help"], 2,
                         "usage: verify-bend CONFIG IVK REQUEST Y PROOF -id HEX [-policy POLICY] [-data DIR] [-q] [-j WORKERS] [-timing]",
                         parity_dir=args.parity_dir, case="reserved-argument")
@@ -77,8 +87,8 @@ def refusals(binary, work):
     """Caller inputs the verifier must refuse, each with a `NO:` line naming the check."""
     clipped = EXAMPLES / "accepted-proof-clipped-gap"
     call = [*inputs(clipped), "-id", (clipped / "ID.txt").read_text().strip(), "-data", "data"]
-    run(binary, work, call, 1, "NO: policy")
-    run(binary, work, [*call, "-policy", "clipped-gap,9244130,323343,0,16,8"], 1, "NO: policy")
+    run(binary, work, call, 1, "NO: policy", stage=PUBLIC)
+    run(binary, work, [*call, "-policy", "clipped-gap,9244130,323343,0,16,8"], 1, "NO: policy", stage=PUBLIC)
     exact = EXAMPLES / "accepted-proof"
     config, ivk, req, y, proof = inputs(exact)
     tail = ["-id", (exact / "ID.txt").read_text().strip(), "-data", "data"]
@@ -98,10 +108,10 @@ def refusals(binary, work):
         if original.count(old) != 1:
             raise RuntimeError(f"fixture does not contain a unique {old!r}")
         (changed / "policy.txt").write_text(original.replace(old, new))
-        run(binary, work, [changed, ivk, req, y, proof, *tail], 1, rejection)
+        run(binary, work, [changed, ivk, req, y, proof, *tail], 1, rejection, stage=PUBLIC)
     short = work / "truncated request"
     short.write_bytes(req.read_bytes()[:-1])
-    run(binary, work, [config, ivk, short, y, proof, *tail], 1, "NO: statement-range")
+    run(binary, work, [config, ivk, short, y, proof, *tail], 1, "NO: statement-range", stage=PUBLIC)
     print("refused omitted and mismatched policy, malformed shapes and a truncated request", flush=True)
 
 

@@ -34,6 +34,11 @@ def report(on: Bool, text: String) -> IO(Unit):
     case True{}: IO.print_err(text)
     case False{}: IO.pure(Unit,Unit{})
 
+# REQ-ASSURE-4. Each stage names itself and the caller's file on stderr before it starts,
+# so a refusal's `NO:` line follows the stage and file that refused.
+def enter(place: String) -> IO(Unit):
+  IO.print_err("stage: " ++ place)
+
 # Prints the milliseconds since `since` under `stage` and answers the current time.
 def lap(on: Bool, stage: String, since: Nat) -> IO(Nat):
   do IO<Nat>:
@@ -53,6 +58,7 @@ def request(checked: Link.Checked, +call: Call, +copy: U32, +mark: Nat) -> IO(Un
   Link.Checked{leaf,session,_} = checked
   Call{_,proof,id,plans,build,+cfg,+st,+timing,start,_} = call
   do IO<Unit>:
+    begun : Unit <- enter("request, file: PROOF")
     evidence : Req.Trace <- Req.verify(proof,copy,st,cfg,plans,leaf,session)
     +done : Nat <- lap(timing,"request",mark)
     whole : Unit <- report(timing,"timing: total " ++ Nat.show(Nat.sub(done,start)) ++ " ms")
@@ -65,8 +71,10 @@ def entry(key: Key.AttestedKey, +call: Call) -> IO(Unit):
   do IO<Unit>:
     id : String <- Commitment.from_record(Config.key_shape(st),O.digest_bytes(root),record,hash)
     named : Unit <- Header.require(String.eq(id,String.to_lower(expected)),"NO: model-statement")
+    proof_head : Unit <- enter("leaf, file: PROOF")
     head : H.Bytes <- Header.bytes(proof,12)
     +copy : U32 <- Header.leaf_index(head)
+    begun : Unit <- enter("leaf, file: IVK/leaf/" ++ U32.show(copy) ++ ".bin")
     trace : Leaf.Trace <- Leaf.inspect(ivk ++ "/leaf/" ++ U32.show(copy) ++ ".bin",hash,plans,Leaf.Table{root,record},session)
     link : Link.Checked <- Link.algebra(trace,hash)
     linked : Nat <- lap(timing,"leaf",mark)
@@ -81,9 +89,11 @@ def run(+config: String, +ivk: String, req: String, y: String, proof: String, bu
         workers : U32 <- IO.thread_count()
         counted : Unit <- report(timing,"timing: workers " ++ U32.show(workers))
         +start : Nat <- IO.now()
+        begun : Unit <- enter("public, files: CONFIG, REQUEST, Y, DIR")
         +st : S.Statement <- S.load(config,req,y,public ++ "/tables",policy)
         +cfg : Config.Configured <- Config.load(st,config,plans)
         loaded : Nat <- lap(timing,"public",start)
+        keying : Unit <- enter("key, file: IVK/key.bin")
         key : Key.AttestedKey <- Key.check_transcript(ivk ++ "/key.bin",digest(cfg),plans)
         keyed : Nat <- lap(timing,"key",loaded)
         entry(key,Call{ivk,proof,id,plans,build,cfg,st,timing,start,keyed})

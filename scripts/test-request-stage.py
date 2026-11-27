@@ -56,7 +56,7 @@ def mutate(tmp, cmd, proof, y, transcript):
     run(altered, 1, "NO: trailing-data")
     for offset in (opened[0],len(data)-1):
         replacement.write_bytes(data[:offset] + bytes([data[offset] ^ 1]) + data[offset+1:])
-        run(altered, 1, "NO: key-opening")
+        run(altered, 1, "NO: opening")
     # The output token has one occurrence in the small real proof as a field
     # element. Change an otherwise canonical upper extension coordinate.
     token = y.read_bytes() + bytes(20)
