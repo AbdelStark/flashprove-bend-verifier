@@ -29,6 +29,8 @@ Run `make ci` and `make docs-check`. GitHub Actions runs both, plus a seeded `ma
 - for a change on the verification path, run `make fuzz` locally too;
 - for end-to-end coverage of all four published proofs, run `make standalone-full`.
 
+The workflow's `extended` job runs the full-size suites and the benchmarks. Start it by hand from the Actions tab. `make docs-check` requires every requirement in `docs/spec` to cite a `make` target that one of the two jobs runs.
+
 [Workflow](.github/workflows/verify.yml) · [Make targets](Makefile)
 
 For a speed change, keep the verdicts identical first, then time the same workload before and after. Record the fixture, the hardware, both binaries, the worker settings and every sample. [Performance contract](docs/spec/performance.md)

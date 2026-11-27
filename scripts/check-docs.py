@@ -9,6 +9,8 @@ Rules (each failure prints `path:line: rule: message`):
   req       a requirement ID (REQ-<AREA>-<n>) is defined at most once across docs/spec
   open      no TODO/TBD/FIXME in a living doc unless the same line cites an issue (#123)
   path      every repo path written in backticks in AGENTS.md exists
+  trace     every requirement row in docs/spec cites a `make` target that a workflow runs,
+            directly or through `make ci` and the targets' prerequisites
 
 Frozen and superseded docs are snapshots: only `status` and `link` apply to them.
 """
@@ -59,12 +61,31 @@ def make_goals(command: str) -> list[str]:
     return goals if all(GOAL.fullmatch(goal) for goal in goals) else []
 
 
+def workflow_reach(makefile: str) -> set[str]:
+    """Make targets that a workflow step runs, closed over Makefile prerequisites."""
+    deps: dict[str, set[str]] = {}
+    for rule, prereqs in re.findall(r"^([\w./-]+(?: +[\w./-]+)*):(?!=)([^#\n]*)", makefile, re.M):
+        for goal in rule.split():
+            deps.setdefault(goal, set()).update(prereqs.replace("|", " ").split())
+    todo = [goal for wf in sorted((ROOT / ".github/workflows").glob("*.y*ml"))
+            for command in re.findall(r"^\s*(?:-\s+)?run:\s*(.+)$", wf.read_text(), re.M)
+            for goal in make_goals(command)]
+    seen: set[str] = set()
+    while todo:
+        goal = todo.pop()
+        if goal not in seen:
+            seen.add(goal)
+            todo.extend(deps.get(goal, ()))
+    return seen
+
+
 def main() -> int:
     bend_version = lock("toolchain.lock")["BEND_VERSION"]
     commit = lock("upstream.lock")["FLASHPROVE_COMMIT"]
     makefile = (ROOT / "Makefile").read_text() if (ROOT / "Makefile").exists() else ""
     targets = {goal for rule in re.findall(r"^([\w./-]+(?: +[\w./-]+)*):", makefile, re.M)
                for goal in rule.split()}
+    reach = workflow_reach(makefile)
     errors: list[str] = []
     req_seen: dict[str, str] = {}
     files = checkout_files()
@@ -128,6 +149,17 @@ def main() -> int:
                 if req in req_seen:
                     errors.append(f"{rel}:1: req: {req} already defined in {req_seen[req]}")
                 req_seen[req] = str(rel)
+            if living:
+                for n, line in enumerate(text.splitlines(), 1):
+                    req = REQ_DEF.match(line)
+                    if not req:
+                        continue
+                    goals = [g for snippet in re.findall(r"`([^`\n]+)`", line) for g in make_goals(snippet)]
+                    if not goals:
+                        errors.append(f"{rel}:{n}: trace: {req.group(1)} cites no `make` command")
+                    for goal in goals:
+                        if goal in targets and goal not in reach:
+                            errors.append(f"{rel}:{n}: trace: {req.group(1)} cites `make {goal}`, which no workflow runs")
 
     for e in errors:
         print(e)

@@ -46,6 +46,31 @@ class DocsCheckTest(unittest.TestCase):
             for error in ("build/report.md", "old.md", "missing-inline", "missing-example", "0123456"):
                 self.assertIn(error, bad.stdout)
 
+    def test_requirements_trace_to_workflow_commands(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for d in ("scripts", "docs/spec", ".github/workflows"):
+                (root / d).mkdir(parents=True)
+            checker = root / "scripts/check-docs.py"
+            shutil.copyfile(Path(__file__).resolve().parents[1] / "scripts/check-docs.py", checker)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "Makefile").write_text("ci: unit | tools\nunit:\ntools:\nmanual:\nextended:\n")
+            (root / "toolchain.lock").write_text("BEND_VERSION=2.0.40\n")
+            (root / "upstream.lock").write_text("FLASHPROVE_COMMIT=abcdef1234567890\n")
+            (root / ".github/workflows/ci.yml").write_text(
+                "jobs:\n  a:\n    steps:\n      - run: make ci\n      - run: make extended FUZZ_ARGS=\"-n 1\"\n")
+            spec = root / "docs/spec/reqs.md"
+            head = "# Requirements\n\n> Status: living\n\n| Requirement | Evidence |\n|---|---|\n"
+            spec.write_text(head + "| **REQ-A-1** | `make unit` |\n| **REQ-A-2** | `make tools` and `make extended` |\n")
+            good = subprocess.run([sys.executable, checker], capture_output=True, text=True)
+            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
+
+            spec.write_text(head + "| **REQ-A-1** | `make manual` |\n| **REQ-A-2** | Read the logs. |\n")
+            bad = subprocess.run([sys.executable, checker], capture_output=True, text=True)
+            self.assertEqual(bad.returncode, 1, bad.stdout + bad.stderr)
+            self.assertIn("REQ-A-1 cites `make manual`, which no workflow runs", bad.stdout)
+            self.assertIn("REQ-A-2 cites no `make` command", bad.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
