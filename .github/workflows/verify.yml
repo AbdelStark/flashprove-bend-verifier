@@ -11,7 +11,22 @@ jobs:
       - run: make ci
       # A new seed per commit: the cases differ from run to run and a failure names its seed.
       - run: make fuzz FUZZ_ARGS="-n 32 --seed ${{ github.sha }}"
-      - if: github.event_name == 'workflow_dispatch'
-        run: make standalone-full standalone-extended
-      - if: github.event_name == 'workflow_dispatch'
-        run: make fuzz FUZZ_ARGS="-n 250 --seed ${{ github.sha }}-extended"
+
+  # The full-size runs and the benchmarks behind each requirement in docs/spec. Start it by hand.
+  extended:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make plans-reproduce standalone-full standalone-extended stages-full worker-parity
+      - run: make fuzz FUZZ_ARGS="-n 250 --seed ${{ github.sha }}-extended"
+      - run: make benchmark-standalone BENCH_ARGS="--output build/benchmark-cpp"
+      - run: make benchmark-workers BENCH_ARGS="--worker-counts 1 2 4 --output build/benchmark-workers"
+      - run: make benchmark-onbytes BENCH_ARGS="--workers 1 --output build/benchmark-lean"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: extended-${{ github.sha }}
+          path: build/benchmark-*/
+          if-no-files-found: ignore
