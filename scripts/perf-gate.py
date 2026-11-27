@@ -17,10 +17,10 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def ratio(results: dict) -> tuple[float, float, float]:
-    cpu = {name: median(r["cpu_s"] for r in results["samples"] if r["program"] == name)
-           for name in ("verify-bend", "cp_verify")}
-    return cpu["verify-bend"] / cpu["cp_verify"], cpu["verify-bend"], cpu["cp_verify"]
+def ratio(results: dict, key: str) -> tuple[float, float, float]:
+    cost = {name: median(r[key] for r in results["samples"] if r["program"] == name)
+            for name in ("verify-bend", "cp_verify")}
+    return cost["verify-bend"] / cost["cp_verify"], cost["verify-bend"], cost["cp_verify"]
 
 
 def main() -> int:
@@ -34,8 +34,11 @@ def main() -> int:
     subprocess.run([sys.executable, "-B", ROOT / "scripts/benchmark-standalone.py", "--compare", "cpp",
                     "--fixture", "accepted-proof", "--samples", str(args.samples), "--output", out],
                    check=True, stdout=subprocess.DEVNULL)
-    measured, bend, cpp = ratio(json.loads((out / "results.json").read_text()))
+    results = json.loads((out / "results.json").read_text())
+    measured, bend, cpp = ratio(results, "cpu_s")
+    wall = ratio(results, "wall_s")
     verdict = "within" if measured <= limit else "OVER"
+    print(f"perf-gate: {results['host']['cpu']}: wall {wall[1]:.2f} s / {wall[2]:.2f} s = {wall[0]:.2f}x")
     print(f"perf-gate: Bend {bend:.2f} s / C++ {cpp:.2f} s CPU = {measured:.2f}x, "
           f"{verdict} the budget {budget['ratio']:.2f}x + {budget['tolerance']:.0%} = {limit:.2f}x ({out.name})")
     return 0 if measured <= limit else 1
