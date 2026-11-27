@@ -16,6 +16,7 @@
 
 A [FlashProve](https://github.com/anthropics/FlashProve/tree/9e2bdd8ff5bf9c62f18263d7dac189b0400b260c) proof says: *given this prompt, every covered token is the committed integer model's first choice.* This repository checks that claim in [Bend 2](https://github.com/bendlang/bend). You give it a model commitment, the tokens and the proof. It answers `YES` or refuses.
 
+- **Type-checked by a proof language.** Bend 2 is a dependently typed language: a function's type can state facts about the values it returns, and the compiler refuses code that does not meet its types. All 151 modules pass that checker, and Bend's independent kernel has rechecked the whole standalone verifier. Today those types pin down shapes, such as an extension-field product returning three coordinates, not full correctness. Proving what the arithmetic computes, and that Bend accepting a proof implies FlashProve's proven Lean verifier accepts it, is open work. [What is and isn't proven](docs/spec/assurance.md#what-has-been-formally-checked)
 - **No weights.** The verifier sees only the commitment, the tokens and the proof bytes.
 - **Standalone.** Bend checks the key, the selected leaf and the request itself. Nothing else runs at verification time.
 - **Parallel.** One executable runs on one worker or many, and prints the same answer either way.
@@ -34,7 +35,18 @@ The times below are for one fresh process, from launch to exit: reading the file
 | Intel Xeon Platinum 8480CL | 1 | 38.77 s | 1.00× | 93.09 s | 2.40× |
 | Intel Xeon Platinum 8480CL | 8 | **20.84 s** | 1.86× | 92.94 s | **4.46×** |
 
-Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary. A separate screen chose each CPU's worker count. On the M4, 12 and 16 workers tie (5.89× in both pairings). The M4 rows measure `05b2268` and the Xeon rows `d42bb69`, which have the same Bend source. The upstream C++ verifier is still faster with `-j 1`: 8.06 s on the M4 and 20.79 s on the Xeon, against Bend's 18.03 s and 38.81 s. [M4 samples and conformance](docs/research/rerun-2026-11-26.md) · [Xeon samples and conformance](docs/research/xeon-rerun-2026-11-27.md) · [Measurement protocol](docs/spec/performance.md)
+Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary. A separate screen chose each CPU's worker count. On the M4, 12 and 16 workers tie (5.89× in both pairings). The M4 rows measure `05b2268` and the Xeon rows `d42bb69`, which have the same Bend source. [M4 samples and conformance](docs/research/rerun-2026-11-26.md) · [Xeon samples and conformance](docs/research/xeon-rerun-2026-11-27.md) · [Measurement protocol](docs/spec/performance.md)
+
+### Against the C++ verifier
+
+FlashProve's reference verifier, `cp_verify`, is written in C++ and is still faster. Both ran with one thread on the same Apple M4 Max, in alternating pairs:
+
+| Proof | Bend | C++ `cp_verify` | Bend vs. C++ | Bend peak RSS | C++ peak RSS |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| accepted-proof (small) | 1.87 s | 0.64 s | 2.92× slower | 0.18 GiB | 0.19 GiB |
+| full-size | 18.03 s | 8.06 s | 2.24× slower | 1.89 GiB | 3.93 GiB |
+
+With 16 workers Bend takes 9.90 s on the full-size proof, still behind single-thread C++. Closing that gap is [REQ-PERF-4](docs/spec/performance.md). [Samples](docs/research/rerun-2026-11-26.md#bend-and-c-one-worker-each)
 
 ## Quick start
 
