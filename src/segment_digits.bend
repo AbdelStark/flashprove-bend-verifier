@@ -15,6 +15,7 @@ import ./key_stage_lookup_rows.bend as L
 import ./key_stage_matrix.bend as Shift
 import ./oracle_sample.bend as Sample
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 # In BZ, the highest five bits of the table-row index select the
 # physical row; the (j,c,remaining t) coordinates index its columns.
@@ -24,7 +25,7 @@ def bz(row: L.Row, link: Nat, k: Nat) -> IO(M.Aff):
       +cols = k
       factors = Layout.cat(List.drop(&2,F.Factor,fs,cols),List.take(&2,F.Factor,fs,cols))
       do IO<M.Aff>:
-        live : Unit <- Header.require(Bool.not(T.is_zero(w)) && Cover.prefix(List.take(&2,F.Factor,fs,cols),Nat.pow(2n,cols),1n),
+        live : Unit <- Header.require(Bool.not(T.is_zero(w)) && Cover.prefix(List.take(&2,F.Factor,fs,cols),P2.pow2(cols),1n),
           "NO: segment-zero-BZ-column")
         return M.Aff{[M.Read{link,"BZ",[F.Term{w,factors}]}],m,t}
     case _: IO.die(M.Aff,1,"NO: segment-digits-planes")
@@ -49,7 +50,7 @@ type Digit is Data:
 
 def digit(c: S.Call, +zy: B.Elements, +zx: B.Elements, +columns: Nat, offset: Nat) -> Digit:
   S.Call{_,_,first,+iota,_,_} = c
-  +call_weight = Tensor.entry(Tensor.eq(List.drop(&2,X.E3,zy,iota)),Nat.div(first,Nat.pow(2n,iota)),F.one())
+  +call_weight = Tensor.entry(Tensor.eq(List.drop(&2,X.E3,zy,iota)),Nat.div(first,P2.pow2(iota)),F.one())
   +point = Layout.cat(Tensor.eq(zx),Tensor.eq(List.take(&2,X.E3,zy,iota)))
   +bits = Sample.row_bits(columns)
   low = List.take(&2,F.Factor,point,bits)
@@ -64,7 +65,7 @@ def digit(c: S.Call, +zy: B.Elements, +zx: B.Elements, +columns: Nat, offset: Na
 # rectangles. Coordinates above their occupied rows may equal zero.
 def live(c: S.Call,+zy: B.Elements,zx: B.Elements,+columns: Nat) -> Bool:
   S.Call{_,_,first,+iota,_,_} = c
-  e = Tensor.entry(Tensor.eq(List.drop(&2,X.E3,zy,iota)),Nat.div(first,Nat.pow(2n,iota)),F.one())
+  e = Tensor.entry(Tensor.eq(List.drop(&2,X.E3,zy,iota)),Nat.div(first,P2.pow2(iota)),F.one())
   +point = Layout.cat(Tensor.eq(zx),Tensor.eq(List.take(&2,X.E3,zy,iota)))
   +bits = Sample.row_bits(columns)
   Bool.not(T.is_zero(e)) && Cover.prefix(List.take(&2,F.Factor,point,bits),columns,1n) &&
@@ -80,7 +81,7 @@ def joined(a: Digit, b: Digit, alpha: X.E3, theta: X.E3, masks: L.Masks, shown: 
 def complete_trees(a: S.Call, b: S.Call, r: Nat) -> Bool:
   match a b:
     case S.Call{S.Range{},10n,first,n,0n,_} S.Call{S.Range{},8n,+next,m,0n,_}:
-      Nat.is_eq(first,0n) && Nat.is_eq(next,Nat.pow(2n,n)) && Nat.is_eq(Nat.add(next,Nat.pow(2n,m)),Nat.pow(2n,r))
+      Nat.is_eq(first,0n) && Nat.is_eq(next,P2.pow2(n)) && Nat.is_eq(Nat.add(next,P2.pow2(m)),P2.pow2(r))
     case _ _: False{}
 
 def join(link: Nat, +columns: Nat, shape: S.Forest, key: L.Point, alpha: X.E3, theta: X.E3) -> IO(M.Aff):

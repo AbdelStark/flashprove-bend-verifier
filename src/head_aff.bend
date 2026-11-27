@@ -12,6 +12,7 @@ import ./segment_model.bend as M
 import ./head_types.bend as G
 import ./head_catalog.bend as C
 import ./head_rounds.bend as R
+import ./pow2.bend as P2
 
 # An affine expression on the single logical U3 array is constrained to zero.
 type Aff is Data:
@@ -56,7 +57,7 @@ def spread_runs(rs: List<&2,G.Run>, +point: F.Factors, +bits: Nat, +divisor: Nat
 def fill(g: G.Segment, k: R.Keys, lt: Nat, bits: Nat, dest: Nat, +skip: Nat, w: X.E3) -> Aff:
   G.Segment{_,j,_,rs} = g
   point = T.eq(List.drop(&2,X.E3,R.column(k,lt,j),skip))
-  Aff{spread_runs(rs,point,bits,Nat.pow(2n,skip),dest,w,[]),[],F.zero()}
+  Aff{spread_runs(rs,point,bits,P2.pow2(skip),dest,w,[]),[],F.zero()}
 
 # Segment ordinal follows head-profile.py. tableAt is the absolute U3 offset,
 # index in its entries, block_bits 0 for each entry or ls for a block of S2.

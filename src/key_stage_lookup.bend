@@ -11,9 +11,10 @@ import ./fold.bend as F
 import ./row_tensor.bend as Tensor
 import ./hash_bytes.bend as H
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 def small(+n: Nat) -> X.E3:
-  X.E3{U32.from_nat(Nat.div(n,Nat.pow(2n,32n))),U32.from_nat(n),0,0,0,0}
+  X.E3{U32.from_nat(Nat.div(n,P2.pow2(32n))),U32.from_nat(n),0,0,0,0}
 
 def power(k: Nat, n: Nat, +x: X.E3, +acc: X.E3) -> X.E3:
   match k n:
@@ -33,7 +34,7 @@ def counts(parts: List<&2,M.Part>, +unit: Nat, pad: Nat, covered: Nat) -> Nat & 
     case []: (pad,covered)
     case M.Part{lp,rows} <> tail:
       +length = real(rows,0n)
-      missing = Nat.sub(Nat.pow(2n,U32.to_nat(lp)),length)
+      missing = Nat.sub(P2.pow2(U32.to_nat(lp)),length)
       counts(tail,unit,Nat.add(pad,Nat.mul(unit,missing)),Nat.add(covered,Nat.mul(unit,length)))
 
 # Position j's public table value is its index; at a non-Boolean point this is sum 2^i z[i].
@@ -189,5 +190,5 @@ def run(specs: List<&2,M.Lookup>, +kcol: Nat, id: Nat, out: Output) -> IO(Output
       +j = id
       do IO<Output>:
         r : L.Read <- L.take(t,"LKP")
-        n : Output <- lookup(r,l,counts(lookup_parts(l),Nat.pow(2n,kcol),0n,0n),j,kcol,prev)
+        n : Output <- lookup(r,l,counts(lookup_parts(l),P2.pow2(kcol),0n,0n),j,kcol,prev)
         run(tail,kcol,1n+j,n)

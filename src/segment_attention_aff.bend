@@ -8,6 +8,7 @@ import ./key_stage_lookup.bend as Int
 import ./key_stage_lookup_rows.bend as L
 import ./base_check.bend as B
 import ./segment_model.bend as Model
+import ./pow2.bend as P2
 
 # Sparse affine forms on a segment's U3 and its scalar masks. Cells are linear
 # indices in U3. The affine expression is required to be zero.
@@ -51,7 +52,7 @@ def get(xs: B.Elements,i: Nat) -> X.E3: Maybe.default(&2,X.E3,List.get(&2,X.E3,x
 def slice(xs: B.Elements, i: Nat, n: Nat) -> B.Elements:
   List.take(&2,X.E3,List.drop(&2,X.E3,xs,i),n)
 def rev(xs: B.Elements) -> B.Elements: List.reverse(&2,X.E3,xs)
-def size(n: Nat) -> Nat: Nat.pow(2n,n)
+def size(n: Nat) -> Nat: P2.pow2(n)
 def eqp(xs: B.Elements, ys: B.Elements, a: X.E3) -> X.E3:
   match xs ys:
     case Con{+x,rest} Con{y,tail}: eqp(rest,tail,E.mul(a,F.mix(F.sub(F.one(),x),x,y)))

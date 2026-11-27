@@ -14,6 +14,7 @@ import ./leaf_shape.bend as S
 import ./leaf_stage.bend as L
 import ./opening_bytes.bend as O
 import ./key_stage_openings.bend as K
+import ./pow2.bend as P2
 
 type Layout is Data:
   Layout{table_depth: Nat, ell: Nat, tail: Nat, row_bits: Nat, place_bits: Nat, side_bits: Nat, rows: Nat}
@@ -90,7 +91,7 @@ def equality(+layout: Layout, phi: B.Elements) -> Row:
 
 def sample(+layout: Layout, side: X.Member, +fs: F.Factors, beta: Ext.E3, answer: Ext.E3) -> Row:
   Layout{_,_,_,_,+p,+b,rows} = layout
-  pad = Nat.add(Nat.mul(Nat.sub(Nat.pow(2n,p),1n),Nat.pow(2n,b)),Nat.sub(rows,1n))
+  pad = Nat.add(Nat.mul(Nat.sub(P2.pow2(p),1n),P2.pow2(b)),Nat.sub(rows,1n))
   +i = pad
   delta = F.sub(beta,X.entry(fs,i,F.one()))
   Row{X.side_bit([F.Term{F.one(),fs},F.Term{delta,X.choice(Nat.add(b,p),i)}],b,side),answer}
@@ -106,7 +107,7 @@ def generator(+layout: Layout, side: X.Member, +z: Field.Gl) -> F.Form:
   Layout{_,+ell,+r,_,p,b,_} = layout
   +width = Commitment.variables(U32.from_nat(ell))
   +rt = Commitment.variables(U32.from_nat(r))
-  +stride = Nat.pow(2n,rt)
+  +stride = P2.pow2(rt)
   prefix = Nat.div(Nat.add(ell,Nat.sub(stride,1n)),stride)
   tail = X.extend(X.below(X.powers(rt,z),r,F.one()),Nat.add(p,b),prefix)
   msg = X.below(X.powers(width,z),ell,X.scalar(pow_bits(32n,r,z,Field.Gl{0,1})))

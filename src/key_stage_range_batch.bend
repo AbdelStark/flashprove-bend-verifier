@@ -11,6 +11,7 @@ import ./extension.bend as Ext
 import ./sumcheck.bend as E
 import ./header.bend as Header
 import ./leaf_shape.bend as S
+import ./pow2.bend as P2
 
 # R13.14. Partition each lookup's live planes into decreasing aligned binary
 # blocks. Larger blocks from all lookups fill the oracle's message rows first.
@@ -26,7 +27,7 @@ def block_list(bits: Nat, +live: Nat, at: Nat, +d: Nat, +mu: Nat, +id: Nat) -> B
     case 0n: []
     case 1n+k:
       +b = k
-      +size = Nat.pow(2n,b)
+      +size = P2.pow2(b)
       +hit = Nat.is_eq(Nat.mod(Nat.div(live,size),2n),1n)
       +pos = at
       +rest = block_list(b,live,Bool.pick(Nat,hit,Nat.add(pos,size),pos),d,mu,id)
@@ -50,7 +51,7 @@ def place(xs: Blocks, +ell: Nat, row: Nat, cell: Nat) -> Layout:
     case []: []
     case +top <> tail:
       Block{_,_,_,_,b} = top
-      +w = Nat.pow(2n,b)
+      +w = P2.pow2(b)
       +r = row
       +c = cell
       +fits = Nat.is_le(Nat.add(c,w),ell)
@@ -62,8 +63,8 @@ def term(block: Placed, factors: F.Factors, weight: Ext.E3, group: Nat, width: N
   Placed{Block{_,first,+b,+mu,+bits},row,cell} = block
   +fs = factors
   fixed = List.take(&2,F.Factor,List.drop(&2,F.Factor,fs,b),Nat.sub(mu,b))
-  scalar = X.entry(fixed,Nat.div(first,Nat.pow(2n,b)),weight)
-  places = X.choice(Nat.sub(width,bits),Nat.div(cell,Nat.pow(2n,bits)))
+  scalar = X.entry(fixed,Nat.div(first,P2.pow2(b)),weight)
+  places = X.choice(Nat.sub(width,bits),Nat.div(cell,P2.pow2(bits)))
   all = List.concat(&2,F.Factor,[X.choice(group,row),List.take(&2,F.Factor,fs,b),
     List.drop(&2,F.Factor,fs,mu),places])
   F.Term{scalar,all}
@@ -106,7 +107,7 @@ def add(row: L.Row, axis: Axis, x: Ext.E3, state: Batched) -> IO(Batched):
   Axis{layout,group,h,width,real} = axis
   Batched{+p,t,main,buf} = state
   do IO<Batched>:
-    next : Array<Ext.E3> <- mask_terms(ms,real,Nat.pow(2n,h),p,buf)
+    next : Array<Ext.E3> <- mask_terms(ms,real,P2.pow2(h),p,buf)
     return Batched{E.mul(p,x),E.add(t,E.mul(p,target)),main_terms(ps,layout,p,group,width,main),next}
 
 def rows(xs: List<&2,L.Row>, +axis: Axis, +x: Ext.E3, state: Batched) -> IO(Batched):

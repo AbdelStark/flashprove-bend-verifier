@@ -9,6 +9,7 @@ import ./segment_coverage.bend as Cover
 import ./base_check.bend as B
 import ./extension.bend as X
 import ./transcript.bend as T
+import ./pow2.bend as P2
 
 # A U3 tile consumes a column interval in logical order. Its column bits
 # are the low bits of that interval; the physical row occupies the high
@@ -17,9 +18,9 @@ def spans(bs: L.Tiles,+at: Nat,+len: Nat,+rows: Nat,+cols: Nat) -> Bool:
   match bs:
     case []: Nat.is_eq(at,len)
     case L.Block{0n,c,+r,+p,0n,+bc,+br,+bp,_} <> tail:
-      +height = Nat.pow(2n,br)
-      +width = Nat.pow(2n,bp)
-      +size = Nat.pow(2n,bc)
+      +height = P2.pow2(br)
+      +width = P2.pow2(bp)
+      +size = P2.pow2(bc)
       Nat.is_eq(c,at) && Nat.is_eq(Nat.mod(at,size),0n) && Nat.is_eq(bc,Nat.add(br,bp)) &&
         Nat.is_eq(Nat.mod(r,height),0n) && Nat.is_le(Nat.add(r,height),rows) &&
         Nat.is_eq(Nat.mod(p,width),0n) && Nat.is_le(Nat.add(p,width),cols) &&
@@ -124,11 +125,11 @@ def stripes(bs: L.Tiles,+gamma: B.Elements,+gr: Nat,+rb: Nat,+cb: Nat,s: Scanned
     case []: s
     case L.Block{_,_,r,p,_,_,br,+bp,_} <> tail:
       +k = Nat.min(gr,bp)
-      +size = Nat.pow(2n,k)
+      +size = P2.pow2(k)
       gs = List.reverse(&2,X.E3,List.take(&2,X.E3,gamma,k))
       neutral = List.replicate(F.Factor,k,F.Factor{F.one(),F.one()})
-      stripe: Stripe = Stripe{gs,neutral,Nat.sub(cb,k),Nat.div(p,size),Nat.pow(2n,Nat.sub(bp,k))}
-      stripes(tail,gamma,gr,rb,cb,rows(Nat.pow(2n,br),r,rb,stripe,s))
+      stripe: Stripe = Stripe{gs,neutral,Nat.sub(cb,k),Nat.div(p,size),P2.pow2(Nat.sub(bp,k))}
+      stripes(tail,gamma,gr,rb,cb,rows(P2.pow2(br),r,rb,stripe,s))
 
 type Packing is Data:
   Packed{form: F.Form, live: Bool}

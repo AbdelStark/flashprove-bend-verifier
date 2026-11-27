@@ -11,6 +11,7 @@ import ./base_check.bend as B
 import ./extension.bend as X
 import ./sumcheck.bend as E
 import ./oracle_sample.bend as S
+import ./pow2.bend as P2
 
 type Tile is Data:
   Tile{block: L.Block, row: F.Factors, neutral: F.Factors, cb: Nat, dr: Nat, dc: Nat,w: X.E3}
@@ -82,7 +83,7 @@ def slice(width: Nat,cs: B.Elements,gs: B.Elements,b: L.Block,row: F.Term,kr: Na
     case 1n+k:
       +bits = k
       t = tile(b,row,kr,kc,bits,dr,dc)
-      fill(Nat.pow(2n,bits),t,gs,0n,Work{out,cs})
+      fill(P2.pow2(bits),t,gs,0n,Work{out,cs})
 
 def single(+b: L.Block,+rs: F.Factors,cols: B.Elements,w: X.E3,+gamma: B.Elements,gr: Nat,dr: Nat,dc: Nat,out: F.Form) -> F.Form:
   L.Block{i,c,_,_,+bi,+bc,_,bp,+ilow} = b
@@ -105,9 +106,9 @@ def valid(bs: L.Tiles,+rb: Nat,+cb: Nat,+dr: Nat,+dc: Nat) -> Bool:
     case []: True{}
     case L.Block{+i,+c,+r,+p,+bi,+bc,+br,+bp,_} <> tail:
       Nat.is_eq(Nat.add(bi,bc),Nat.add(br,bp)) && Nat.is_le(bi,rb) && Nat.is_le(bc,cb) &&
-        Nat.is_le(br,dr) && Nat.is_le(bp,dc) && L.axis_valid(i,bi,Nat.pow(2n,rb)) &&
-        L.axis_valid(c,bc,Nat.pow(2n,cb)) && L.axis_valid(r,br,Nat.pow(2n,dr)) &&
-        L.axis_valid(p,bp,Nat.pow(2n,dc)) && valid(tail,rb,cb,dr,dc)
+        Nat.is_le(br,dr) && Nat.is_le(bp,dc) && L.axis_valid(i,bi,P2.pow2(rb)) &&
+        L.axis_valid(c,bc,P2.pow2(cb)) && L.axis_valid(r,br,P2.pow2(dr)) &&
+        L.axis_valid(p,bp,P2.pow2(dc)) && valid(tail,rb,cb,dr,dc)
 
 def translated(source: O.Source,table: L.Matrix,link: Nat,dc: Nat,dr: Nat,basis: Project.Basis) -> Frame.On:
   O.Outer{rs,cs,_,w} = source
@@ -128,7 +129,7 @@ def pick(+source: O.Source,+table: L.Matrix,+m: Frame.Member,link: Nat,+dc: Nat,
   +cb = S.row_bits(c)
   +dr = S.row_bits(rows)
   ok = Bool.not(held) && Nat.is_eq(List.length(&2,F.Factor,rs),rb) &&
-    Nat.is_eq(bits,cb) && Nat.is_le(F.count(X.E3,cs,0n),Nat.pow(2n,cb)) && valid(bs,rb,cb,dr,dc)
+    Nat.is_eq(bits,cb) && Nat.is_le(F.count(X.E3,cs,0n),P2.pow2(cb)) && valid(bs,rb,cb,dr,dc)
   checked(ok,source,table,m,link,dc,dr,basis)
 
 def on_matrix(source: O.Source,+table: L.Matrix,+m: Frame.Member,link: Nat,+dc: Nat,b: Maybe<&2,Project.Basis>) -> Frame.On:

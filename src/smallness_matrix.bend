@@ -15,6 +15,7 @@ import ./row_tensor.bend as Tensor
 import ./oracle_sample.bend as Sample
 import ./transcript.bend as T
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 # One column gamma is shared by all reads on its source matrix. These are
 # the field-valued folds of the genuine 128 ternary challenges per column.
@@ -41,7 +42,7 @@ def prepare(shapes: List<&2,G.Matrix>, +powers: B.Elements, state: State) -> Sta
       +k = cols(g)
       +got = C.columns(k,powers,s)
       sym = Nat.div(Nat.add(m,2n),3n)
-      span = Nat.mul(128n,Nat.pow(2n,Sample.row_bits(sym)))
+      span = Nat.mul(128n,P2.pow2(Sample.row_bits(sym)))
       next: State = State{Matrix{g,T.value(B.Elements,got),r,f} <> ms,T.after(B.Elements,got),Nat.add(r,m),Nat.add(c,k),Nat.add(f,span)}
       prepare(rest,powers,next)
 

@@ -6,6 +6,7 @@ import ./fold.bend as F
 import ./hash_bytes.bend as H
 import ./policy_tables.bend as T
 import ./key_stage_lookup.bend as KL
+import ./pow2.bend as P2
 
 # R11.2–11.4 table encodings at the four released configurations.
 type TableKind is Data:
@@ -50,24 +51,24 @@ def row(kind: TableKind, +i: Nat, +words: H.Bytes) -> Scalar:
     case Gate{}: row_words(i,268435456n,0n,words)
     case Sigmoid{}:
       +upper = Nat.is_ge(i,32768n)
-      row_words(i,Bool.pick(Nat,upper,268435456n,131072n),Bool.pick(Nat,upper,Nat.pow(2n,40n),0n),words)
+      row_words(i,Bool.pick(Nat,upper,268435456n,131072n),Bool.pick(Nat,upper,P2.pow2(40n),0n),words)
     case HeadExp{}:
       v = Bool.pick(Nat,Nat.is_eq(i,0n),16777216n,Bool.pick(Nat,Nat.is_eq(i,1n),2n,1n))
       Scalar{Nat.add(i,Nat.mul(65536n,v)),words}
     case Window{}: Scalar{Nat.add(Nat.mod(i,256n),Nat.mul(Nat.div(i,256n),1048576n)),words}
     case KernelRange{lim}:
       v = Nat.add(Nat.mod(i,256n),Nat.mul(Nat.div(i,256n),1048576n))
-      Scalar{Nat.add(v,Bool.pick(Nat,Nat.is_ge(i,lim),Nat.pow(2n,40n),0n)),words}
+      Scalar{Nat.add(v,Bool.pick(Nat,Nat.is_ge(i,lim),P2.pow2(40n),0n)),words}
     case KernelExp{+step}:
       # Texp holds u0=2307 words. rho, C and the coarse-bin count are public.
       +rho = Nat.sub(65536n,step)
       +bins = Nat.div(Nat.add(2145387009n,Nat.sub(rho,1n)),rho)
       +j = Nat.sub(i,2307n)
       +high = Nat.is_ge(j,bins)
-      coarse = Nat.add(Nat.pow(2n,32n),Nat.add(Nat.mul(2306n,step),
+      coarse = Nat.add(P2.pow2(32n),Nat.add(Nat.mul(2306n,step),
         Nat.add(Nat.mul(rho,Bool.pick(Nat,high,Nat.sub(j,bins),j)),Bool.pick(Nat,high,Nat.div(rho,2n),0n))))
       action = Bool.pick(Unit -> Scalar,Nat.is_lt(i,2307n),
-        _ => row_words(Nat.mul(i,step),Nat.pow(2n,33n),0n,words), _ => Scalar{coarse,words})
+        _ => row_words(Nat.mul(i,step),P2.pow2(33n),0n,words), _ => Scalar{coarse,words})
       action(Unit{})
 
 type Value is Data:

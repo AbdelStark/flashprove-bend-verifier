@@ -14,6 +14,7 @@ import ./key_stage_lookup_rows.bend as L
 import ./key_stage_matrix.bend as Shift
 import ./header.bend as Header
 import ./oracle_sample.bend as Sample
+import ./pow2.bend as P2
 
 type Parts is Data:
   Parts{rows: M.Equations, functions: M.Functionals}
@@ -23,7 +24,7 @@ type Entry is Data:
 
 def width(shape: S.Forest, lm: Nat) -> Nat:
   S.Forest{_,k,_,_,calls} = shape
-  Nat.mul(List.length(&2,S.Call,calls),Nat.pow(2n,Nat.sub(5n+k,lm)))
+  Nat.mul(List.length(&2,S.Call,calls),P2.pow2(Nat.sub(5n+k,lm)))
 
 def tables(rows: List<&2,L.Row>) -> List<&2,L.Row>:
   match rows:
@@ -48,7 +49,7 @@ def mapped(pair: F.Factors & F.Factors, link: Nat, lm: Nat, offset: Nat, length:
   +off = offset
   form = Shift.stretch(1n+Nat.mul(2n,n),n,0n,off,count,columns,w,[])
   read: M.Read = M.Read{link,"U3",form}
-  Entry{M.Aff{[read],m,target},M.Functional{matrix,Nat.pow(2n,lm),[F.Term{F.one(),rows}],off}}
+  Entry{M.Aff{[read],m,target},M.Functional{matrix,P2.pow2(lm),[F.Term{F.one(),rows}],off}}
 
 def mapped_row(row: L.Row, +shape: S.Forest, link: Nat, +lm: Nat, off: Nat, length: Nat, matrix: Nat) -> IO(Entry):
   match row:

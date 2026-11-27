@@ -2,6 +2,7 @@ import Base
 import ./header.bend as Header
 import ./hash_bytes.bend as H
 import ./record_seeds.bend as Seeds
+import ./pow2.bend as P2
 
 def unpack(-A: Type, pair: File & Result<&1, &1, U32 & String, A>) -> IO(File & A):
   (f, res) = pair
@@ -101,7 +102,7 @@ def shape(values: List<&2, String>, salt: U32) -> IO(Shape):
           U32.is_le(rows, 20) && U32.is_le(bits, 32) && U32.is_ne(message, 0) &&
           U32.is_zero(entry) && U32.is_le(rows, block) && U32.is_le(block, 40), "NO: parameter-table-shape")
         checked : Unit <- Header.require(
-          Nat.is_lt(Nat.add(U32.to_nat(message), U32.to_nat(random)), Nat.pow(2n, U32.to_nat(bits))),
+          Nat.is_lt(Nat.add(U32.to_nat(message), U32.to_nat(random)), P2.pow2(U32.to_nat(bits))),
           "NO: parameter-table-shape")
         return Shape{rows, bits, message, random, salt}
     case _: IO.die(Shape, 1, "NO: policy-table")
@@ -140,7 +141,7 @@ def record_finish(ctx: H.Context) -> String:
 
 def record_length(shape: Shape) -> Nat:
   Shape{b,_,_,_,_} = shape
-  Nat.mul(24n,Nat.pow(2n,U32.to_nat(b)))
+  Nat.mul(24n,P2.pow2(U32.to_nat(b)))
 
 # R4.11 uses precisely the root and record consumed by the validated key.
 def from_record(+shape: Shape, +root: H.Bytes, +record: H.Bytes, config: H.Bytes) -> IO(String):

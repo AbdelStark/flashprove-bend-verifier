@@ -2,10 +2,11 @@ import Base
 import ./goldilocks.bend as Field
 import ./extension.bend as Ext
 import ./chain.bend as Bits
+import ./pow2.bend as P2
 
 # R12.11 permits 1 <= log_n <= 32. A Nat position is checked before its U32 conversion.
 def valid(+log_n: Nat, pos: Nat) -> Bool:
-  Nat.is_le(1n,log_n) && Nat.is_le(log_n,32n) && Nat.is_lt(pos,Nat.pow(2n,Nat.min(log_n,32n)))
+  Nat.is_le(1n,log_n) && Nat.is_le(log_n,32n) && Nat.is_lt(pos,P2.pow2(Nat.min(log_n,32n)))
 
 # In descending bit order, root goes from order 2^32 to order 2 by repeated squaring.
 def point_bits(count: Nat, +pos: U32, +root: Field.Gl, +acc: Field.Gl) -> Field.Gl:

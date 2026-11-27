@@ -9,6 +9,7 @@ import ./policy.bend as Policy
 import ./policy_frame.bend as Frame
 import ./policy_statement.bend as S
 import ./accounting.bend as Accounting
+import ./pow2.bend as P2
 
 type Snapshot is Data:
   Snapshot{digest: H.Bytes, layout: H.Bytes}
@@ -37,7 +38,7 @@ def read_layout(config: String) -> IO(H.Bytes):
 
 def width(codes: List<&2,Frame.Words>) -> IO(Nat):
   match codes:
-    case [_,_,bits,_,_] <> _: IO.pure(Nat,Nat.pow(2n,U32.to_nat(bits)))
+    case [_,_,bits,_,_] <> _: IO.pure(Nat,P2.pow2(U32.to_nat(bits)))
     case _: IO.die(Nat,1,"NO: parameter-group-shape")
 
 def verify_config(st: S.Statement, snap: Snapshot, plan: Plan.Plan) -> IO(Unit):

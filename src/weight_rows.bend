@@ -9,6 +9,7 @@ import ./key_stage_matrix.bend as Matrix
 import ./key_stage_lookup.bend as Int
 import ./oracle_sample.bend as Sample
 import ./header.bend as H
+import ./pow2.bend as P2
 
 # For each mixed-radix group, the remaining row polynomial is represented
 # by a small list of high-digit weights and a tensor over its low binary bits.
@@ -123,7 +124,7 @@ def translated(rs: List<&2,Run>, +bits: Nat, +low: F.Factors, +size: Nat, acc: F
 def rows(parts: List<&2,Part>, w: X.E3, off: Nat, bits: Nat, acc: F.Form) -> F.Form:
   match parts:
     case Part{+hs,+low} <> tail:
-      +n = Nat.pow(2n,List.length(&2,F.Factor,low))
+      +n = P2.pow2(List.length(&2,F.Factor,low))
       runs = expand_values(hs,off,n,w,[])
       translated(outer(tail,runs,Nat.mul(n,F.count(X.E3,hs,0n))),bits,low,n,acc)
     case []: acc

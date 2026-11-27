@@ -13,6 +13,7 @@ import ./key_stage_lookup_levels.bend as V
 import ./key_stage_psc.bend as PSC
 import ./hash_bytes.bend as H
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 # A forest leaves an evaluation on its key vector (R11.1 step 8). Each
 # segment owns the linear map from its component calls to committed cells.
@@ -63,7 +64,7 @@ def leaf_row(s: L.State, top: L.Point, +shape: S.Forest, a: X.E3, theta: X.E3, i
   S.Forest{_,_,_,+c,calls} = shape
   +cp = List.drop(&2,X.E3,point,5n)
   v = cells(calls,List.drop(&2,X.E3,cp,c),Tensor.eq(List.take(&2,X.E3,cp,c)),tables,
-    theta,F.zero(),0n,Nat.pow(2n,c),F.zero(),F.zero())
+    theta,F.zero(),0n,P2.pow2(c),F.zero(),F.zero())
   KL.finish_leaves(PSC.obligation(state,F.one(),[F.sub(F.sub(a,F.one()),v)]),id,point,ms,events,m,i,rows)
 
 def leaves(pair: V.Pairing, +shape: S.Forest, a: X.E3, theta: X.E3, id: Nat, tables: T.Tables) -> IO(L.Tape):
@@ -88,7 +89,7 @@ def table(key: V.Pairing, plane: L.Point, +shape: S.Forest, +a: X.E3, +theta: X.
   V.Pairing{end,t} = key
   S.Forest{n,k,r,c,calls} = shape
   +d = Nat.add(k,c)
-  real = Nat.sub(Nat.pow(2n,Nat.add(n,r)),padded(calls,0n))
+  real = Nat.sub(P2.pow2(Nat.add(n,r)),padded(calls,0n))
   do IO<Claims>:
     below : V.Pairing <- V.chain(d,5n,[],False{},V.Pairing{plane,t})
     l : L.Tape <- leaves(below,shape,a,theta,id,tables)

@@ -16,6 +16,7 @@ import ./segment_layout.bend as Layout
 import ./key_stage_lookup.bend as K
 import ./oracle_sample.bend as Sample
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 # Once a read at ordinal j has entered BAT-sigma, chi^j cancels the
 # chi^(-j) in leadF. Consecutive row segments of a single functional
@@ -49,7 +50,7 @@ def read(fn_: M.Functional, mat: Mat.Matrix, world: Mat.World, state: Sums) -> I
   zz = SF.digits(weights,axis,rows,off,mz,lead)
   u3: U.Series = U.Series{gam,segments,at,bits,step,E.negate(lead)}
   do IO<Sums>:
-    valid : Unit <- Header.require(Nat.is_eq(Nat.pow(2n,Sample.row_bits(length)),length) &&
+    valid : Unit <- Header.require(Nat.is_eq(P2.pow2(Sample.row_bits(length)),length) &&
       Nat.is_eq(Nat.mul(length,segments),rows) && F.fits(phi,Sample.row_bits(length)),"NO: segment-functional-shape")
     return Sums{M.U3Run{link,u3} <> M.Read{link,"ZZ",zz} <> fs,E.add(rhs,E.mul(delta,sum(progression))),
       Nat.add(n,segments),Nat.add(entries,Nat.mul(k,segments)),E.mul(lead,after(progression)),Tensor.scale(weights,lead,test)}

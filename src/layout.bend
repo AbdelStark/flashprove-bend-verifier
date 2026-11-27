@@ -5,6 +5,7 @@ import ./policy.bend as P
 import ./policy_frame.bend as Frame
 import ./plan.bend as Plan
 import ./wire_reader.bend as Reader
+import ./pow2.bend as P2
 
 # Plain decimal layout encoding (§13.4). Coordinates may occupy 48 bits.
 # A rectangle stores half-open bounds. Nat keeps area and coordinate sums exact.
@@ -21,7 +22,7 @@ type Lines is Data:
   Lines{groups: List<&2,Group>, blocks: List<&2,Block>}
 
 def nat_limit() -> Nat:
-  Nat.add(Nat.pow(2n,47n),Nat.sub(Nat.pow(2n,47n),1n))
+  Nat.add(P2.pow2(47n),Nat.sub(P2.pow2(47n),1n))
 
 def nat_value(value: Maybe<&2,Nat>) -> IO(Nat):
   match value:
@@ -46,7 +47,7 @@ def number(s: String, low: Nat, high: Nat) -> IO(U32):
     return U32.from_nat(n)
 
 def le64(+n: Nat) -> H.Bytes:
-  H.cat([H.le(U32.from_nat(n)),H.le(U32.from_nat(Nat.div(n,Nat.pow(2n,32n))))])
+  H.cat([H.le(U32.from_nat(n)),H.le(U32.from_nat(Nat.div(n,P2.pow2(32n))))])
 
 # The segment's first moment lists private matrices first, then matrices
 # another segment reads. G0's private xbI therefore precedes qa and xbO.
@@ -86,8 +87,8 @@ def new_block(link: U32, moment: U32, group: U32, named: String & U32, source: R
   Block{link,moment,group,name,life,source,target,bytes}
 
 def rectangle(+x: Nat, +y: Nat, a: U32, b: U32) -> IO(Rect):
-  +dx = Nat.pow(2n,U32.to_nat(a))
-  +dy = Nat.pow(2n,U32.to_nat(b))
+  +dx = P2.pow2(U32.to_nat(a))
+  +dy = P2.pow2(U32.to_nat(b))
   do IO<Rect>:
     ok : Unit <- Header.require(Nat.is_eq(Nat.mod(x,dx),0n) && Nat.is_eq(Nat.mod(y,dy),0n), "NO: layout-alignment")
     ok : Unit <- Header.require(Nat.is_le(x,Nat.sub(nat_limit(),dx)) && Nat.is_le(y,Nat.sub(nat_limit(),dy)), "NO: layout-placement")

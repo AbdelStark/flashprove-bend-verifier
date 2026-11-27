@@ -7,6 +7,7 @@ import ./goldilocks.bend as Field
 import ./sumcheck.bend as E
 import ./leaf_shape.bend as S
 import ./transcript.bend as T
+import ./pow2.bend as P2
 
 # One column after folding its authenticated rows. The calling transcript preserves repeated draws.
 type Draw is Data:
@@ -16,7 +17,7 @@ def Draws() -> Data: List<&2,Draw>
 # Field 2 admits at most 2^32 places. The upper endpoint does not fit U32.
 def bits(+len: Nat) -> Nat:
   Bool.pick(Nat,Nat.is_eq(len,1n+4294967295n),32n,U32.log2(U32.from_nat(len)))
-def size(k: Nat) -> Nat: Nat.pow(2n,k)
+def size(k: Nat) -> Nat: P2.pow2(k)
 def zeros(len: Nat) -> B.Elements: F.fill(len,F.zero(),[])
 
 def embed(x: Field.Gl) -> Ext.E3:

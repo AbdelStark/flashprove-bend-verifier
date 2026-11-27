@@ -14,9 +14,10 @@ import ./sumcheck.bend as E
 import ./base_check.bend as B
 import ./fold.bend as F
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 def Rows() -> Data: List<&2,H.Aff>
-def two(k: Nat) -> Nat: Nat.pow(2n,k)
+def two(k: Nat) -> Nat: P2.pow2(k)
 def slot(vs: A.Values,i: Nat) -> H.Aff: H.slot(A.at(vs,i))
 def join(a: Rows,b: Rows) -> Rows: List.append(&2,H.Aff,a,b)
 
