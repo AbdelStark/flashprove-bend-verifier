@@ -8,6 +8,18 @@
 
 Bend's independent BendTT kernel can recheck the translated definitions with `--verdict`. It needs Lean v4.34.0 on `PATH`. The official release archive works; you don't need elan. What it confirms is that the definitions have their declared types. For example, the type of the cubic extension product says that it returns three field coordinates. It does not say *which* coordinates, and the law that would say so is still open. [Kernel check and open arithmetic laws](https://github.com/AbdelStark/flashprove-bend-verifier/issues/28#issuecomment-7126358874) · [Assurance contract](../spec/assurance.md)
 
+## Proving laws
+
+`LAWS.bend` states each law and `PROOF.bend` proves it; `make laws` checks both and `make kernel-check` rechecks them with the independent kernel. Write a law about the code in `src/`, not about a copy of it. What we learned proving the limb laws:
+
+- **The checker writes naturals in unary.** A literal above 2^32 − 1 is rejected, and asking it to compute 2^32 overflows the stack. Name the quantity (`pow2(32n)`) and never let the checker unfold it.
+- **Keep both sides of every step syntactically identical to the lemma that proves it.** When a comparison fails its quick check, the checker normalizes whole terms, and a term that holds `pow2(32n)` then overflows. Bridge different spellings of the same value (`U32.add` and `Word.adc`, `bits(U32{x})` and `x`) with a small `{==}` lemma that contains no large number.
+- **Prove over any width, then apply at 32.** `Word(n)` is a list of bits, lowest first, so an adder law is an induction over `n` with one case per row of the full-adder table. The 32-bit instance is then one application.
+- **Base has almost no arithmetic.** `proofs/words.bend` builds what it needs: adding zero or one on the right and doubling a sum.
+- **A def may not call a later def, and a match cannot take apart a computed pair.** Compute a carry with its own function (`maj`) instead of destructuring `Bool.full_add`.
+
+Both checks are fast: `make laws` takes under a second, and the kernel rechecks the laws and the standalone verifier in about a minute on an M4 Max.
+
 ## Arithmetic and native calls
 
 A 64-bit word is two U32 limbs. Test a carry out of the low limb, overflow of the high limb, an encoding equal to the field prime, and tree indices that cross 2³². Define helpers before their callers: the checker reads a file in order and does not allow mutual recursion. When a function receives several computed records, destructure them as parameters together. The extension kernel uses this to sum three 128-bit products before reducing a coefficient. [Extension product](../../src/extension.bend) · [Boundary case](../../tests/extension.bend) · [Python reference](../../tests/extension_random.py)
