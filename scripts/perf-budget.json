@@ -1,0 +1,11 @@
+{
+ "tolerance": 0.10,
+ "default": {"ratio": 2.35},
+ "cpus": {
+  "AMD EPYC 7763 64-Core Processor": {"ratio": 1.85},
+  "AMD EPYC 9V45 96-Core Processor": {"ratio": 2.35},
+  "AMD EPYC 9V74 80-Core Processor": {"ratio": 2.0},
+  "INTEL(R) XEON(R) PLATINUM 8573C": {"ratio": 1.87},
+  "Intel(R) Xeon(R) 6975P-C": {"ratio": 1.87}
+ }
+}

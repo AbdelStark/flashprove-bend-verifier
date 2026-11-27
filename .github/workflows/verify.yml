@@ -11,6 +11,7 @@ jobs:
       - run: make ci
       # A new seed per commit: the cases differ from run to run and a failure names its seed.
       - run: make fuzz FUZZ_ARGS="-n 32 --seed ${{ github.sha }}"
+      - run: make perf-gate
 
   # The full-size runs and the benchmarks behind each requirement in docs/spec. Start it by hand.
   extended:
