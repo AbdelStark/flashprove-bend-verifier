@@ -4,6 +4,7 @@ import ./sumcheck.bend as E
 import ./extension.bend as Ext
 import ./base_check.bend as B
 import ./goldilocks.bend as Field
+import ./pow2.bend as P2
 
 def eq(xs: B.Elements) -> F.Factors:
   match xs:
@@ -74,7 +75,7 @@ def blocks(bits: Nat, +fs: F.Factors, +n: Nat, +low: Nat, +weight: Ext.E3) -> F.
 
 def below(+fs: F.Factors, +length: Nat, +weight: Ext.E3) -> F.Form:
   +bits = List.length(&2,F.Factor,fs)
-  Bool.pick(F.Form,Nat.is_eq(length,Nat.pow(2n,bits)),[F.Term{weight,fs}],blocks(bits,fs,length,0n,weight))
+  Bool.pick(F.Form,Nat.is_eq(length,P2.pow2(bits)),[F.Term{weight,fs}],blocks(bits,fs,length,0n,weight))
 
 def extend(terms: F.Form, +bits: Nat, +pos: Nat) -> F.Form:
   match terms:

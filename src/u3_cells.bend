@@ -3,6 +3,7 @@ import ./fold.bend as F
 import ./row_tensor.bend as T
 import ./extension.bend as X
 import ./sumcheck.bend as E
+import ./pow2.bend as P2
 
 # An affine read already names an integer cell. Keep that address through BAT
 # instead of constructing one Low/High factor per bit and decoding them at placement.
@@ -41,4 +42,4 @@ def scatter(xs: List<&2,Cell>,+mask: U32,+s: X.E3,buf: Array<X.E3>) -> Array<X.E
 
 def write(p: Points,buf: Array<X.E3>) -> Array<X.E3>:
   Points{xs,bits,s} = p
-  scatter(xs,U32.from_nat(Nat.sub(Nat.pow(2n,bits),1n)),s,buf)
+  scatter(xs,U32.from_nat(Nat.sub(P2.pow2(bits),1n)),s,buf)

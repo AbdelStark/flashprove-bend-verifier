@@ -10,6 +10,7 @@ import ./segment_model.bend as M
 import ./smallness_geometry.bend as G
 import ./oracle_sample.bend as Sample
 import ./transcript.bend as T
+import ./pow2.bend as P2
 
 # §13.9 events 4–8. A product over every index in [0,n) is nonzero
 # precisely when each endpoint selected by at least one such index is.
@@ -59,7 +60,7 @@ def endpoints(fs: F.Factors) -> Bool:
 def single(terms: F.Form,+length: Nat,+bits: Nat) -> Maybe<&2,Bool>:
   match terms:
     case [F.Term{w,fs}]:
-      +full = Nat.is_eq(Nat.pow(2n,bits),length)
+      +full = Nat.is_eq(P2.pow2(bits),length)
       Bool.pick(Maybe<&2,Bool>,full,Some{nonzero(w) && endpoints(fs)},None{})
     case _: None{}
 

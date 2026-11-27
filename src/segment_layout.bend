@@ -11,6 +11,7 @@ import ./header.bend as Header
 import ./key_stage_openings.bend as K
 import ./policy.bend as P
 import ./oracle_sample.bend as Sample
+import ./pow2.bend as P2
 
 # R12.17 binary layout, already authenticated by Plan.load and compared to
 # the admitted text by Layout.check. Each logical block is one dyadic tile.
@@ -63,10 +64,10 @@ def cut_axis(row: Bool,bs: Tiles,rows: Nat,cols: Nat) -> Next:
   match row:
     case True{}:
       +r = Nat.sub(rows,1n)
-      cut(True{},r,cols,divide(bs,True{},Nat.pow(2n,r),[],[]))
+      cut(True{},r,cols,divide(bs,True{},P2.pow2(r),[],[]))
     case False{}:
       +c = Nat.sub(cols,1n)
-      cut(False{},rows,c,divide(bs,False{},Nat.pow(2n,c),[],[]))
+      cut(False{},rows,c,divide(bs,False{},P2.pow2(c),[],[]))
 
 def branch(+bs: Tiles,+r: Nat,+c: Nat) -> Next:
   +row = free_cut(bs,True{},r)
@@ -98,7 +99,7 @@ def tree(budget: Nat,next: Next) -> Index:
     case 0n _: General{}
 
 def axis_valid(+at: Nat,+bits: Nat,limit: Nat) -> Bool:
-  Nat.is_lt(at,limit) && Nat.is_eq(Nat.mod(at,Nat.pow(2n,bits)),0n)
+  Nat.is_lt(at,limit) && Nat.is_eq(Nat.mod(at,P2.pow2(bits)),0n)
 
 def aligned(bs: Tiles,+rows: Nat,+cols: Nat) -> Bool:
   match bs:
@@ -126,7 +127,7 @@ def words(n: Nat, raw: H.Bytes, acc: List<&2,Nat>) -> IO(Cut<List<&2,Nat>>):
     case 1n+k a <> b <> c <> d <> e <> f <> 0 <> 0 <> more:
       hi = U32.to_nat(U32.or(e,U32.shln(f,8n)))
       lo = U32.to_nat(Header.le32(a,b,c,d))
-      words(k,more,Nat.add(lo,Nat.mul(Nat.pow(2n,32n),hi)) <> acc)
+      words(k,more,Nat.add(lo,Nat.mul(P2.pow2(32n),hi)) <> acc)
     case _ _: IO.die(Cut<List<&2,Nat>>,1,"NO: segment-layout-integer")
 
 def block_list(n: Nat, xs: List<&2,Nat>, acc: List<&2,Block>) -> IO(List<&2,Block>):
@@ -215,7 +216,7 @@ def upper_value(fs:F.Factors,dead:Bool,+index:Nat,w:X.E3) -> X.E3:
       upper_value(tail,B.equal(p,F.zero()),Nat.div(index,2n),multiply(p,w))
 
 def upper(fs:F.Factors,at:Nat,+keep:Nat,w:X.E3) -> X.E3:
-  upper_value(List.drop(&2,F.Factor,fs,keep),False{},Nat.div(at,Nat.pow(2n,keep)),w)
+  upper_value(List.drop(&2,F.Factor,fs,keep),False{},Nat.div(at,P2.pow2(keep)),w)
 
 type Axes is Data:
   Axes{weight:X.E3,rows:F.Factors,columns:F.Factors}
@@ -241,8 +242,8 @@ def project(b:Block,a:Axes,dest_rows:Nat,dest_columns:Nat,w:X.E3) -> F.Term:
   +rows = List.take(&2,F.Factor,ir,bi)
   +cols = List.take(&2,F.Factor,ic,bc)
   +inside = Bool.pick(F.Factors,low,cat(rows,cols),cat(cols,rows))
-  rf = cat(List.drop(&2,F.Factor,inside,bp),Tensor.choice(Nat.sub(dest_rows,br),Nat.div(r,Nat.pow(2n,br))))
-  cf = cat(List.take(&2,F.Factor,inside,bp),Tensor.choice(Nat.sub(dest_columns,bp),Nat.div(p,Nat.pow(2n,bp))))
+  rf = cat(List.drop(&2,F.Factor,inside,bp),Tensor.choice(Nat.sub(dest_rows,br),Nat.div(r,P2.pow2(br))))
+  cf = cat(List.take(&2,F.Factor,inside,bp),Tensor.choice(Nat.sub(dest_columns,bp),Nat.div(p,P2.pow2(bp))))
   F.Term{w,cat(rf,cf)}
 
 def tile(+b:Block,term:F.Term,row_bits:Nat,dest_rows:Nat,dest_columns:Nat) -> F.Term:

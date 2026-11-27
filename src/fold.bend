@@ -2,6 +2,7 @@ import Base
 import ./base_check.bend as B
 import ./sumcheck.bend as E
 import ./extension.bend as Ext
+import ./pow2.bend as P2
 
 # A separable main-row coefficient is weight times one endpoint per bit, low row bits first.
 type Factor is Data:
@@ -437,5 +438,5 @@ def expand(main: Form,acc: B.Elements) -> B.Elements:
       +terms : Form = Term{w,fs} <> rest
       +k = List.length(&2,Factor,fs)
       +ys = acc
-      good = Nat.is_lt(k,32n) && Nat.is_eq(count(Ext.E3,ys,0n),Nat.pow(2n,k)) && fits(terms,k)
+      good = Nat.is_lt(k,32n) && Nat.is_eq(count(Ext.E3,ys,0n),P2.pow2(k)) && fits(terms,k)
       sized(terms,ys,k,good)

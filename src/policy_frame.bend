@@ -1,6 +1,7 @@
 import Base
 import ./header.bend as Header
 import ./policy.bend as P
+import ./pow2.bend as P2
 
 def Words() -> Data:
   List<&2, U32>
@@ -106,7 +107,7 @@ def make_table(ws: Words, sec: U32, slots: U32, salt: U32, work: List<&2, Words>
     case [+b,+n,+i,+m,0,+w]:
       do IO<Frame>:
         ok : Unit <- Header.require(U32.is_le(b,20) && U32.is_le(n,32) && U32.is_ne(i,0) &&
-          Nat.is_lt(Nat.add(U32.to_nat(i),U32.to_nat(m)),Nat.pow(2n,U32.to_nat(U32.min(n,32)))) &&
+          Nat.is_lt(Nat.add(U32.to_nat(i),U32.to_nat(m)),P2.pow2(U32.to_nat(U32.min(n,32)))) &&
           U32.is_le(b,w) && U32.is_le(w,40), "NO: parameter-table-shape")
         ok : Unit <- Header.require(within(w,1,20), "NO: w-shape-lk")
         return Frame{sec,slots,salt,work,groups,stages,ranges,b,n,i,m,w}

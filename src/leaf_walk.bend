@@ -11,6 +11,7 @@ import ./header.bend as Header
 import ./leaf_shape.bend as S
 import ./base_check.bend as B
 import ./extension.bend as Ext
+import ./pow2.bend as P2
 
 # The algebra reads draws in transcript order, including repeats. Columns use Merkle order.
 type EntryRound is Data:
@@ -24,7 +25,7 @@ type Cursor is Data:
     lambda: Maybe<&2,Ext.E3>, events: List<&2,EntryRound>}
 
 def power(bits: U32) -> Nat:
-  Nat.pow(2n,U32.to_nat(bits))
+  P2.pow2(U32.to_nat(bits))
 
 def tail_width(first: Bool, last: Bool, k: U32, h: U32, rows: U32) -> Nat:
   match first last:

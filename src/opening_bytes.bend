@@ -3,6 +3,7 @@ import ./merkle.bend as Tree
 import ./opening.bend as Path
 import ./hash_bytes.bend as H
 import ./chain.bend as Bits
+import ./pow2.bend as P2
 
 type Shape is Data:
   Shape{tag: U32, tree: U32, depth: Nat, width: Nat, salt: Nat, start: Tree.Digest}
@@ -39,7 +40,7 @@ def read_digest(+bytes: H.Bytes) -> Maybe<&2,Tree.Digest>:
 def short(depth: Nat, place: Nat) -> Nat:
   match depth:
     case 48n: place
-    case k: Nat.mod(place,Nat.pow(2n,k))
+    case k: Nat.mod(place,P2.pow2(k))
 
 def unique(xs: Places, previous: Maybe<&2,Nat>) -> Places:
   match xs previous:
@@ -118,7 +119,7 @@ def salt_bytes(shape: Shape) -> Nat:
 
 # Leaf index can require 49 bits at depth 48. Keep it in two explicit limbs.
 def leaf_index(+depth: Nat, +x: Nat) -> H.Bytes:
-  high = U32.add(U32.from_nat(Nat.div(x,Nat.pow(2n,32n))),Bool.pick(U32,Nat.is_ge(depth,32n),U32.shln(1,Nat.sub(depth,32n)),0))
+  high = U32.add(U32.from_nat(Nat.div(x,P2.pow2(32n))),Bool.pick(U32,Nat.is_ge(depth,32n),U32.shln(1,Nat.sub(depth,32n)),0))
   low = U32.add(U32.from_nat(x),Bool.pick(U32,Nat.is_lt(depth,32n),U32.shln(1,Nat.min(depth,31n)),0))
   H.cat([H.le(low),H.le(high)])
 

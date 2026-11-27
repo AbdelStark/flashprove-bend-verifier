@@ -5,6 +5,7 @@ import ./hash_bytes.bend as H
 import ./extension.bend as Ext
 import ./sumcheck.bend as E
 import ./code_eval.bend as Eval
+import ./pow2.bend as P2
 
 def Elements() -> Data:
   List<&2,Ext.E3>
@@ -17,7 +18,7 @@ type Rows is Data:
 
 def code_ok(code: Code) -> Bool:
   Code{+n,+m,r} = code
-  +limit = Nat.pow(2n,Nat.min(n,32n))
+  +limit = P2.pow2(Nat.min(n,32n))
   Nat.is_le(1n,n) && Nat.is_le(n,32n) && Nat.is_le(1n,m) && Nat.is_le(m,limit) && Nat.is_le(r,Nat.sub(limit,m))
 
 # Called only for canonical, complete 24-byte extension elements. The wire limbs are (low, high).

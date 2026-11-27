@@ -4,6 +4,7 @@ import ./hash_bytes.bend as H
 import ./hashlib.bend as Kernel
 import ./extension.bend as Ext
 import ./goldilocks.bend as Field
+import ./pow2.bend as P2
 
 # Bend 2.0.40 native Nat already restricts a chain label to 48 bits.
 # Numeric words are (high, low); H's digest and message byte strings are in wire order.
@@ -12,7 +13,7 @@ def wire(word: Bits.Bits64) -> H.Bytes:
   H.cat([H.le(lo), H.le(hi)])
 
 def from_nat(+n: Nat) -> Bits.Bits64:
-  Bits.Bits64{U32.from_nat(Nat.div(n, Nat.pow(2n, 32n))), U32.from_nat(n)}
+  Bits.Bits64{U32.from_nat(Nat.div(n, P2.pow2(32n))), U32.from_nat(n)}
 
 def packed(tag: U32, +value: Nat) -> H.Bytes:
   H.cat([H.le(U32.or(tag, U32.shln(U32.from_nat(value), 16n))), H.le(U32.from_nat(Nat.div(value, 65536n)))])
@@ -189,7 +190,7 @@ def nonzero(stream: Stream) -> Read<Ext.E3>:
 
 def word_nat(w: Bits.Bits64) -> Nat:
   Bits.Bits64{h,l} = w
-  Nat.add(Nat.mul(U32.to_nat(h),Nat.pow(2n,32n)),U32.to_nat(l))
+  Nat.add(Nat.mul(U32.to_nat(h),P2.pow2(32n)),U32.to_nat(l))
 
 def low_bits(w: Bits.Bits64, k: Nat) -> Nat:
   Bits.Bits64{h,l} = w

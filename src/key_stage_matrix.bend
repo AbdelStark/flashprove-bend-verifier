@@ -10,6 +10,7 @@ import ./sumcheck.bend as E
 import ./hash_bytes.bend as H
 import ./key_stage_openings.bend as K
 import ./header.bend as Header
+import ./pow2.bend as P2
 
 # Sum of the public multilinear weights at indices < limit. Higher bits supersede
 # the earlier comparison. This also handles a limit equal to the whole domain.
@@ -93,7 +94,7 @@ def stretch(fuel: Nat, +rows: Nat, cell: Nat, row: Nat, count: Nat, +point: F.Fa
     case 1n+k +n:
       +r = row
       +b = block_bits(n,r)
-      +size = Nat.pow(2n,b)
+      +size = P2.pow2(b)
       +c = cell
       high = X.choice(Nat.sub(rows,b),Nat.div(r,size))
       items = shifted_block(Nat.is_eq(Nat.mod(c,size),0n),b,c,size,point,high,scale,acc)

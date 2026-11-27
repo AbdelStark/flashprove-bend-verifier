@@ -7,6 +7,7 @@ import ./row_tensor.bend as X
 import ./sumcheck.bend as E
 import ./extension.bend as Ext
 import ./commitment.bend as C
+import ./pow2.bend as P2
 
 # R8.3 and the H821 SEND sample form, toys/1-product §2.4. Index bits are row first.
 # first_row is the member's aligned row block in the batched group's corresponding table.
@@ -39,9 +40,9 @@ def exists(part: Part) -> Bool:
 
 def valid(part: Part) -> Bool:
   Part{+rows,ell,+g,+first} = part
-  +span = Nat.pow(2n,row_bits(rows))
+  +span = P2.pow2(row_bits(rows))
   Nat.is_eq(rows,0n) || (Nat.is_lt(0n,ell) && Nat.is_le(g,32n) && Nat.is_eq(Nat.mod(first,span),0n) &&
-    Nat.is_le(Nat.add(first,span),Nat.pow(2n,Nat.min(g,32n))))
+    Nat.is_le(Nat.add(first,span),P2.pow2(Nat.min(g,32n))))
 
 # The prefix fixes the high group-row coordinates between member rows and places.
 def insert_prefix(rows: Nat, fs: F.Factors, prefix: F.Factors) -> F.Factors:
@@ -59,7 +60,7 @@ def prefix_terms(terms: F.Form, +bits: Nat, +prefix: F.Factors) -> F.Form:
 def embed_group(extra: Nat, terms: F.Form, +bits: Nat, first: Nat) -> F.Form:
   match extra:
     case 0n: terms
-    case 1n+k: prefix_terms(terms,bits,X.choice(1n+k,Nat.div(first,Nat.pow(2n,bits))))
+    case 1n+k: prefix_terms(terms,bits,X.choice(1n+k,Nat.div(first,P2.pow2(bits))))
 
 def group_form(terms: F.Form, +bits: Nat, group: Nat, first: Nat) -> F.Form:
   embed_group(Nat.sub(group,bits),terms,bits,first)
@@ -86,7 +87,7 @@ def form(part: Part, +z: B.Elements, factor: Ext.E3, pad_count: Nat, beta: Ext.E
       +r = row_bits(rows)
       +bits = Nat.add(r,row_bits(ell))
       +fs = X.eq(List.take(&2,Ext.E3,z,bits))
-      +stride = Nat.pow(2n,r)
+      +stride = P2.pow2(r)
       +n = pad_count
       start = Nat.add(Nat.sub(rows,1n),Nat.mul(Nat.sub(ell,n),stride))
       +scale = factor

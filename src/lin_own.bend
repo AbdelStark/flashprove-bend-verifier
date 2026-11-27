@@ -15,6 +15,7 @@ import ./extension.bend as E
 import ./fold.bend as F
 import ./base_check.bend as B
 import ./oracle_sample.bend as Sample
+import ./pow2.bend as P2
 
 type Slot is Data:
   Slot{index: Nat, coefficient: E.E3}
@@ -66,7 +67,7 @@ def layout(terms: F.Form, +cols: Nat, +rows: Nat, +prefix: F.Factors, +zero: F.F
 
 def table(terms: F.Form, rows: Nat, ell: Nat, k: Nat, offset: Nat) -> F.Form:
   +r = Sample.row_bits(rows)
-  prefix = X.choice(Nat.sub(k,r),Nat.div(offset,Nat.pow(2n,r)))
+  prefix = X.choice(Nat.sub(k,r),Nat.div(offset,P2.pow2(r)))
   layout(terms,CS.bits(ell),r,prefix,X.select(0n))
 
 def eq(psi: B.Elements, scale: E.E3) -> F.Form:

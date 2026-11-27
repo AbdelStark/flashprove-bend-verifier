@@ -27,6 +27,7 @@ import ./key_stage_trace.bend as Events
 import ./segment_stage.bend as Seg
 import ./segment_geometry.bend as SG
 import ./policy_tables.bend as Tables
+import ./pow2.bend as P2
 
 # The transcript stage returns evidence to the checkers of segment and fold
 # claims. Only the whole-call verifier can issue a proof verdict.
@@ -97,7 +98,7 @@ def second(shared: R.Reader & Lin.Shared, ctx: Context, slot: Nat, binding: M.Di
 def slot_number(lo: U32, +hi: U32) -> IO(Nat):
   do IO<Nat>:
     ok : Unit <- Header.require(U32.is_lt(hi,65536),"NO: request-binding-slot")
-    return Nat.add(U32.to_nat(lo),Nat.mul(U32.to_nat(hi),Nat.pow(2n,32n)))
+    return Nat.add(U32.to_nat(lo),Nat.mul(U32.to_nat(hi),P2.pow2(32n)))
 
 def slot(raw: H.Bytes) -> IO(Nat):
   match raw:
