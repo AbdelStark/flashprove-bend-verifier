@@ -147,6 +147,10 @@ benchmark-revisions: standalone upstream  ## compare two standalone Bend builds 
 benchmark-workers: standalone upstream  ## select a worker count on the full-size proof (BENCH_ARGS="--worker-counts 1 2 4 8 16")
 	@python3 -B scripts/benchmark-standalone.py --compare workers $(BENCH_ARGS)
 
+.PHONY: perf-gate
+perf-gate: standalone oracle  ## fail if small exact-match CPU time relative to C++ exceeds scripts/perf-budget.json
+	@python3 -B scripts/perf-gate.py
+
 benchmark-test:  ## check worker counts and launch order in the paired benchmark
 	@python3 -B tests/test_benchmark_standalone.py
 
