@@ -1,1 +1,1 @@
-{"ratio": 1.85, "tolerance": 0.10}
+{"tolerance": 0.10, "default": {"ratio": 4.0}, "cpus": {}}
