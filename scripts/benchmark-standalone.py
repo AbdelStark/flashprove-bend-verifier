@@ -191,6 +191,7 @@ def main():
                         help="exact-match fixture to run (default: both)")
     parser.add_argument("--workers", type=int, default=1, help="Bend workers requested, applied to both binaries with --compare bend")
     parser.add_argument("--worker-counts", type=int, nargs="+", help="pool sizes to screen on the full-size fixture")
+    parser.add_argument("--cpp-workers", type=int, default=1, help="request-stage threads for cp_verify with --compare cpp")
     args = parser.parse_args()
     if args.compare == "workers":
         if not args.worker_counts or not all(1 <= n <= 128 for n in args.worker_counts):
@@ -222,6 +223,8 @@ def main():
     elif args.compare == "lean":
         digests = {"verify-on-bytes": "lean-verify-on-bytes"}
     workers = {name: 1 for name in digests}
+    if "cp_verify" in workers:
+        workers["cp_verify"] = args.cpp_workers
     if args.before:
         digests["before"] = bend_digest(args.before)
         # Earlier releases lack -j. Keep their historical behavior in three-program comparisons.
