@@ -25,6 +25,8 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = [
     ["standalone-test"],
+    ["plan-test"],
+    ["public-input-test"],
     ["standalone-rejections"],
     ["request-claims-test"],
     ["fuzz", "FUZZ_ARGS=-n 64 --seed mutants"],
@@ -122,7 +124,7 @@ def run(index: int, site: dict, work: Path, logs: Path) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--list", action="store_true", help="print the mutable refusal sites and stop")
-    ap.add_argument("--sites", help="a range such as 0-40 (default: all)")
+    ap.add_argument("--sites", help="indices and ranges such as 0-40,57,90-99 (default: all)")
     ap.add_argument("-j", type=int, default=2, help="mutants in parallel")
     ap.add_argument("--out", type=Path, help="write every mutant's outcome as JSON")
     args = ap.parse_args()
@@ -131,7 +133,10 @@ def main() -> int:
         for i, s in enumerate(found):
             print(f"{i:3d} {s['file']}:{s['line']} NO: {s['name']}")
         return 0
-    lo, hi = (map(int, args.sites.split("-")) if args.sites else (0, len(found) - 1))
+    chosen = range(len(found))
+    if args.sites:
+        chosen = sorted({i for part in args.sites.split(",") for i in
+                         range(int(part.split("-")[0]), int(part.split("-")[-1]) + 1)})
     for needed in ("cp_verify", "plans", "tables"):
         if not (ROOT / "build" / needed).exists():
             ap.error(f"build/{needed} is missing: run `make standalone oracle` first")
@@ -139,7 +144,7 @@ def main() -> int:
     logs = work / "logs"
     logs.mkdir()
     with ThreadPoolExecutor(max_workers=args.j) as pool:
-        rows = list(pool.map(lambda i: run(i, found[i], work, logs), range(lo, hi + 1)))
+        rows = list(pool.map(lambda i: run(i, found[i], work, logs), chosen))
     if args.out:
         args.out.write_text(json.dumps(rows, indent=1) + "\n")
     survivors = [r for r in rows if r["outcome"] != "killed"]
