@@ -31,10 +31,10 @@ The times below are for one fresh process, from launch to exit: reading the file
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Apple M4 Max | 1 | 17.64 s | 1.00× | 57.86 s | 3.28× |
 | Apple M4 Max | 16 | **9.90 s** | 1.78× | 58.26 s | **5.89×** |
-| Intel Xeon Platinum 8480CL | 1 | 45.86 s | 1.00× | 93.16 s | 2.03× |
-| Intel Xeon Platinum 8480CL | 8 | **23.38 s** | 1.96× | 93.35 s | **3.99×** |
+| Intel Xeon Platinum 8480CL | 1 | 38.77 s | 1.00× | 93.09 s | 2.40× |
+| Intel Xeon Platinum 8480CL | 8 | **20.84 s** | 1.86× | 92.94 s | **4.46×** |
 
-Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary. On the M4, 12 and 16 workers tie (5.89× in both pairings), and a separate screen chose the Xeon's count. The M4 rows measure `05b2268`. The Xeon rows measure the earlier `9d00a32`. The upstream C++ verifier is still faster: 8.06 s on the M4 with `-j 1`, against Bend's 18.03 s. [M4 samples and conformance](docs/research/rerun-2026-11-26.md) · [Xeon samples and worker selection](docs/research/request-projection.md) · [Measurement protocol](docs/spec/performance.md)
+Each figure is the median of three alternating Bend/Lean pairs, after one warmup per program, with the proof already in the file cache. Both rows for a CPU use the same binary. A separate screen chose each CPU's worker count. On the M4, 12 and 16 workers tie (5.89× in both pairings). The M4 rows measure `05b2268` and the Xeon rows `d42bb69`, which have the same Bend source. The upstream C++ verifier is still faster with `-j 1`: 8.06 s on the M4 and 20.79 s on the Xeon, against Bend's 18.03 s and 38.81 s. [M4 samples and conformance](docs/research/rerun-2026-11-26.md) · [Xeon samples and conformance](docs/research/xeon-rerun-2026-11-27.md) · [Measurement protocol](docs/spec/performance.md)
 
 ## Quick start
 
