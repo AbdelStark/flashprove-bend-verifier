@@ -106,7 +106,12 @@ def run_case(example: Path, identity: str, policy: list[str], work: str, seed: s
                 run = run_cli(cmd, cwd=case, env=env, timeout=timeout,
                               parity_dir=parity_dir if label == "bend" else None, case=f"{example.name}-{index}")
                 lines = (run.stdout + run.stderr).splitlines()
+                # Bend names each stage on stderr as it starts: the last one is where a refusal arose.
+                stages = [line[7:] for line in lines if label == "bend" and line.startswith("stage: ")]
+                lines = [line for line in lines if not (label == "bend" and line.startswith("stage: "))]
                 out[label], out[label + "_last"] = classify(run.returncode, lines), (lines[-1][:120] if lines else "")
+                if label == "bend":
+                    out["bend_stage"] = stages[-1] if stages else ""
             except subprocess.TimeoutExpired:
                 out[label], out[label + "_last"] = "timeout", ""
         return out
@@ -146,21 +151,32 @@ def main() -> int:
             print(f"{name}: {args.n} cases, seed {args.seed}")
             for (bend, cpp), count in sorted(tally.items(), key=lambda kv: -kv[1]):
                 print(f"  bend={bend:8} cpp={cpp:8} {count}", flush=True)
+            stages: dict[tuple[str, str], int] = {}
+            for r in rows:
+                if r["bend"] == "reject":
+                    key = (r["file"], r["bend_stage"].split(",")[0])
+                    stages[key] = stages.get(key, 0) + 1
+            for (file, stage), count in sorted(stages.items()):
+                print(f"  {file} refused in stage {stage}: {count}", flush=True)
     finally:
         shutil.rmtree(work, ignore_errors=True)
     if args.out:
         args.out.write_text(json.dumps(results, indent=1))
     unsound = [r for r in results if r["bend"] == "accept" and r["cpp"] != "accept"]
     broken = [r for r in results if not {r["bend"], r["cpp"]} <= {"accept", "reject"}]
+    # REQ-ASSURE-4: the proof and the leaf are read only after the key stage has passed.
+    misnamed = [r for r in results if r["bend"] == "reject" and r["file"] in ("example.proof", "ivk/leaf/0.bin")
+                and not r["bend_stage"].startswith(("leaf,", "request,"))]
     other = [r for r in results if r["bend"] != r["cpp"] and r not in unsound and r not in broken]
     for title, rows in (("UNSOUND: Bend accepts, the reference does not", unsound),
                         ("FAILED: a verifier crashed, timed out or exited unexpectedly", broken),
+                        ("MISNAMED: a proof or leaf fault refused outside the leaf and request stages", misnamed),
                         ("other disagreements", other)):
         if rows:
             print(f"{title}: {len(rows)}")
             for r in rows[:40]:
                 print("  " + json.dumps(r))
-    return 1 if unsound or broken else 0
+    return 1 if unsound or broken or misnamed else 0
 
 
 if __name__ == "__main__":

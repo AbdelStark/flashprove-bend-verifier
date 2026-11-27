@@ -165,7 +165,7 @@ def main():
         changes = {"slot": (loc["slot"], b"\x01", "key-binding-slot"),
                    "nonce": (loc["nonce"], (int.from_bytes(original[loc["nonce"]:loc["nonce"]+8], "little") ^ 1).to_bytes(8, "little"), "chain-round"),
                    "record": (40, bytes([255])*8, "key-record"),
-                   "sibling": (len(original)-1, bytes([original[-1] ^ 1]), "key-opening"),
+                   "sibling": (len(original)-1, bytes([original[-1] ^ 1]), "opening"),
                    "trailing": (len(original), b"x", "trailing-data")}
         with tempfile.TemporaryDirectory(dir=ROOT / "build") as tmp:
             for name, (start, new, reason) in changes.items():
