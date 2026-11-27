@@ -99,31 +99,3 @@ def policy_fields(lines: List<&2, String>) -> IO(U32 & U32):
         checked : Unit <- require(U32.is_ge(vocab, 2) && U32.is_le(vocab, 16777216), "NO: shape-V")
         IO.pure(U32 & U32, (U32.shln(1, U32.to_nat(lt)), vocab))
     case _: IO.die(U32 & U32, 1, "NO: policy-empty")
-
-def dimensions(path: String) -> IO(U32 & U32):
-  do IO<U32 & U32>:
-    f : File <- IO.try(File, File.open(path, "r"))
-    # The 32 frame lines (at most 32 numerals of 15 digits per line)
-    # and fixed scalar lines through V fit in this prefix (FORMAT 8.1, 8.6).
-    pair : File & Result<&1, &1, U32 & String, String> <- File.read(f, 32768)
-    text : String <- closed(String, pair)
-    policy_fields(String.lines(text))
-
-def check_files(dims: U32 & U32, +ivk: String, proof: String, request: String, token: String) -> IO(Unit):
-  (+length, vocab) = dims
-  do IO<Unit>:
-    req : List<&2, U32> <- bytes(request, U32.add(U32.shln(length, 2n), 9))
-    ybytes : List<&2, U32> <- bytes(token, 5)
-    y : U32 <- token_word(ybytes)
-    checked : Unit <- request_result(request_status(req, 0, length, vocab, y, True{}))
-    key : List<&2, U32> <- bytes(ivk ++ "/key.bin", 8)
-    checked : Unit <- require(key_head(key), "NO: cp-key-head")
-    head : List<&2, U32> <- bytes(proof, 12)
-    index : U32 <- leaf_index(head)
-    leaf : List<&2, U32> <- bytes(ivk ++ "/leaf/" ++ U32.show(index) ++ ".bin", 8)
-    require(leaf_head(leaf), "NO: cp-entry-head")
-
-def check(config: String, ivk: String, proof: String, request: String, token: String) -> IO(Unit):
-  do IO<Unit>:
-    dims : U32 & U32 <- dimensions(config ++ "/policy.txt")
-    check_files(dims, ivk, proof, request, token)

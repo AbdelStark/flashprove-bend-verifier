@@ -123,10 +123,3 @@ def finish(cur: Cursor,c: B.Code,m: B.Code,later: List<&2,L.Stage>) -> IO(Tr.Eve
         group : Group <- prepare([Q.carry()],c,m,[],prev,False{},bat,1n)
         end(group,later)
     case _: IO.die(Tr.Events,1,"NO: request-kept-at-end")
-
-# The returned suffix starts after BASE. Its LIN/SEAL messages belong to the other request checks.
-def verify(shape: Q.Shape, local: Segments, events: Tr.Events) -> IO(Tr.Events):
-  Q.Shape{+c,+m,links,later} = shape
-  do IO<Tr.Events>:
-    cur : Cursor <- visit(links,local,c,m,Cursor{events,Start{},[]},True{})
-    finish(cur,c,m,later)

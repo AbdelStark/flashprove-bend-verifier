@@ -9,8 +9,6 @@ import ./key_stage_matrix.bend as Shift
 import ./segment_digits.bend as Dig
 import ./oracle_sample.bend as Sample
 
-def add(a: F.Form, b: F.Form) -> F.Form: List.append(&2,F.Term,a,b)
-
 def weight_sum(fs: F.Factors, acc: X.E3) -> X.E3:
   match fs:
     case []: acc
