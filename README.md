@@ -109,7 +109,7 @@ The whole pipeline is ordinary Bend. Bend compiles it to C, and Clang compiles t
 - ✅ Bend and Lean OnBytes agree on all four published fixtures.
 - ✅ A fresh proof from the H100 prover passed both Bend and C++ under a new commitment. [Record](docs/research/fresh-proof.md)
 - ✅ Bend's independent kernel checked the standalone definitions of the measured revision against their declared types. [Details](docs/spec/assurance.md#what-has-been-formally-checked)
-- ✅ On the measured revision, all four published proofs pass, Bend and C++ both reject all 122 altered sets and 256 fuzzed proofs, and 1 and 16 workers agree on 91 of 91 comparisons. [Rerun](docs/research/rerun-2026-11-26.md#conformance)
+- ✅ On the measured revision, all four published proofs pass, Bend and C++ both reject all 122 altered sets and 256 fuzzed proofs (and 40,000 more in a separate campaign over all four proofs), and 1 and 16 workers agree on 91 of 91 comparisons. [Rerun](docs/research/rerun-2026-11-26.md#conformance)
 - ✅ Every commit runs conformance tests and seeded fuzzing. Bend must never accept a mutated proof that C++ refuses.
 - ⏳ **Open:** a proof that Bend acceptance implies Lean acceptance for *every* supported input.
 

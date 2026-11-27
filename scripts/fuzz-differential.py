@@ -7,9 +7,10 @@ A sound verifier never accepts where the reference refuses. The run fails on suc
 on any crash, timeout or unexpected exit from either verifier, and when the unchanged set
 is not accepted by both. A case is reproducible from its seed and index.
 
-    scripts/fuzz-differential.py [-n N] [--seed S] [-j J] [--out FILE] [FIXTURE ...]
+    scripts/fuzz-differential.py [-n N] [--seed S] [-j J] [--threads T] [--out FILE] [FIXTURE ...]
 
-Default fixtures: the two small proof sets. Exit status: 0 if every case passes, 1 otherwise.
+Default fixtures: the two small proof sets. Name full-size or full-size-clipped-gap to fuzz the
+large ones; with many cases in parallel, --threads 1 keeps each verifier on one thread. Exit status: 0 if every case passes, 1 otherwise.
 """
 import argparse
 import json
@@ -78,7 +79,7 @@ def classify(code: int, lines: list[str]) -> str:
 
 
 def run_case(example: Path, identity: str, policy: list[str], work: str, seed: str, index: int,
-             timeout: int, parity_dir=None) -> dict:
+             timeout: int, parity_dir=None, threads=None) -> dict:
     # A negative index is the control: the genuine set, unchanged.
     rng = random.Random(f"{seed}:{example.name}:{index}")
     name = rng.choices(FILES, WEIGHTS)[0] if index >= 0 else None
@@ -95,7 +96,7 @@ def run_case(example: Path, identity: str, policy: list[str], work: str, seed: s
         else:
             what = "none"
         inputs = [case / "config", case / "ivk", case / "example.req", case / "example.y",
-                  case / "example.proof", "-id", identity]
+                  case / "example.proof", "-id", identity, *(["-j", str(threads)] if threads else [])]
         out = {"fixture": example.name, "index": index, "file": name, "mutation": what}
         for label, cmd, env in (
             ("cpp", [BUILD / "cp_verify", *inputs, *policy], {**os.environ}),
@@ -124,6 +125,7 @@ def main() -> int:
     ap.add_argument("--seed", default="0")
     ap.add_argument("-j", type=int, default=min(os.cpu_count() or 1, 8))
     ap.add_argument("--timeout", type=int, default=1800, help="seconds per verifier call")
+    ap.add_argument("--threads", type=int, help="threads per verifier call (-j for both programs)")
     ap.add_argument("--out", type=Path, help="write every case as JSON")
     ap.add_argument("--parity-dir", type=Path, help="save and compare Bend calls with 1 and 16 workers")
     args = ap.parse_args()
@@ -137,13 +139,13 @@ def main() -> int:
             example = EXAMPLES / name
             identity = (example / "ID.txt").read_text().strip()
             policy = stated_policy(example)
-            control = run_case(example, identity, policy, work, args.seed, -1, args.timeout)
+            control = run_case(example, identity, policy, work, args.seed, -1, args.timeout, threads=args.threads)
             if (control["bend"], control["cpp"]) != ("accept", "accept"):
                 print(f"{name}: the unchanged set is not accepted by both: {json.dumps(control)}")
                 return 1
             with ThreadPoolExecutor(max_workers=args.j) as pool:
                 rows = list(pool.map(lambda i: run_case(example, identity, policy, work, args.seed, i,
-                                                        args.timeout, args.parity_dir), range(args.n)))
+                                                        args.timeout, args.parity_dir, args.threads), range(args.n)))
             results += rows
             tally: dict[tuple[str, str], int] = {}
             for r in rows:
