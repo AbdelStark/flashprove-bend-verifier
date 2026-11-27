@@ -1,7 +1,7 @@
 # Build, verification and measurement commands used in the documentation.
 export BEND_NO_TELEMETRY := 1
 
-.PHONY: help bootstrap upstream check test test-native docs-check spikes ci
+.PHONY: help bootstrap upstream check test test-native laws kernel-check docs-check spikes ci
 
 help:  ## list the targets
 	@awk '/^[a-z0-9-]+:.*## / {target = $$1; sub(/:$$/, "", target); sub(/^.*## /, ""); printf "%-24s %s\n", target, $$0}' $(MAKEFILE_LIST)
@@ -21,6 +21,12 @@ test: bootstrap  ## run the expectation tests on the JS lane (fast)
 test-native: bootstrap  ## run the expectation tests as native binaries (the lane that is benchmarked)
 	@python3 scripts/bend-test.py --native tests
 
+laws: bootstrap  ## prove the arithmetic laws stated in LAWS.bend (bend PROOF.bend)
+	@.toolchain/bend/bin/bend PROOF.bend
+
+kernel-check: bootstrap  ## recheck PROOF.bend and the standalone verifier with Bend's independent kernel (fetches Lean v4.34.0)
+	@bash scripts/kernel-check.sh
+
 docs-check:  ## mechanical anti-drift checks over the Markdown
 	@python3 scripts/check-docs.py
 	@python3 tests/test_docs_check.py
@@ -28,7 +34,7 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 spikes: bootstrap upstream  ## time Bend kernels against C and Python references
 	@sh research/spikes/run.sh
 
-ci: docs-check benchmark-test check test test-native plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
+ci: docs-check benchmark-test check laws test test-native plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
 
 .PHONY: oracle generated-check
 
