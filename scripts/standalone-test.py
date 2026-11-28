@@ -112,7 +112,17 @@ def refusals(binary, work):
     short = work / "truncated request"
     short.write_bytes(req.read_bytes()[:-1])
     run(binary, work, [config, ivk, short, y, proof, *tail], 1, "NO: statement-range", stage=PUBLIC)
-    print("refused omitted and mismatched policy, malformed shapes and a truncated request", flush=True)
+    # A table missing its trailing zero bytes packs to the same words and digest: only its length refuses it.
+    trimmed = work / "trimmed"
+    shutil.copytree(work / "data", trimmed, symlinks=True)
+    table = trimmed / "tables/softmax-12-8.bin"
+    data = table.read_bytes()
+    if data[-3:] != b"\0\0\0":
+        raise RuntimeError(f"{table.name} no longer ends in three zero bytes")
+    table.write_bytes(data[:-3])
+    run(binary, work, [config, ivk, req, y, proof, *tail[:-1], trimmed], 1, "NO: public-table-length", stage=PUBLIC)
+    print("refused omitted and mismatched policy, malformed shapes, a truncated request and a trimmed table",
+          flush=True)
 
 
 if __name__ == "__main__":

@@ -85,7 +85,8 @@ def make(copy: Path, goals: list[str], log: Path) -> bool:
     with log.open("a") as out:
         out.write(f"\n$ make {' '.join(goals)}\n")
         out.flush()
-        return subprocess.run(["make", *goals], cwd=copy, stdout=out, stderr=subprocess.STDOUT,
+        # Mutants share the parent's .upstream; a concurrent fetch races on its git lock.
+        return subprocess.run(["make", "-o", "upstream", *goals], cwd=copy, stdout=out, stderr=subprocess.STDOUT,
                               env={**os.environ, "BEND_NO_TELEMETRY": "1"}).returncode == 0
 
 
@@ -140,6 +141,8 @@ def main() -> int:
     for needed in ("cp_verify", "plans", "tables"):
         if not (ROOT / "build" / needed).exists():
             ap.error(f"build/{needed} is missing: run `make standalone oracle` first")
+    if not (ROOT / ".upstream/FlashProve").is_dir():
+        ap.error(".upstream is missing: run `make upstream` first")
     work = Path(tempfile.mkdtemp(prefix="mutants-", dir=ROOT / "build"))
     logs = work / "logs"
     logs.mkdir()

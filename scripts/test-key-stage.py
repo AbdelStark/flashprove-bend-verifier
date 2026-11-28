@@ -172,7 +172,11 @@ def main():
                 changed = Path(tmp) / name
                 changed.write_bytes(original[:start] + new + original[start+len(new):])
                 run(args.exe, args.plans, folder, changed, False, reason)
-        print("refused", ", ".join(changes), flush=True)
+            # Without the length check, a short file is refused later as a bad opening.
+            short = Path(tmp) / "truncated"
+            short.write_bytes(original[:-1])
+            run(args.exe, args.plans, folder, short, False, "plan-length")
+        print("refused", ", ".join(changes), "and truncated", flush=True)
 
 
 if __name__ == "__main__":
