@@ -28,6 +28,11 @@ def digest_bytes(d: Tree.Digest) -> H.Bytes:
   Tree.Digest{a,b,c,d,e,f,g,h} = d
   H.cat([H.le(a),H.le(b),H.le(c),H.le(d),H.le(e),H.le(f),H.le(g),H.le(h)])
 
+# A session names each root by its eight words.
+def root_key(d: Tree.Digest) -> String:
+  Tree.Digest{a,b,c,e,f,g,h,i} = d
+  SCon{Chr{a},SCon{Chr{b},SCon{Chr{c},SCon{Chr{e},SCon{Chr{f},SCon{Chr{g},SCon{Chr{h},SCon{Chr{i},SNil{}}}}}}}}}
+
 def as_digest(words: H.Bytes) -> Maybe<&2,Tree.Digest>:
   match words:
     case [a,b,c,d,e,f,g,h]: Some{Tree.Digest{a,b,c,d,e,f,g,h}}
@@ -187,7 +192,7 @@ def verify_length(+shape: Shape, config: Tree.Digest, +root: Tree.Digest, xs: Pl
   match ok:
     case False{}: None{}
     case True{}:
-      +key = H.hex(digest_bytes(root))
+      +key = root_key(root)
       stored = Map.get(Path.Record,Map.new(&2,Path.Value),session,key)
       verify_parsed(shape,config,root,key,columns(xs,shape,input),stored)
 

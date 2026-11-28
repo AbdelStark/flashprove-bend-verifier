@@ -46,13 +46,18 @@ def insert(key: String, v: Tree.Digest, entry: Record & Value) -> Tracking:
   (r,found) = entry
   merging(r,key,v,found)
 
+# One character each for the depth and the low and high words of the place.
+# Map compares keys bit by bit, so a short fixed-width key is cheap.
+def key(depth: Nat, +i: Nat) -> String:
+  SCon{Chr{U32.from_nat(depth)},SCon{Chr{U32.from_nat(i)},SCon{Chr{U32.from_nat(Nat.div(Nat.div(i,65536n),65536n))},SNil{}}}}
+
 def remember(book: Tracking, depth: Nat, i: Nat, v: Tree.Digest) -> Tracking:
   match book:
     case Skip{}: Skip{}
     case Conflict{}: Conflict{}
     case Track{r}:
-      +key = Nat.show(depth) ++ "/" ++ Nat.show(i)
-      insert(key,v,Map.get(Value,None{},r,key))
+      +k = key(depth,i)
+      insert(k,v,Map.get(Value,None{},r,k))
 
 type Level is Data:
   Level{current: Nodes, given: Siblings, parents: Nodes, book: Tracking}
