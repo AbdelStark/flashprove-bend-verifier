@@ -38,15 +38,19 @@ def absorb(hash: Hash, bytes: H.Bytes) -> Hash:
     case None{}: None{}
     case Some{ctx}: Some{H.update(ctx, bytes)}
 
+# The first k bytes of buf, and a reader over the rest, in one pass that never shares buf.
+def split_at(k: Nat, buf: H.Bytes, rev: H.Bytes, f: File, left: U32, available: U32, hash: Hash) -> Reader & H.Bytes:
+  match k buf:
+    case 1n+j Con{x, rest}: split_at(j, rest, x <> rev, f, left, available, hash)
+    case _ rest: (Reader{f, left, available, rest, hash}, List.reverse(&2, U32, rev))
+
 # A large record often consumes the entire refill. Transfer the list directly
 # to avoid copying its bytes and walking it again to find the empty suffix.
-def split(exact: Bool, f: File, left: U32, available: U32, +buf: H.Bytes, hash: Hash,
+def split(exact: Bool, f: File, left: U32, available: U32, buf: H.Bytes, hash: Hash,
   +n: U32) -> Reader & H.Bytes:
   match exact:
     case True{}: (Reader{f, left, 0, [], hash}, buf)
-    case False{}:
-      (Reader{f, left, U32.sub(available, n), List.drop(&2, U32, buf, U32.to_nat(n)), hash},
-       H.take(buf, U32.to_nat(n)))
+    case False{}: split_at(U32.to_nat(n), buf, [], f, left, U32.sub(available, n), hash)
 
 def slice(f: File, left: U32, +available: U32, buf: H.Bytes, hash: Hash, +n: U32) -> Reader & H.Bytes:
   split(U32.is_eq(available,n), f, left, available, buf, hash, n)
