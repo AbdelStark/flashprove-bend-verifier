@@ -18,6 +18,9 @@ def le(+x: U32) -> Bytes:
 def word(x: U32) -> Bytes:
   cat([le(x), [0,0,0,0]])
 
+def zero_words(n: U32) -> Bytes:
+  List.replicate(U32, U32.to_nat(n), 0)
+
 def length_go(bytes: Bytes, n: Nat) -> Nat:
   match bytes:
     case []: n
@@ -85,40 +88,58 @@ def output(state: Kernel.H8, n: U32) -> Bytes:
 type Context is Data:
   Context{state: Kernel.H8, tail: Bytes, offset: U32}
 
-type Block is Data:
-  Block{words: Bytes, rest: Bytes}
+# Bytes of words given last word first, prepended to acc.
+def unpack_rev(rev: Bytes, acc: Bytes) -> Bytes:
+  match rev:
+    case []: acc
+    case +x <> tail:
+      unpack_rev(tail, U32.and(x, 255) <> U32.and(U32.shrn(x, 8n), 255) <>
+        U32.and(U32.shrn(x, 16n), 255) <> U32.shrn(x, 24n) <> acc)
 
-# A full BLAKE2b block has 32 little-endian words. Consume each byte once
-# and return the suffix. update keeps the last 1..128 bytes for finalization.
-def read_block(n: Nat, src: Bytes, rev: Bytes) -> Block:
-  match n src:
-    case 1n+k a <> b <> c <> d <> tail:
-      w = (a + U32.shln(b,8n) + U32.shln(c,16n) + U32.shln(d,24n) : U32)
-      read_block(k,tail,w <> rev)
-    case _ tail: Block{List.reverse(&2,U32,rev),tail}
+# A full block is pending: compress it only if a byte follows.
+def stream_last(rest: Bytes, rev: Bytes, state: Kernel.H8, +offset: U32) -> Context:
+  match rest:
+    case []: Context{state,unpack_rev(rev,[]),offset}
+    case x <> tail:
+      +end = U32.add(offset,128)
+      Context{compress(List.reverse(&2,U32,rev),state,end,0),x <> tail,end}
 
-def absorb_more(n: Nat, state: Kernel.H8, block: Block, +end: U32) -> Context:
-  match n block:
-    case 0n Block{words,rest}: Context{compress(words,state,end,0),rest,end}
-    case 1n+k Block{words,rest}:
-      absorb_more(k,compress(words,state,end,0),read_block(32n,rest,[]),U32.add(end,128))
-
-def absorb(count: Nat, state: Kernel.H8, src: Bytes, offset: U32) -> Context:
-  match count:
-    case 0n: Context{state,src,offset}
-    case 1n+k: absorb_more(k,state,read_block(32n,src,[]),U32.add(offset,128))
+# Read four bytes per step, holding up to j = 32 words of the current block
+# (last word first). A full block is compressed only once a byte follows it,
+# so the last 1..128 bytes stay for finalization. The walk recurses on the
+# input itself, so it needs no length and never shares the input.
+def stream(src: Bytes, j: U32, rev: Bytes, state: Kernel.H8, +offset: U32) -> Context:
+  match src j:
+    case a <> b <> c <> d <> tail 32:
+      +end = U32.add(offset,128)
+      stream(tail,1,[(a + U32.shln(b,8n) + U32.shln(c,16n) + U32.shln(d,24n) : U32)],
+        compress(List.reverse(&2,U32,rev),state,end,0),end)
+    case a <> b <> c <> d <> tail k:
+      stream(tail,U32.add(k,1),(a + U32.shln(b,8n) + U32.shln(c,16n) + U32.shln(d,24n) : U32) <> rev,state,offset)
+    case rest 32: stream_last(rest,rev,state,offset)
+    case rest _: Context{state,unpack_rev(rev,rest),offset}
 
 def update(ctx: Context, bytes: Bytes) -> Context:
   Context{state, tail, offset} = ctx
-  +src = cat([tail, bytes])
-  count = Nat.div(Nat.sub(length(src), 1n), 128n)
-  absorb(count, state, src, offset)
+  stream(cat([tail, bytes]), 0, [], state, offset)
+
+# The last block as 32 words with zero fill, and its byte count.
+def pad_words(src: Bytes, +n: U32, rev: Bytes) -> Bytes & U32:
+  match src:
+    case a <> b <> c <> d <> tail:
+      pad_words(tail,U32.add(n,4),(a + U32.shln(b,8n) + U32.shln(c,16n) + U32.shln(d,24n) : U32) <> rev)
+    case [a,b,c]: (List.reverse.go(&2,U32,(a + U32.shln(b,8n) + U32.shln(c,16n) : U32) <> rev,zero_words(U32.sub(31,U32.shrn(n,2n)))),U32.add(n,3))
+    case [a,b]: (List.reverse.go(&2,U32,(a + U32.shln(b,8n) : U32) <> rev,zero_words(U32.sub(31,U32.shrn(n,2n)))),U32.add(n,2))
+    case [a]: (List.reverse.go(&2,U32,a <> rev,zero_words(U32.sub(31,U32.shrn(n,2n)))),U32.add(n,1))
+    case _: (List.reverse.go(&2,U32,rev,zero_words(U32.sub(32,U32.shrn(n,2n)))),n)
+
+def padded(last: Bytes & U32, state: Kernel.H8, offset: U32) -> Kernel.H8:
+  (words, len) = last
+  compress(words, state, U32.add(offset, len), 4294967295)
 
 def finish_state(ctx: Context) -> Kernel.H8:
-  Context{state, +tail, offset} = ctx
-  +len = length(tail)
-  padded = cat([tail, List.replicate(U32, Nat.sub(128n, len), 0)])
-  compress(u32s(padded), state, U32.add(offset, U32.from_nat(len)), 4294967295)
+  Context{state, tail, offset} = ctx
+  padded(pad_words(tail, 0, []), state, offset)
 
 def finish(ctx: Context, n: U32) -> Bytes:
   output(finish_state(ctx),n)
