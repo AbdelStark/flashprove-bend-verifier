@@ -72,16 +72,22 @@ def fused(+eps: X.E3) -> Bool:
   +carry = K.small(17n)
   same(Transport.contract(basis,coords,local,old,carry,eps),P.merge(basis,F.fixed(local,coords,eps),old,carry))
 
-# A queued pair applies the older scalar first. Include a zero carry and
-# a non-base-field carry so reversing or dropping either update changes the
-# resulting table.
+# Deferred updates apply the older scalar first. Include a zero carry and
+# non-base-field carries so reversing, dropping or repeating an update
+# changes the resulting table. Five updates split unevenly in the fork tree.
 def queued() -> Bool:
   +basis: P.Basis = P.Basis{[F.one(),F.zero()],2n,2n}
   +old: B.Elements = [F.one(),K.small(7n),F.zero(),K.small(13n)]
   +a: Transport.Update = Transport.Update{[],source(),F.zero(),K.small(11n)}
   +b: Transport.Update = Transport.Update{[],source(),X.E3{0,7,0,5,0,3},K.small(17n)}
-  eager = Transport.commit_one(basis,Transport.commit_one(basis,old,a),b)
-  same(eager,Transport.finish_columns(basis,Transport.Two{old,a,b}))
+  +c: Transport.Update = Transport.Update{[],source(),K.small(19n),X.E3{0,2,0,9,0,4}}
+  +d: Transport.Update = Transport.Update{[],source(),X.E3{0,1,0,0,0,6},K.small(23n)}
+  +e: Transport.Update = Transport.Update{[],source(),K.small(3n),F.one()}
+  +ab = Transport.commit_one(basis,Transport.commit_one(basis,old,a),b)
+  eager = Transport.commit_one(basis,Transport.commit_one(basis,Transport.commit_one(basis,ab,c),d),e)
+  same(ab,Transport.finish_columns(basis,Transport.Deferred{old,[b,a]})) &&
+    same(eager,Transport.finish_columns(basis,Transport.Deferred{old,[e,d,c,b,a]})) &&
+    same(old,Transport.finish_columns(basis,Transport.Deferred{old,[]}))
 
 def main() -> IO(Unit):
   IO.print(Bool.show(check([K.small(23n),K.small(29n)]) && check([F.one(),F.zero()]) && fused(F.zero()) && fused(K.small(7n)) && queued()))

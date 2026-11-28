@@ -46,6 +46,14 @@ def last_place() -> Nat:
 def high_root() -> Tree.Digest:
   Tree.Digest{3705891777, 4093106752, 2932463118, 2500145827, 663443500, 2927891234, 2125083432, 1468902147}
 
+# Vertex keys stay distinct across the 2^32 boundary and between depth and place.
+def keys_distinct() -> Bool:
+  +big = Nat.mul(65536n,65536n)
+  Bool.not(String.eq(Opening.key(0n,big),Opening.key(0n,0n))) &&
+    Bool.not(String.eq(Opening.key(1n,0n),Opening.key(0n,1n))) &&
+    Bool.not(String.eq(Opening.key(48n,last_place()),Opening.key(48n,Nat.mod(last_place(),big)))) &&
+    String.eq(Opening.key(48n,last_place()),Opening.key(48n,last_place()))
+
 def copies(n: Nat) -> Opening.Siblings:
   match n:
     case 0n: []
@@ -77,6 +85,7 @@ def main() -> IO(Unit):
     IO.print(check(47n, [Opening.Node{last_place(),leaf0()}], copies(47n), high_root()))
     IO.print(check(49n, [Opening.Node{0n,root()}], [], root()))
     IO.print(Bool.show(Opening.check(0n, False{}, Tree.Digest{0,0,0,0,0,0,0,0}, [Opening.Node{0n,root()}], [], root())))
+    IO.print(Bool.show(keys_distinct()))
 
 #|True
 #|False
@@ -96,3 +105,4 @@ def main() -> IO(Unit):
 #|False
 #|False
 #|False
+#|True

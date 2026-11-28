@@ -39,14 +39,14 @@ Each figure is the median of three alternating Bend/Lean pairs, after one warmup
 
 ### Against the C++ verifier
 
-FlashProve's reference verifier, `cp_verify`, is written in C++ and is still faster. Both ran with one thread on the same Apple M4 Max, in alternating pairs:
+FlashProve's reference verifier, `cp_verify`, is written in C++ and is faster with one thread each. Both ran with one thread on the same Apple M4 Max, in alternating pairs:
 
 | Proof | Bend | C++ `cp_verify` | Bend vs. C++ | Bend peak RSS | C++ peak RSS |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | accepted-proof (small) | 1.87 s | 0.64 s | 2.92× slower | 0.18 GiB | 0.19 GiB |
 | full-size | 18.03 s | 8.06 s | 2.24× slower | 1.89 GiB | 3.93 GiB |
 
-With 16 workers Bend takes 9.90 s on the full-size proof, still behind single-thread C++. Closing that gap is [REQ-PERF-4](docs/spec/performance.md). [Samples](docs/research/rerun-2026-11-26.md#bend-and-c-one-worker-each)
+With 16 workers Bend overtakes it: on the full-size proof, a later build took 7.29 s against 8.03 s for `cp_verify -j 1` on the same M4 Max, and 15.89 s against 18.73 s on a 16-core Xeon. That meets [REQ-PERF-4](docs/spec/performance.md). [Samples](docs/research/rerun-2026-11-26.md#bend-and-c-one-worker-each) · [16-worker pairings](docs/research/perf4-2026-11-28.md)
 
 ## Quick start
 

@@ -34,6 +34,8 @@ Most of the request stage's time goes to cubic-extension products and reference 
 - **Skip the product when you can.** Multiplying by one or minus one is the value or its negation. For an equality factor `{1−x, x}`, the low child is `w − w·x`, so one product serves both children.
 - **Recursion must visibly shrink.** When an index climbs toward a bound, pass explicit fuel and recurse on `fuel − 1`.
 
+- **Fork where the tree grows.** The native runtime deals a parallel call's tasks to idle cores while a fork tree grows. A parallel call nested inside a long-running branch, or inside an IO action evaluated purely (`Workers.observe`), tends to run on that branch's core. Keep forks at the top of an IO step, and gather independent work into one balanced tree there. The event loop also runs one computation's pure code at a time, so `IO.fork` does not overlap CPU work. [16-worker report](../research/perf4-2026-11-28.md)
+
 Each of these changes left every computed value unchanged. Keep it that way: an optimization comes with a test that compares the new path to the old one, value by value.
 
 ## Tracing a disagreement

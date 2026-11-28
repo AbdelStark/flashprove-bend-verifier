@@ -64,8 +64,8 @@ def next(v: Maybe<&2,O.Opened>) -> String:
 
 def conflict() -> O.Session:
   +zero: M.Digest = M.Digest{0,0,0,0,0,0,0,0}
-  record = Map.set(&2,Path.Value,Map.new(&2,Path.Value),"2/1",Some{zero})
-  Map.set(&2,Path.Record,O.empty_session(),H.hex(O.digest_bytes(root())),record)
+  record = Map.set(&2,Path.Value,Map.new(&2,Path.Value),Path.key(2n,1n),Some{zero})
+  Map.set(&2,Path.Record,O.empty_session(),O.root_key(root()),record)
 
 def binding(+slot: Nat) -> String:
   config: M.Digest = M.Digest{403769859,875374111,1346978363,1818582615,2290186867,2761791119,3233395371,3704999623}
@@ -76,7 +76,7 @@ def sibling_saved(v: Maybe<&2,O.Opened>,key: String) -> String:
   match v:
     case Some{O.Opened{_,session}}:
       record = Pair.snd(O.Session,Path.Record,Map.get(Path.Record,Map.new(&2,Path.Value),session,key))
-      found = Pair.snd(Path.Record,Path.Value,Map.get(Path.Value,None{},record,"1/0"))
+      found = Pair.snd(Path.Record,Path.Value,Map.get(Path.Value,None{},record,Path.key(1n,0n)))
       show_digest(found)
     case None{}: "invalid"
 
@@ -85,8 +85,8 @@ def recorded(root: Maybe<&2,M.Digest>,bytes: H.Bytes,conflicting: Bool) -> Strin
   match root:
     case None{}: "missing root"
     case Some{+r}:
-      +key = H.hex(O.digest_bytes(r))
-      wrong = Map.set(&2,Path.Value,Map.new(&2,Path.Value),"1/0",Some{config()})
+      +key = O.root_key(r)
+      wrong = Map.set(&2,Path.Value,Map.new(&2,Path.Value),Path.key(1n,0n),Some{config()})
       session = Bool.pick(O.Session,conflicting,Map.set(&2,Path.Record,O.empty_session(),key,wrong),O.empty_session())
       sibling_saved(O.binding_record(1n,1n,config(),r,40n,bytes,session),key)
 

@@ -28,6 +28,11 @@ def digest_bytes(d: Tree.Digest) -> H.Bytes:
   Tree.Digest{a,b,c,d,e,f,g,h} = d
   H.cat([H.le(a),H.le(b),H.le(c),H.le(d),H.le(e),H.le(f),H.le(g),H.le(h)])
 
+# A session names each root by its eight words.
+def root_key(d: Tree.Digest) -> String:
+  Tree.Digest{a,b,c,e,f,g,h,i} = d
+  SCon{Chr{a},SCon{Chr{b},SCon{Chr{c},SCon{Chr{e},SCon{Chr{f},SCon{Chr{g},SCon{Chr{h},SCon{Chr{i},SNil{}}}}}}}}}
+
 def as_digest(words: H.Bytes) -> Maybe<&2,Tree.Digest>:
   match words:
     case [a,b,c,d,e,f,g,h]: Some{Tree.Digest{a,b,c,d,e,f,g,h}}
@@ -152,18 +157,34 @@ def prepend(+i: Nat, limbs: H.Bytes, digest: Maybe<&2,Tree.Digest>, rest: Parsed
     case Some{d} Parsed{ls,cs,tail} True{}: Parsed{Path.Node{i,d} <> ls,Column{i,limbs} <> cs,tail}
     case _ _ _: Bad{}
 
-def columns(xs: Places, +shape: Shape, +input: H.Bytes) -> Parsed:
+# One place's column and salt, and the bytes after them.
+type Piece is Data:
+  Piece{column: H.Bytes, salt: H.Bytes, rest: H.Bytes}
+  Remaining{rest: H.Bytes}
+
+# Cut k column bytes, then m salt bytes, in one pass that never shares the input.
+def cut(k: Nat, m: Nat, input: H.Bytes, col: H.Bytes, salt: H.Bytes) -> Piece:
+  match k m input:
+    case 1n+a _ Con{x,rest}: cut(a,m,rest,x <> col,salt)
+    case 0n 1n+b Con{x,rest}: cut(0n,b,rest,col,x <> salt)
+    case _ _ rest: Piece{List.reverse(&2,U32,col),List.reverse(&2,U32,salt),rest}
+
+def next_piece(xs: Places, +shape: Shape, input: H.Bytes) -> Piece:
   match xs:
-    case []: Parsed{[],[],input}
-    case +i <> tail:
-      +w = Nat.mul(8n,width(shape))
-      +col = H.take(input,w)
+    case []: Remaining{input}
+    case _: cut(Nat.mul(8n,width(shape)),salt_bytes(shape),input,[],[])
+
+def columns_cut(xs: Places, +shape: Shape, piece: Piece) -> Parsed:
+  match xs piece:
+    case Con{+i,+tail} Piece{+col,salt,rest}:
       +limbs = H.u32s(col)
-      +after = List.drop(&2,U32,input,w)
-      +n = salt_bytes(shape)
-      salt = List.take(&2,U32,after,n)
-      rest = columns(tail,shape,List.drop(&2,U32,after,n))
-      prepend(i,limbs,leaf(shape,i,col,salt),rest,is_binding(shape) || canonical(limbs))
+      more = columns_cut(tail,shape,next_piece(tail,shape,rest))
+      prepend(i,limbs,leaf(shape,i,col,salt),more,is_binding(shape) || canonical(limbs))
+    case Nil{} Remaining{rest}: Parsed{[],[],rest}
+    case _ _: Bad{}
+
+def columns(+xs: Places, +shape: Shape, input: H.Bytes) -> Parsed:
+  columns_cut(xs,shape,next_piece(xs,shape,input))
 
 def digests(words: H.Bytes) -> Path.Siblings:
   match words:
@@ -187,7 +208,7 @@ def verify_length(+shape: Shape, config: Tree.Digest, +root: Tree.Digest, xs: Pl
   match ok:
     case False{}: None{}
     case True{}:
-      +key = H.hex(digest_bytes(root))
+      +key = root_key(root)
       stored = Map.get(Path.Record,Map.new(&2,Path.Value),session,key)
       verify_parsed(shape,config,root,key,columns(xs,shape,input),stored)
 
