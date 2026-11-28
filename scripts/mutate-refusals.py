@@ -8,7 +8,7 @@ fastest first, until one fails. A mutant no suite kills is a survivor: it needs 
 check alone refuses, or a reason why no input reaches it.
 
     scripts/mutate-refusals.py --list
-    scripts/mutate-refusals.py [-j JOBS] [--sites 0-40] [--out FILE]
+    scripts/mutate-refusals.py [-j JOBS] [--sites 0-40] [--names a,b] [--strict] [--out FILE]
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -126,6 +126,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--list", action="store_true", help="print the mutable refusal sites and stop")
     ap.add_argument("--sites", help="indices and ranges such as 0-40,57,90-99 (default: all)")
+    ap.add_argument("--names", help="comma-separated refusal names; mutate only their sites")
+    ap.add_argument("--strict", action="store_true", help="exit 1 if any chosen mutant is not killed")
     ap.add_argument("-j", type=int, default=2, help="mutants in parallel")
     ap.add_argument("--out", type=Path, help="write every mutant's outcome as JSON")
     args = ap.parse_args()
@@ -138,6 +140,12 @@ def main() -> int:
     if args.sites:
         chosen = sorted({i for part in args.sites.split(",") for i in
                          range(int(part.split("-")[0]), int(part.split("-")[-1]) + 1)})
+    if args.names:
+        names = set(args.names.split(","))
+        chosen = [i for i in chosen if found[i]["name"] in names]
+        missing = names - {found[i]["name"] for i in chosen}
+        if missing:
+            ap.error(f"no refusal site named {', '.join(sorted(missing))}")
     for needed in ("cp_verify", "plans", "tables"):
         if not (ROOT / "build" / needed).exists():
             ap.error(f"build/{needed} is missing: run `make standalone oracle` first")
@@ -154,7 +162,7 @@ def main() -> int:
     print(f"mutants: {len(rows)}, killed: {len(rows) - len(survivors)}, not killed: {len(survivors)} (logs in {logs})")
     for r in survivors:
         print(f"  {r['outcome']}: {r['file']}:{r['line']} NO: {r['name']}")
-    return 0
+    return 1 if args.strict and survivors else 0
 
 
 if __name__ == "__main__":
