@@ -28,11 +28,6 @@ type Table is Data:
 type Packed is Data:
   Packed{sum: E.E3, rest: H.Bytes}
 
-def select(part: Part, main: B.Elements, mask: B.Elements) -> B.Elements:
-  match part:
-    case Main{}: main
-    case _: mask
-
 def add(+d: CS.Draw, part: Part, x: E.E3) -> CS.Draw:
   CS.Draw{i,m,n,f} = d
   match part:

@@ -23,6 +23,7 @@ jobs:
       - run: make kernel-check
       - run: make plans-reproduce standalone-full standalone-extended stages-full worker-parity
       - run: make fuzz FUZZ_ARGS="-n 250 --seed ${{ github.sha }}-extended"
+      - run: make mutation-test MUTATE_ARGS="-j 2 --strict --names noncanonical-element,public-table-length,KL-length,plan-length"
       - run: make benchmark-standalone BENCH_ARGS="--output build/benchmark-cpp"
       - run: make benchmark-workers BENCH_ARGS="--worker-counts 1 2 4 --output build/benchmark-workers"
       - run: make benchmark-onbytes BENCH_ARGS="--workers 1 --output build/benchmark-lean"

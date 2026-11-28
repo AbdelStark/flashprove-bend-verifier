@@ -106,15 +106,3 @@ def count_covered(xs: List<&2,U32>, +length: U32) -> IO(U32):
 def first(pair: U32 & U32) -> U32:
   (length, _) = pair
   length
-
-def check(config: String, request: String, named: Maybe<&2, String>) -> IO(Unit):
-  do IO<Unit>:
-    +lines : Lines <- document(config ++ "/policy.txt")
-    dims : U32 & U32 <- Header.policy_fields(lines)
-    +length : U32 = first(dims)
-    claim : Claim <- parse(lines)
-    f : File <- IO.try(File, File.open(request, "r"))
-    r : File & Result<&1, &1, U32 & String, List<&2,U32>> <- File.read_at(f, U32.shln(length, 2n), 9)
-    tail : List<&2,U32> <- Header.closed(List<&2,U32>, r)
-    count : U32 <- count_covered(tail, length)
-    Header.require(held(claim, named, length, count), "NO: policy")

@@ -83,46 +83,6 @@ def configuration(+config: String) -> IO(H.Bytes):
 type Shape is Data:
   Shape{rows_log: U32, code_log: U32, message: U32, random: U32, salt: U32}
 
-def table(line: Maybe<&2, String>) -> IO(List<&2, String>):
-  match line:
-    case Some{text}: IO.pure(List<&2, String>, String.split(text, ' '))
-    case None{}: IO.die(List<&2, String>, 1, "NO: policy-table")
-
-def shape(values: List<&2, String>, salt: U32) -> IO(Shape):
-  match values:
-    case [_, b, n, i, m, e, w]:
-      do IO<Shape>:
-        +rows : U32 <- Header.decimal(Nat.read(b))
-        +bits : U32 <- Header.decimal(Nat.read(n))
-        +message : U32 <- Header.decimal(Nat.read(i))
-        +random : U32 <- Header.decimal(Nat.read(m))
-        entry : U32 <- Header.decimal(Nat.read(e))
-        +block : U32 <- Header.decimal(Nat.read(w))
-        checked : Unit <- Header.require(
-          U32.is_le(rows, 20) && U32.is_le(bits, 32) && U32.is_ne(message, 0) &&
-          U32.is_zero(entry) && U32.is_le(rows, block) && U32.is_le(block, 40), "NO: parameter-table-shape")
-        checked : Unit <- Header.require(
-          Nat.is_lt(Nat.add(U32.to_nat(message), U32.to_nat(random)), P2.pow2(U32.to_nat(bits))),
-          "NO: parameter-table-shape")
-        return Shape{rows, bits, message, random, salt}
-    case _: IO.die(Shape, 1, "NO: policy-table")
-
-def parse_shape(+lines: List<&2, String>) -> IO(Shape):
-  do IO<Shape>:
-    +salt : U32 <- Header.field(List.find(String, line => String.starts_with(line, "salt "), lines), 5n)
-    check : Unit <- Header.require(U32.is_ge(salt, 40) && U32.is_le(salt, 64) && U32.is_zero(U32.and(salt, 7)), "NO: parameter-range")
-    answers : U32 <- Header.field(List.find(String, line => String.starts_with(line, "answers "), lines), 8n)
-    check : Unit <- Header.require(U32.is_eq(answers, 1), "NO: policy-answers")
-    values : List<&2, String> <- table(List.find(String, line => String.starts_with(line, "table "), lines))
-    shape(values, salt)
-
-def key_shape(config: String) -> IO(Shape):
-  do IO<Shape>:
-    f : File <- IO.try(File, File.open(config ++ "/policy.txt", "r"))
-    r : File & Result<&1, &1, U32 & String, String> <- File.read(f, 32768)
-    text : String <- Header.closed(String, r)
-    parse_shape(String.lines(text))
-
 def variables(+message: U32) -> Nat:
   match message:
     case 1: 0n
@@ -149,26 +109,3 @@ def from_record(+shape: Shape, +root: H.Bytes, +record: H.Bytes, config: H.Bytes
     ok : Unit <- Header.require(Nat.is_eq(H.length(root),32n) && Nat.is_eq(H.length(record),record_length(shape)) &&
       canonical(H.u32s(record)), "NO: commitment-record")
     return record_finish(H.update(record_start(shape,root,config),record))
-
-def record_hash(+shape: Shape, pair: File & H.Bytes, config: H.Bytes) -> IO(String):
-  (f,+head) = pair
-  +length = record_length(shape)
-  root = List.drop(&2,U32,head,8n)
-  do IO<String>:
-    check : Unit <- Header.require(Nat.is_eq(H.length(head),40n) &&
-      Header.key_head(List.take(&2,U32,head,8n)), "NO: key-refused")
-    stream : H.Context <- chunks(Nat.div(length,8192n),(f,record_start(shape,root,config)),Nat.mod(length,8192n),True{})
-    return record_finish(stream)
-
-def from_config(shape: Shape, digest: H.Bytes, ivk: String) -> IO(String):
-  do IO<String>:
-    f : File <- IO.try(File, File.open(ivk ++ "/key.bin", "r"))
-    r : File & Result<&1, &1, U32 & String, H.Bytes> <- File.read_bytes(f, 40)
-    head : File & H.Bytes <- unpack(H.Bytes, r)
-    record_hash(shape, head, digest)
-
-def compute(+config: String, ivk: String) -> IO(String):
-  do IO<String>:
-    shape : Shape <- key_shape(config)
-    digest : H.Bytes <- configuration(config)
-    from_config(shape,digest,ivk)

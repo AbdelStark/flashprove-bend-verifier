@@ -119,14 +119,3 @@ def end_only(pair: R.Reader & Traced) -> R.Reader & End:
   (r,t) = pair
   Traced{e,_,_} = t
   (r,e)
-
-def finish(pair: R.Reader & Cursor) -> IO(R.Reader & End):
-  do IO<R.Reader & End>:
-    out : R.Reader & Traced <- finish_traced(pair)
-    return end_only(out)
-
-def begin(pair: R.Reader & H.Bytes, label: Nat, plan: P.Plan, statement: H.Bytes, config: M.Digest,
-  table: M.Digest, book: K.Book, session: O.Session, groups: G.Schedule, finals: List<&2,Code.Final>) -> IO(R.Reader & End):
-  do IO<R.Reader & End>:
-    out : R.Reader & Traced <- begin_traced(pair,label,plan,statement,config,table,book,session,groups,finals)
-    return end_only(out)

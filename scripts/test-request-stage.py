@@ -65,12 +65,15 @@ def mutate(tmp, cmd, proof, y, transcript):
     at = data.index(token)+8
     replacement.write_bytes(data[:at] + b"\x01" + data[at+1:])
     run(altered, 1, "NO: header-y")
+    # 2^64 - 1 is above the field prime; nothing after round_io re-checks canonical encoding.
+    replacement.write_bytes(data[:at] + b"\xff" * 8 + data[at+8:])
+    run(altered, 1, "NO: noncanonical-element")
     wrong_y = tmp / "wrong.y"
     wrong_y.write_bytes((int.from_bytes(y.read_bytes(),"little")+1).to_bytes(4,"little"))
     altered = list(cmd)
     altered[4] = wrong_y
     run(altered, 1, "NO: reply-differs")
-    print("Rejected altered LOC, BASE, REPLY, caller y and trailing data.")
+    print("Rejected altered LOC, BASE, REPLY, a noncanonical element, caller y and trailing data.")
 
 
 def main():

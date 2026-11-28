@@ -72,6 +72,3 @@ def scan(events: Trace.Events, +start: Nat, +acc: L.Events) -> IO(P.Cursor):
         _ => scan(tail,start,L.event(name,msg,st,n,nz) <> acc))
       action(Unit{})
     case _: IO.die(P.Cursor,1,"NO: attention-U3")
-
-def first(events: Trace.Events, skip: Nat, slots: Nat) -> IO(P.Cursor):
-  scan(List.drop(&2,Trace.Observed,events,skip),slots,[])

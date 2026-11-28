@@ -186,12 +186,6 @@ def first_data(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Co
     head : R.Reader & H.Bytes <- R.take(r,12)
     first(head,expected_copy,st,plan,Context{digest,profile,plans_dir,root,Item.item("table",Leaf.table_bytes(leaf)),geom,record},session)
 
-def inspect(path: String, expected_copy: U32, st: S.Statement, cfg: Config.Configured,
-    plans_dir: String, leaf: Leaf.Table, session: O.Session) -> IO(Trace):
-  do IO<Trace>:
-    saved : R.Reader & FirstData <- first_data(path,expected_copy,st,cfg,plans_dir,leaf,session)
-    continue_first(saved)
-
 def close_verified(pair: R.Reader & FirstData,items: List<&2,P.Item>) -> IO(Trace):
   (reader,FirstData{end,+events,+ctx,+forests,st}) = pair
   Context{_,+profile,_,_,_,_,_} = ctx

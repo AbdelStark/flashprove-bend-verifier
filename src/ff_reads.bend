@@ -79,9 +79,6 @@ def ws(+s:G.Shape,key:B.Elements,+sn:String,+log:Nat) -> B.Elements:
   weights(Nat.div(n,unit),Z.take(G.zj(s,key,sn),Nat.sub(bits,log)),seg,unit,[])
 
 def segment_weights(+s:G.Shape,key:B.Elements,sn:String) -> B.Elements: ws(s,key,sn,G.field(s,"ls"))
-def length(t:G.Tensor) -> Nat:
-  G.Tensor{_,_,_,_,n} = t
-  n
 
 def bounded(+s:G.Shape,ws:B.Elements,n:String,point:String,lam:Nat,+low:Nat,hi:Nat,base:Nat) -> A.Aff:
   +ten = G.tensor(s,n)

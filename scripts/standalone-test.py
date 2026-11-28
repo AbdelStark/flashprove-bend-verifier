@@ -109,10 +109,27 @@ def refusals(binary, work):
             raise RuntimeError(f"fixture does not contain a unique {old!r}")
         (changed / "policy.txt").write_text(original.replace(old, new))
         run(binary, work, [changed, ivk, req, y, proof, *tail], 1, rejection, stage=PUBLIC)
+    # KL.bin ends in zero bytes, which pack to the same words and digest when cut: only its length refuses it.
+    (changed / "policy.txt").write_text(original)
+    scales = (config / "KL.bin").read_bytes()
+    if scales[-1:] != b"\0":
+        raise RuntimeError("KL.bin no longer ends in a zero byte")
+    (changed / "KL.bin").write_bytes(scales[:-1])
+    run(binary, work, [changed, ivk, req, y, proof, *tail], 1, "NO: KL-length", stage=PUBLIC)
     short = work / "truncated request"
     short.write_bytes(req.read_bytes()[:-1])
     run(binary, work, [config, ivk, short, y, proof, *tail], 1, "NO: statement-range", stage=PUBLIC)
-    print("refused omitted and mismatched policy, malformed shapes and a truncated request", flush=True)
+    # A table missing its trailing zero bytes packs to the same words and digest: only its length refuses it.
+    trimmed = work / "trimmed"
+    shutil.copytree(work / "data", trimmed, symlinks=True)
+    table = trimmed / "tables/softmax-12-8.bin"
+    data = table.read_bytes()
+    if data[-3:] != b"\0\0\0":
+        raise RuntimeError(f"{table.name} no longer ends in three zero bytes")
+    table.write_bytes(data[:-3])
+    run(binary, work, [config, ivk, req, y, proof, *tail[:-1], trimmed], 1, "NO: public-table-length", stage=PUBLIC)
+    print("refused omitted and mismatched policy, malformed shapes, a truncated request, a trimmed KL.bin and a trimmed table",
+          flush=True)
 
 
 if __name__ == "__main__":

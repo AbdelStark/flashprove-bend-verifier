@@ -71,9 +71,6 @@ def expand_state(query: Query, j: Nat) -> Kernel.H8:
   Query{prefix, meta, nonce} = query
   H.finish_state(H.update(prefix,H.cat([packed(meta,j),wire(nonce)])))
 
-def expand(query: Query, j: Nat) -> H.Bytes:
-  H.output(expand_state(query,j),64)
-
 type Stream is Data:
   Stream{query: Query, next_call: Nat, words: List<&2,Bits.Bits64>}
 

@@ -1,0 +1,1322 @@
+[
+ {
+  "index": 0,
+  "site": "src/accounting.bend:50",
+  "name": "security-bits",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 1,
+  "site": "src/commitment.bend:29",
+  "name": "short file",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 2,
+  "site": "src/commitment.bend:30",
+  "name": "key-refused",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 3,
+  "site": "src/commitment.bend:101",
+  "name": "parameter-table-shape",
+  "outcome": "removed",
+  "run": "7816"
+ },
+ {
+  "index": 4,
+  "site": "src/commitment.bend:104",
+  "name": "parameter-table-shape",
+  "outcome": "removed",
+  "run": "7816"
+ },
+ {
+  "index": 5,
+  "site": "src/commitment.bend:133",
+  "name": "commitment-record",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 6,
+  "site": "src/ff_lookup.bend:155",
+  "name": "unsupported-G-lookup",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 7,
+  "site": "src/ff_stack.bend:178",
+  "name": "g-stack-inverse",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 8,
+  "site": "src/fold_batt.bend:42",
+  "name": "request-batt-extra-rounds",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 9,
+  "site": "src/fold_batt.bend:65",
+  "name": "request-index-send",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 10,
+  "site": "src/fold_batt.bend:81",
+  "name": "request-batt-row-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 11,
+  "site": "src/fold_request.bend:35",
+  "name": "initial-request-send",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 12,
+  "site": "src/fold_request.bend:39",
+  "name": "request-switch-list",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 13,
+  "site": "src/fold_request.bend:56",
+  "name": "request-group-row-count",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 14,
+  "site": "src/fold_request.bend:65",
+  "name": "request-send-moments",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 15,
+  "site": "src/fold_request.bend:102",
+  "name": "request-last-group",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 16,
+  "site": "src/fold_request.bend:108",
+  "name": "request-carry-proximity",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "request-claims-test"
+ },
+ {
+  "index": 17,
+  "site": "src/fold_request_rounds.bend:100",
+  "name": "request-fold-round",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 18,
+  "site": "src/fold_request_rounds.bend:112",
+  "name": "request-fold-first",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 19,
+  "site": "src/fold_request_shape.bend:41",
+  "name": "request-member-shape",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 20,
+  "site": "src/head_norm.bend:88",
+  "name": "head-norm-limbs",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 21,
+  "site": "src/header.bend:82",
+  "name": "policy-range",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 22,
+  "site": "src/header.bend:95",
+  "name": "version-unknown (policy)",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 23,
+  "site": "src/header.bend:98",
+  "name": "shape-words",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 24,
+  "site": "src/header.bend:99",
+  "name": "shape-V",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 25,
+  "site": "src/key_stage.bend:45",
+  "name": "key-table-size",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 26,
+  "site": "src/key_stage.bend:91",
+  "name": "key-binding-slot",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-extended"
+ },
+ {
+  "index": 27,
+  "site": "src/key_stage.bend:143",
+  "name": "key-record",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 28,
+  "site": "src/key_stage.bend:153",
+  "name": "key-header",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-extended"
+ },
+ {
+  "index": 29,
+  "site": "src/key_stage_base.bend:41",
+  "name": "key-base-symbol",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 30,
+  "site": "src/key_stage_batt.bend:50",
+  "name": "key-batt-extra-rounds",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 31,
+  "site": "src/key_stage_batt.bend:98",
+  "name": "key-W-answer",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 32,
+  "site": "src/key_stage_batt.bend:123",
+  "name": "key-batt-count",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 33,
+  "site": "src/key_stage_codes.bend:54",
+  "name": "key-range-choices",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 34,
+  "site": "src/key_stage_codes.bend:66",
+  "name": "key-stage-list",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 35,
+  "site": "src/key_stage_codes.bend:74",
+  "name": "key-split-choices",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 36,
+  "site": "src/key_stage_lookup.bend:102",
+  "name": "key-lookup-zero",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 37,
+  "site": "src/key_stage_lookup.bend:153",
+  "name": "key-lookup-join",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 38,
+  "site": "src/key_stage_lookup_plan.bend:31",
+  "name": "key-lookup-vector",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 39,
+  "site": "src/key_stage_lookup_rows.bend:57",
+  "name": "key-lookup-round",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 40,
+  "site": "src/key_stage_range_batch.bend:145",
+  "name": "key-range-mask-budget",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 41,
+  "site": "src/key_stage_range_check.bend:65",
+  "name": "key-range-proximity",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 42,
+  "site": "src/key_stage_walk.bend:94",
+  "name": "unfinished-key-openings",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 43,
+  "site": "src/key_stage_walk.bend:95",
+  "name": "unfinished-key-base",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 44,
+  "site": "src/key_stage_wf.bend:29",
+  "name": "key-range-batch-rows",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 45,
+  "site": "src/layout.bend:31",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 46,
+  "site": "src/layout.bend:37",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 47,
+  "site": "src/layout.bend:40",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 48,
+  "site": "src/layout.bend:46",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 49,
+  "site": "src/layout.bend:69",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 50,
+  "site": "src/layout.bend:77",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 51,
+  "site": "src/layout.bend:81",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 52,
+  "site": "src/layout.bend:93",
+  "name": "layout-alignment",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 53,
+  "site": "src/layout.bend:94",
+  "name": "layout-placement",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 54,
+  "site": "src/layout.bend:106",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 55,
+  "site": "src/layout.bend:111",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 56,
+  "site": "src/layout.bend:125",
+  "name": "layout-block-size",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 57,
+  "site": "src/layout.bend:196",
+  "name": "layout-placement",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 58,
+  "site": "src/layout.bend:197",
+  "name": "layout-overlap",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 59,
+  "site": "src/layout.bend:198",
+  "name": "unsupported-layout-area",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 60,
+  "site": "src/layout.bend:236",
+  "name": "layout-array-cover",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 61,
+  "site": "src/layout.bend:256",
+  "name": "layout-missing-array",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 62,
+  "site": "src/layout.bend:266",
+  "name": "layout-group-order",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 63,
+  "site": "src/layout.bend:312",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 64,
+  "site": "src/layout.bend:338",
+  "name": "layout-plan-mismatch",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 65,
+  "site": "src/layout.bend:339",
+  "name": "layout-shape-mismatch",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 66,
+  "site": "src/layout.bend:345",
+  "name": "layout-group-order",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 67,
+  "site": "src/leaf_batch.bend:27",
+  "name": "link-row-order",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 68,
+  "site": "src/leaf_check.bend:17",
+  "name": "link-proximity",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 69,
+  "site": "src/leaf_shape.bend:32",
+  "name": "leaf-codes",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 70,
+  "site": "src/leaf_stage.bend:29",
+  "name": "leaf-unopened-tree",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 71,
+  "site": "src/leaf_stage.bend:59",
+  "name": "leaf-record",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 72,
+  "site": "src/leaf_stage.bend:67",
+  "name": "leaf-header",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-extended"
+ },
+ {
+  "index": 73,
+  "site": "src/leaf_walk.bend:56",
+  "name": "link-draw-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 74,
+  "site": "src/leaf_walk.bend:67",
+  "name": "leaf-base-symbols",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 75,
+  "site": "src/lin_own.bend:123",
+  "name": "lin-index-mask-pad",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 76,
+  "site": "src/lin_own.bend:140",
+  "name": "lin-own-rounds",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 77,
+  "site": "src/lin_run.bend:80",
+  "name": "lin-bat-missing",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 78,
+  "site": "src/lin_shape.bend:43",
+  "name": "lin-stage-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 79,
+  "site": "src/lin_shape.bend:66",
+  "name": "lin-split-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 80,
+  "site": "src/lin_shape.bend:72",
+  "name": "lin-choices",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 81,
+  "site": "src/lin_shared.bend:54",
+  "name": "lin-seed-width",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 82,
+  "site": "src/lin_shared.bend:90",
+  "name": "lin-omega-rounds",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 83,
+  "site": "src/lin_shared.bend:103",
+  "name": "lin-table-rounds",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 84,
+  "site": "src/lin_shared.bend:183",
+  "name": "lin-seal",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 85,
+  "site": "src/plan.bend:39",
+  "name": "plan-item",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 86,
+  "site": "src/plan.bend:52",
+  "name": "plan-version",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 87,
+  "site": "src/plan.bend:59",
+  "name": "plan-round-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 88,
+  "site": "src/plan.bend:124",
+  "name": "plan-configuration",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 89,
+  "site": "src/policy.bend:15",
+  "name": "policy-line-form",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 90,
+  "site": "src/policy.bend:89",
+  "name": "policy-length",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 91,
+  "site": "src/policy.bend:90",
+  "name": "policy-line-form",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 92,
+  "site": "src/policy.bend:92",
+  "name": "parameter-line-missing",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 93,
+  "site": "src/policy.bend:101",
+  "name": "statement-range",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 94,
+  "site": "src/policy_config.bend:36",
+  "name": "unsupported-configuration",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 95,
+  "site": "src/policy_config.bend:55",
+  "name": "plan-layout",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 96,
+  "site": "src/policy_frame.bend:27",
+  "name": "parameter-line-order",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 97,
+  "site": "src/policy_frame.bend:97",
+  "name": "parameter-group-shape",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 98,
+  "site": "src/policy_frame.bend:98",
+  "name": "parameter-stages-shape",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 99,
+  "site": "src/policy_frame.bend:109",
+  "name": "parameter-table-shape",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 100,
+  "site": "src/policy_frame.bend:112",
+  "name": "w-shape-lk",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 101,
+  "site": "src/policy_frame.bend:122",
+  "name": "parameter-group-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 102,
+  "site": "src/policy_frame.bend:130",
+  "name": "parameter-range",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 103,
+  "site": "src/policy_frame.bend:136",
+  "name": "parameter-range",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 104,
+  "site": "src/policy_frame.bend:144",
+  "name": "policy-work-most",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 105,
+  "site": "src/policy_model.bend:34",
+  "name": "policy-name-",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 106,
+  "site": "src/policy_model.bend:66",
+  "name": "policy-",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 107,
+  "site": "src/policy_model.bend:99",
+  "name": "policy-call-line",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 108,
+  "site": "src/policy_model.bend:107",
+  "name": "policy-call-list",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 109,
+  "site": "src/policy_model.bend:110",
+  "name": "policy-line-long",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 110,
+  "site": "src/policy_model.bend:112",
+  "name": "policy-call-line",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 111,
+  "site": "src/policy_scales.bend:23",
+  "name": "KL-shift-range",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 112,
+  "site": "src/policy_scales.bend:25",
+  "name": "KL-kq-kk",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 113,
+  "site": "src/policy_scales.bend:26",
+  "name": "KL-norm",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 114,
+  "site": "src/policy_scales.bend:27",
+  "name": "KL-rp",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 115,
+  "site": "src/policy_scales.bend:28",
+  "name": "af-policy-sh",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "public-input-test"
+ },
+ {
+  "index": 116,
+  "site": "src/policy_scales.bend:29",
+  "name": "af-policy-C",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 117,
+  "site": "src/policy_scales.bend:30",
+  "name": "unsupported parameter form: attention-shifts",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 118,
+  "site": "src/policy_scales.bend:31",
+  "name": "unsupported parameter form: norm-shifts",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 119,
+  "site": "src/policy_scales.bend:41",
+  "name": "KL-shift-range",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 120,
+  "site": "src/policy_scales.bend:49",
+  "name": "shape-words",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 121,
+  "site": "src/policy_scales.bend:51",
+  "name": "shape-L",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 122,
+  "site": "src/policy_scales.bend:52",
+  "name": "plan-groups-base",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 123,
+  "site": "src/policy_scales.bend:57",
+  "name": "KL-length",
+  "outcome": "killed",
+  "run": "local",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 124,
+  "site": "src/policy_scales.bend:71",
+  "name": "policy-norm-F",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 125,
+  "site": "src/policy_scales.bend:72",
+  "name": "unsupported parameter form: norm-shifts",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 126,
+  "site": "src/policy_statement.bend:79",
+  "name": "policy",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 127,
+  "site": "src/policy_tables.bend:30",
+  "name": "public-table-length",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 128,
+  "site": "src/policy_tables.bend:60",
+  "name": "unsupported public table geometry",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 129,
+  "site": "src/request_stage.bend:47",
+  "name": "request-binding-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 130,
+  "site": "src/request_stage.bend:100",
+  "name": "request-binding-slot",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 131,
+  "site": "src/request_stage.bend:169",
+  "name": "request-stored-copy",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 132,
+  "site": "src/request_walk.bend:38",
+  "name": "header-y",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 133,
+  "site": "src/request_walk.bend:63",
+  "name": "reply-differs",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 134,
+  "site": "src/result.bend:20",
+  "name": "statement-range",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 135,
+  "site": "src/round_io.bend:77",
+  "name": "noncanonical-element",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 136,
+  "site": "src/round_io.bend:84",
+  "name": "round-plan",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 137,
+  "site": "src/segment_attention.bend:59",
+  "name": "attention-forest-boundary",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 138,
+  "site": "src/segment_attention_psc.bend:47",
+  "name": "attention-psc-values",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 139,
+  "site": "src/segment_attention_psc.bend:81",
+  "name": "attention-psc",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 140,
+  "site": "src/segment_attention_psc.bend:98",
+  "name": "attention-coin",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 141,
+  "site": "src/segment_batch.bend:51",
+  "name": "segment-mask-slot",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 142,
+  "site": "src/segment_batch.bend:108",
+  "name": "segment-free-slot",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 143,
+  "site": "src/segment_chain.bend:88",
+  "name": "segment-link-order",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 144,
+  "site": "src/segment_chain.bend:145",
+  "name": "segment-link-order",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 145,
+  "site": "src/segment_digits.bend:28",
+  "name": "segment-zero-BZ-column",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 146,
+  "site": "src/segment_digits.bend:93",
+  "name": "segment-digits-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 147,
+  "site": "src/segment_digits.bend:94",
+  "name": "segment-zero-ZZ-join",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 148,
+  "site": "src/segment_ff.bend:39",
+  "name": "feed-forward-weight-count",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 149,
+  "site": "src/segment_forest.bend:83",
+  "name": "segment-forest-slots",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 150,
+  "site": "src/segment_forest.bend:107",
+  "name": "segment-forest-planes",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 151,
+  "site": "src/segment_head.bend:50",
+  "name": "head-slot-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 152,
+  "site": "src/segment_local.bend:55",
+  "name": "segment-U3-rows",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 153,
+  "site": "src/segment_local.bend:72",
+  "name": "segment-zero-U3-column",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 154,
+  "site": "src/segment_local.bend:77",
+  "name": "segment-zero-U3-column",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 155,
+  "site": "src/segment_local.bend:86",
+  "name": "segment-zero-U3-column",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 156,
+  "site": "src/segment_projection.bend:57",
+  "name": "request-terminal-dimensions",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 157,
+  "site": "src/segment_stage.bend:33",
+  "name": "coin-zero",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 158,
+  "site": "src/segment_transport.bend:70",
+  "name": "request-switch-equations",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 159,
+  "site": "src/smallness.bend:30",
+  "name": "segment-functional-rows",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 160,
+  "site": "src/smallness.bend:76",
+  "name": "segment-smallness-equation-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 161,
+  "site": "src/smallness.bend:88",
+  "name": "segment-smallness-rng-size",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 162,
+  "site": "src/smallness.bend:91",
+  "name": "segment-linear-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 163,
+  "site": "src/smallness.bend:102",
+  "name": "segment-smallness-row-powers",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 164,
+  "site": "src/smallness.bend:104",
+  "name": "segment-functional-coverage",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 165,
+  "site": "src/smallness_packing.bend:58",
+  "name": "segment-packing-width",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 166,
+  "site": "src/smallness_reads.bend:53",
+  "name": "segment-functional-shape",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 167,
+  "site": "src/smallness_reads.bend:90",
+  "name": "segment-zero-ZZ-read",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 168,
+  "site": "src/smallness_reads.bend:99",
+  "name": "segment-smallness-zero-column",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 169,
+  "site": "src/standalone.bend:73",
+  "name": "model-statement",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "standalone-test"
+ },
+ {
+  "index": 170,
+  "site": "src/weight_merge.bend:28",
+  "name": "weights-start-slot",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 171,
+  "site": "src/weight_merge.bend:64",
+  "name": "weights-claim-count",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 172,
+  "site": "src/weight_rows.bend:56",
+  "name": "weights-equality-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 173,
+  "site": "src/weight_rows.bend:60",
+  "name": "weights-array-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 174,
+  "site": "src/weight_rows.bend:64",
+  "name": "weights-array-shape",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 175,
+  "site": "src/weight_rows.bend:156",
+  "name": "weights-column-point",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 176,
+  "site": "src/wire_reader.bend:22",
+  "name": "file-too-long",
+  "outcome": "survived",
+  "run": "7816"
+ },
+ {
+  "index": 177,
+  "site": "src/wire_reader.bend:58",
+  "name": "truncated-file",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "plan-test"
+ },
+ {
+  "index": 178,
+  "site": "src/wire_reader.bend:67",
+  "name": "plan-length",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "stages-test"
+ },
+ {
+  "index": 179,
+  "site": "src/wire_reader.bend:128",
+  "name": "plan-name",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 180,
+  "site": "src/wire_reader.bend:145",
+  "name": "trailing-data",
+  "outcome": "survived",
+  "run": "7811"
+ },
+ {
+  "index": 181,
+  "site": "src/wire_reader.bend:148",
+  "name": "trailing-data",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "plan-test"
+ },
+ {
+  "index": 182,
+  "site": "src/wire_reader.bend:164",
+  "name": "plan-digest",
+  "outcome": "killed",
+  "run": "7816",
+  "killed_by": "plan-test"
+ }
+]

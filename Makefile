@@ -136,6 +136,10 @@ request-claims-test: bootstrap upstream plans public-tables  ## check local, car
 profile: standalone upstream  ## sample one call's stacks and print where its time goes: make profile FIXTURE=accepted-proof
 	@python3 -B scripts/profile.py $(FIXTURE)
 
+.PHONY: mutation-test
+mutation-test: standalone oracle  ## disable each refusal in turn and report the ones no test notices (MUTATE_ARGS="-j 4 --sites 0-40")
+	@python3 -B scripts/mutate-refusals.py $(MUTATE_ARGS)
+
 .PHONY: fuzz
 fuzz: standalone oracle  ## alter random bytes of both small proof sets; Bend must never accept where C++ refuses (FUZZ_ARGS="-n N --seed S")
 	@python3 -B scripts/fuzz-differential.py $(FUZZ_ARGS)
