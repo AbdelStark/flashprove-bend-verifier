@@ -99,28 +99,61 @@ def commit_one(basis: Project.Basis,old: B.Elements,x: Update) -> B.Elements:
   Update{gs,fs,c,e} = x
   contract(basis,gs,fs,old,c,e)
 
-# The contributions of n updates, in order, as a balanced fork tree.
-# Fuel bounds the depth; 64 halvings exceed any list.
-def contributions(fuel: Nat,+basis: Project.Basis,+us: List<&2,Update>,+n: Nat) -> List<&2,B.Elements>:
-  match fuel us n:
-    case _ Nil{} _: []
-    case _ Con{Update{gs,fs,_,e},_} 1n: [contribution(basis,gs,fs,e)]
-    case 1n+(+f) _ _:
-      +h = Nat.div(n,2n)
-      left right = contributions(f,basis,List.take(&2,Update,us,h),h) contributions(f,basis,List.drop(&2,Update,us,h),Nat.sub(n,h))
-      List.append(&2,B.Elements,left,right)
-    case 0n _ _: []
+# Split off the carries so the projection inputs are never shared.
+type Part is Data:
+  Part{rows: B.Elements, main: F.Form, eps: X.E3}
 
-def carried(us: List<&2,Update>,cs: List<&2,B.Elements>,old: B.Elements) -> B.Elements:
-  match us cs:
-    case Con{Update{_,_,c,_},more} Con{x,rest}: carried(more,rest,F.plus(x,F.scaled(old,c)))
+def unzip(newest_first: List<&2,Update>, parts: List<&2,Part>, carries: B.Elements) -> List<&2,Part> & B.Elements:
+  match newest_first:
+    case []: (parts,carries)
+    case Update{gs,fs,c,e} <> older: unzip(older,Part{gs,fs,e} <> parts,c <> carries)
+
+type Parts is Data:
+  Leaf{part: Part}
+  Fork{left: Parts, right: Parts}
+
+def leaves(ps: List<&2,Part>) -> List<&2,Parts>:
+  match ps:
+    case []: []
+    case p <> rest: Leaf{p} <> leaves(rest)
+
+def pair_up(ts: List<&2,Parts>) -> List<&2,Parts>:
+  match ts:
+    case a <> b <> rest: Fork{a,b} <> pair_up(rest)
+    case rest: rest
+
+# Pair neighbours level by level; 64 levels exceed any list.
+def tree(fuel: Nat, ts: List<&2,Parts>) -> List<&2,Parts>:
+  match fuel ts:
+    case 1n+f Con{a,Con{b,rest}}: tree(f,pair_up(a <> b <> rest))
+    case _ rest: rest
+
+# The contributions in order, each subtree on its own worker.
+def contributions(+basis: Project.Basis,t: Parts) -> List<&2,B.Elements>:
+  match t:
+    case Leaf{Part{gs,fs,e}}: [contribution(basis,gs,fs,e)]
+    case Fork{l,r}:
+      left right = contributions(basis,l) contributions(basis,r)
+      List.append(&2,B.Elements,left,right)
+
+def all_contributions(+basis: Project.Basis,ts: List<&2,Parts>) -> List<&2,B.Elements>:
+  match ts:
+    case [t]: contributions(basis,t)
+    case _: []
+
+def carried(cs: B.Elements,xs: List<&2,B.Elements>,old: B.Elements) -> B.Elements:
+  match cs xs:
+    case Con{c,more} Con{x,rest}: carried(more,rest,F.plus(x,F.scaled(old,c)))
     case _ _: old
+
+def combined(+basis: Project.Basis,old: B.Elements,split: List<&2,Part> & B.Elements) -> B.Elements:
+  (parts,carries) = split
+  carried(carries,all_contributions(basis,tree(64n,leaves(parts))),old)
 
 # C_i = contribution_i + carry_i * C_(i-1). Compute every contribution at
 # once, then apply the affine updates in transcript order.
 def commit_all(basis: Project.Basis,old: B.Elements,newest_first: List<&2,Update>) -> B.Elements:
-  +us = List.reverse(&2,Update,newest_first)
-  carried(us,contributions(64n,basis,us,List.length(&2,Update,us)),old)
+  combined(basis,old,unzip(newest_first,[],[]))
 
 def finish_columns(basis: Project.Basis,q: Columns) -> B.Elements:
   match q:
@@ -151,3 +184,4 @@ def restore(st: State) -> Fold.Cursor:
       main = F.cat(F.Term,Project.lift(basis,finish_columns(basis,columns)),fs)
       Fold.Cursor{evs,Fold.Past{ms,stage,R.Closed{F.Single{main,d,f,t},held},g,ks},alive}
     case State{cur,_,_}: cur
+
