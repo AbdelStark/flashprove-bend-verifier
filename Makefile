@@ -34,7 +34,7 @@ docs-check:  ## mechanical anti-drift checks over the Markdown
 spikes: bootstrap upstream  ## time Bend kernels against C and Python references
 	@sh research/spikes/run.sh
 
-ci: docs-check benchmark-test check laws test test-native plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
+ci: docs-check benchmark-test check laws plans-reproduce test test-native plan-test public-input-test stages-test standalone-test standalone-rejections request-claims-test  ## run local conformance checks (Actions also runs seeded fuzz cases)
 
 .PHONY: oracle generated-check
 
