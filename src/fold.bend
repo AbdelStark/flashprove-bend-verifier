@@ -46,6 +46,12 @@ def one() -> Ext.E3: Ext.E3{0,1,0,0,0,0}
 def sub(a: Ext.E3, b: Ext.E3) -> Ext.E3: E.add(a,E.negate(b))
 def mix(+lo: Ext.E3, hi: Ext.E3, g: Ext.E3) -> Ext.E3: B.masked(lo,g,sub(hi,lo))
 
+# The first n factors and the rest, in one pass over an unshared list.
+def cut(n: Nat, fs: Factors, rev: Factors) -> Factors & Factors:
+  match n fs:
+    case 1n+k Con{f,tail}: cut(k,tail,f <> rev)
+    case _ rest: (List.reverse(&2,Factor,rev),rest)
+
 # Fixed address bits occur once per dimension of a placed cell.
 def at_bit(f: Factor, high: Bool) -> Ext.E3:
   match f:

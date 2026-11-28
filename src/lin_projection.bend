@@ -37,10 +37,14 @@ def place(p: F.Projected, high: F.Factors, buf: Array<E.E3>) -> Rows:
   F.Projected{v,next} = p
   Rows{next,write(high,v,buf)}
 
-def row(placed: F.Term, rows: Rows, +n: Nat) -> Rows:
-  F.Term{w,+fs} = placed
+def split_row(w: E.E3, parts: F.Factors & F.Factors, rows: Rows) -> Rows:
+  (low,rest) = parts
   Rows{r,buf} = rows
-  place(F.project_with(r,F.Term{w,List.drop(&2,F.Factor,fs,n)}),List.take(&2,F.Factor,fs,n),buf)
+  place(F.project_with(r,F.Term{w,rest}),low,buf)
+
+def row(placed: F.Term, rows: Rows, +n: Nat) -> Rows:
+  F.Term{w,fs} = placed
+  split_row(w,F.cut(n,fs,[]),rows)
 
 def finished(rows: Rows) -> Array<E.E3>:
   Rows{_,buf} = rows

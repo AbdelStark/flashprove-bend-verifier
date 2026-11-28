@@ -93,12 +93,27 @@ def single(+b: L.Block,+rs: F.Factors,cols: B.Elements,w: X.E3,+gamma: B.Element
   rg = List.take(&2,X.E3,List.drop(&2,X.E3,gamma,Bool.pick(Nat,ilow,0n,kc)),kr)
   cg = List.take(&2,X.E3,List.drop(&2,X.E3,gamma,Bool.pick(Nat,ilow,kr,0n)),kc)
   row = F.fix(rg,List.take(&2,F.Factor,rs,bi),L.upper(rs,i,bi,w))
-  slice(Nat.sub(bc,kc),List.drop(&2,X.E3,cols,c),List.reverse(&2,X.E3,cg),b,row,kr,kc,dr,dc,out)
+  slice(Nat.sub(bc,kc),cols,List.reverse(&2,X.E3,cg),b,row,kr,kc,dr,dc,out)
 
-def blocks(bs: L.Tiles,+rs: F.Factors,+cols: B.Elements,+w: X.E3,+gs: B.Elements,+gr: Nat,+dr: Nat,+dc: Nat,out: F.Form) -> F.Form:
+# The columns from c on. Tiles usually ascend, so continue from the previous
+# tile's offset at instead of walking the shared list from its start.
+def seek(ahead: Bool,cols: B.Elements,rest: B.Elements,at: Nat,c: Nat) -> B.Elements:
+  match ahead:
+    case True{}: List.drop(&2,X.E3,rest,Nat.sub(c,at))
+    case False{}: List.drop(&2,X.E3,cols,c)
+
+def column(b: L.Block) -> Nat:
+  L.Block{_,c,_,_,_,_,_,_,_} = b
+  c
+
+def blocks(bs: L.Tiles,+rs: F.Factors,+cols: B.Elements,+w: X.E3,+gs: B.Elements,+gr: Nat,+dr: Nat,+dc: Nat,
+    +at: Nat,rest: B.Elements,out: F.Form) -> F.Form:
   match bs:
     case []: out
-    case b <> tail: blocks(tail,rs,cols,w,gs,gr,dr,dc,single(b,rs,cols,w,gs,gr,dr,dc,out))
+    case +b <> tail:
+      +c = column(b)
+      +here = seek(Nat.is_le(at,c),cols,rest,at,c)
+      blocks(tail,rs,cols,w,gs,gr,dr,dc,c,here,single(b,rs,here,w,gs,gr,dr,dc,out))
 
 # For irregular public layouts, keep the complete general form.
 def valid(bs: L.Tiles,+rb: Nat,+cb: Nat,+dr: Nat,+dc: Nat) -> Bool:
@@ -111,10 +126,10 @@ def valid(bs: L.Tiles,+rb: Nat,+cb: Nat,+dr: Nat,+dc: Nat) -> Bool:
         L.axis_valid(p,bp,P2.pow2(dc)) && valid(tail,rb,cb,dr,dc)
 
 def translated(source: O.Source,table: L.Matrix,link: Nat,dc: Nat,dr: Nat,basis: Project.Basis) -> Frame.On:
-  O.Outer{rs,cs,_,w} = source
+  O.Outer{rs,+cs,_,w} = source
   L.Matrix{msg,_,_,bs,_} = table
   Project.Basis{gs,gr,_} = basis
-  Frame.On{Q.label(link,msg),False{},blocks(bs,rs,cs,w,gs,gr,dr,dc,[])}
+  Frame.On{Q.label(link,msg),False{},blocks(bs,rs,cs,w,gs,gr,dr,dc,0n,cs,[])}
 
 def checked(yes: Bool,source: O.Source,table: L.Matrix,m: Frame.Member,link: Nat,dc: Nat,dr: Nat,basis: Project.Basis) -> Frame.On:
   match yes:

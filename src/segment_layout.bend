@@ -221,9 +221,13 @@ def upper(fs:F.Factors,at:Nat,+keep:Nat,w:X.E3) -> X.E3:
 type Axes is Data:
   Axes{weight:X.E3,rows:F.Factors,columns:F.Factors}
 
+def split_axes(w:X.E3,parts:F.Factors & F.Factors) -> Axes:
+  (rows,cols) = parts
+  Axes{w,rows,cols}
+
 def axes(term:F.Term,+n:Nat) -> Axes:
-  F.Term{w,+fs} = term
-  Axes{w,List.take(&2,F.Factor,fs,n),List.drop(&2,F.Factor,fs,n)}
+  F.Term{w,fs} = term
+  split_axes(w,F.cut(n,fs,[]))
 
 def then_upper(zero:Bool,cols:F.Factors,c:Nat,bc:Nat,v:X.E3) -> X.E3:
   match zero:
@@ -236,15 +240,22 @@ def weight(b:Block,a:Axes) -> X.E3:
   +v = upper(rows,i,bi,w)
   then_upper(B.equal(v,F.zero()),cols,c,bc,v)
 
+def inside(low:Bool,rows:F.Factors,cols:F.Factors) -> F.Factors:
+  match low:
+    case True{}: cat(rows,cols)
+    case False{}: cat(cols,rows)
+
+def arranged(parts:F.Factors & F.Factors,rest:F.Factors,more:F.Factors,w:X.E3) -> F.Term:
+  (low,high) = parts
+  F.Term{w,cat(cat(high,rest),cat(low,more))}
+
 def project(b:Block,a:Axes,dest_rows:Nat,dest_columns:Nat,w:X.E3) -> F.Term:
   Block{_,_,r,p,bi,bc,+br,+bp,low} = b
   Axes{_,ir,ic} = a
-  +rows = List.take(&2,F.Factor,ir,bi)
-  +cols = List.take(&2,F.Factor,ic,bc)
-  +inside = Bool.pick(F.Factors,low,cat(rows,cols),cat(cols,rows))
-  rf = cat(List.drop(&2,F.Factor,inside,bp),Tensor.choice(Nat.sub(dest_rows,br),Nat.div(r,P2.pow2(br))))
-  cf = cat(List.take(&2,F.Factor,inside,bp),Tensor.choice(Nat.sub(dest_columns,bp),Nat.div(p,P2.pow2(bp))))
-  F.Term{w,cat(rf,cf)}
+  rows = List.take(&2,F.Factor,ir,bi)
+  cols = List.take(&2,F.Factor,ic,bc)
+  arranged(F.cut(bp,inside(low,rows,cols),[]),Tensor.choice(Nat.sub(dest_rows,br),Nat.div(r,P2.pow2(br))),
+    Tensor.choice(Nat.sub(dest_columns,bp),Nat.div(p,P2.pow2(bp))),w)
 
 def tile(+b:Block,term:F.Term,row_bits:Nat,dest_rows:Nat,dest_columns:Nat) -> F.Term:
   +a = axes(term,row_bits)

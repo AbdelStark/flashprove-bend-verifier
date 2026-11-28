@@ -35,6 +35,28 @@ def widths() -> Bool:
   F.fits([],5n) && F.fits([zero],0n) && F.fits([one,one],1n) && F.fits([two],2n) &&
     Bool.not(F.fits([one],0n)) && Bool.not(F.fits([two,one],2n)) && Bool.not(F.fits([one,zero],1n))
 
+# cut agrees with take and drop at every split, including past the end.
+def same(xs: F.Factors, ys: F.Factors) -> Bool:
+  match xs ys:
+    case Nil{} Nil{}: True{}
+    case Con{F.Low{},a} Con{F.Low{},b}: same(a,b)
+    case Con{F.High{},a} Con{F.High{},b}: same(a,b)
+    case _ _: False{}
+
+def agrees(parts: F.Factors & F.Factors, +fs: F.Factors, +n: Nat) -> Bool:
+  (low,rest) = parts
+  same(low,List.take(&2,F.Factor,fs,n)) && same(rest,List.drop(&2,F.Factor,fs,n))
+
+def sample() -> F.Factors: [F.High{},F.Low{},F.Low{},F.High{}]
+
+def cuts(n: Nat) -> Bool:
+  match n:
+    case 0n: agrees(F.cut(0n,sample(),[]),sample(),0n)
+    case 1n+k:
+      +j = k
+      +i: Nat = 1n+j
+      agrees(F.cut(i,sample(),[]),sample(),i) && cuts(j)
+
 # Oracle: field 2 fold_mask_weights/form and generator_row on code (5,4,2) and mask (4,2,1).
 # CS weights use theta^(2+3*i+j), including both occurrences of position 17; mask position there is 1.
 def main() -> IO(Unit):
@@ -45,7 +67,7 @@ def main() -> IO(Unit):
   +next: S.Stage = S.Stage{B.Code{4n,2n,1n},B.Code{4n,8n,1n},1,1}
   +seed: CS.Seed = CS.Seed{[e(2),e(3),e(5),e(6),e(7)],e(8)}
   do IO<Unit>:
-    IO.print(Bool.show(widths()))
+    IO.print(Bool.show(widths() && cuts(6n)))
     IO.print(list(F.fresh(1n,g,8n)))
     IO.print(list(F.scaled(F.fold_low([e(2)],[e(1),e(4),e(6),e(2)]),e(45))))
     IO.print(show(F.round(e(101),e(3),e(5),e(7))))
