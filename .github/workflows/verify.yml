@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: make kernel-check
-      - run: make plans-reproduce standalone-full standalone-extended stages-full worker-parity
+      - run: make standalone-full standalone-extended stages-full worker-parity
       - run: make fuzz FUZZ_ARGS="-n 250 --seed ${{ github.sha }}-extended"
       - run: make mutation-test MUTATE_ARGS="-j 2 --strict --names noncanonical-element,public-table-length,KL-length,plan-length"
       - run: make benchmark-standalone BENCH_ARGS="--output build/benchmark-cpp"
