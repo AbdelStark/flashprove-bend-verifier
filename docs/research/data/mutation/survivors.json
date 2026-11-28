@@ -1,0 +1,1017 @@
+[
+ {
+  "index": 0,
+  "site": "src/accounting.bend:50",
+  "name": "security-bits",
+  "class": "self-check",
+  "reason": "C.stages(profile) are compiled-in catalog constants (accounting_catalog.bend) for a profile chosen by Catalog.select, so admitted(...) is a fixed truth value for the four profiles and needs no input."
+ },
+ {
+  "index": 1,
+  "site": "src/commitment.bend:29",
+  "name": "short file",
+  "class": "self-check",
+  "reason": "read_chunk is reached only from Commitment.configuration (commitment.bend:76), whose only caller is the inspect-plans tool (plan_cli.bend:24), not the verifier. The wanted count comes from File.size of the same handle (commitment.bend:69), so only a concurrent truncation could break it."
+ },
+ {
+  "index": 2,
+  "site": "src/commitment.bend:30",
+  "name": "key-refused",
+  "class": "self-check",
+  "reason": "The only caller of chunks passes record=False (commitment.bend:64), and record_chunk(False) is constantly True (commitment.bend:24). The code path is also limited to plan_cli.bend:24."
+ },
+ {
+  "index": 3,
+  "site": "src/commitment.bend:101",
+  "name": "parameter-table-shape",
+  "class": "removed",
+  "reason": "Commitment.shape lost its only caller when parse_shape was removed; shape and table are now deleted."
+ },
+ {
+  "index": 4,
+  "site": "src/commitment.bend:104",
+  "name": "parameter-table-shape",
+  "class": "removed",
+  "reason": "Commitment.shape lost its only caller when parse_shape was removed; shape and table are now deleted."
+ },
+ {
+  "index": 5,
+  "site": "src/commitment.bend:133",
+  "name": "commitment-record",
+  "class": "self-check",
+  "reason": "root is digest_bytes of an 8-word digest, always 32 bytes (opening_bytes.bend:27-29). The record was already checked canonical at key_stage.bend:143 'NO: key-record', and its length n comes from the authenticated plan table item (key_stage.bend:49-53,157). That length equals 24*2^b from the authenticated policy for the admitted profiles."
+ },
+ {
+  "index": 6,
+  "site": "src/ff_lookup.bend:155",
+  "name": "unsupported-G-lookup",
+  "class": "self-check",
+  "reason": "gate_clamp, router_clamp and limbs come from the feed-forward shape in the compiled catalog (ff_catalog.bend:41-50, 201-210, 279-288, 439-448), chosen only by ff_catalog.bend:481. All four shapes hold 1, 1 and 5."
+ },
+ {
+  "index": 7,
+  "site": "src/ff_stack.bend:178",
+  "name": "g-stack-inverse",
+  "class": "negligible-event",
+  "reason": "eps is relation[1] of the terms check, the PSC epsilon challenge drawn from the transcript stream (ff_stack.bend:169, segment_attention_psc.bend:30,32-34,74). It is zero only if a Fiat-Shamir draw is exactly zero (section 13.9 event), which the prover cannot force."
+ },
+ {
+  "index": 8,
+  "site": "src/fold_batt.bend:42",
+  "name": "request-batt-extra-rounds",
+  "class": "self-check",
+  "reason": "rest is the tape left after k plain rounds, where the tape is the plan-round event list and k is the trusted point length (fold_batt.bend:55-58). Both are fixed by the digest-pinned plan and geometry, like key-batt-extra-rounds."
+ },
+ {
+  "index": 9,
+  "site": "src/fold_batt.bend:65",
+  "name": "request-index-send",
+  "class": "self-check",
+  "reason": "first and reply are plan round names, and a is the plan Round answer-count field (fold_batt.bend:63). The plan is digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 10,
+  "site": "src/fold_batt.bend:81",
+  "name": "request-batt-row-count",
+  "class": "self-check",
+  "reason": "count is the BAT-sigma round's rows field from the digest-pinned plan (key_stage_batt.bend:110-113); the number of pending rows and each point length k come from the trusted segment geometry and Lin shape (fold_batt.bend:131-136, segment_chain.bend:166), not from PROOF bytes."
+ },
+ {
+  "index": 11,
+  "site": "src/fold_request.bend:35",
+  "name": "initial-request-send",
+  "class": "self-check",
+  "reason": "Lin.name(result) is the plan round name of the event paired with a seed by W.step, which only accepts 'SEND answer' or 'LOC' (fold_request_rounds.bend:44-50). The event sequence follows the digest-pinned plan."
+ },
+ {
+  "index": 12,
+  "site": "src/fold_request.bend:39",
+  "name": "request-switch-list",
+  "class": "self-check",
+  "reason": "Same as site 11: the name is a plan round name chosen by the plan sequence (fold_request_rounds.bend:44-50), not proof data."
+ },
+ {
+  "index": 13,
+  "site": "src/fold_request.bend:56",
+  "name": "request-group-row-count",
+  "class": "self-check",
+  "reason": "count is the BAT round's rows field from the plan (fold_request_rounds.bend:41). The equations come from verifier-built segment rows, the switch built from plan codes, and one sample row per plan notice per plan-sized SEND (fold_request_rounds.bend:61-87), so the count is fixed by trusted data."
+ },
+ {
+  "index": 14,
+  "site": "src/fold_request.bend:65",
+  "name": "request-send-moments",
+  "class": "self-check",
+  "reason": "ss is the list of SEND seed/answer pairs found by W.scan over plan rounds before BAT (fold_request_rounds.bend:36-55); expected is a constant 3 or 1 (fold_request.bend:93,123)."
+ },
+ {
+  "index": 15,
+  "site": "src/fold_request.bend:102",
+  "name": "request-last-group",
+  "class": "self-check",
+  "reason": "The final group is laid out from the constant notice list [Q.carry()] (fold_request.bend:122-123); kept, k and h all come from Q.layout of that trusted notice and the plan's codes (fold_request_shape.bend:115-121, fold_frame.bend:108)."
+ },
+ {
+  "index": 17,
+  "site": "src/fold_request_rounds.bend:100",
+  "name": "request-fold-round",
+  "class": "self-check",
+  "reason": "name is a plan round name and the loop count k comes from the layout of the plan's request shape (fold_request_rounds.bend:111-114, fold_request.bend:47-48). The plan is digest-pinned."
+ },
+ {
+  "index": 18,
+  "site": "src/fold_request_rounds.bend:112",
+  "name": "request-fold-first",
+  "class": "self-check",
+  "reason": "name is the plan round name of the next event in the plan-ordered tape (fold_request_rounds.bend:109)."
+ },
+ {
+  "index": 19,
+  "site": "src/fold_request_shape.bend:41",
+  "name": "request-member-shape",
+  "class": "self-check",
+  "reason": "The notice words are parsed from the plan item \"request's shape\" (fold_request_shape.bend:76-83), which is digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 20,
+  "site": "src/head_norm.bend:88",
+  "name": "head-norm-limbs",
+  "class": "self-check",
+  "reason": "The head Shape is only ever built from compiled-in constants in head_catalog.bend:8-11, and all four limb lists have exactly 5 entries."
+ },
+ {
+  "index": 21,
+  "site": "src/header.bend:82",
+  "name": "policy-range",
+  "class": "shadowed",
+  "reason": "Header.decimal only parses policy.txt numbers (header.bend:88, policy.bend:16; the commitment.bend:95 caller is dead). A value above 2^32-1 wraps to an in-range U32 that a shorter spelling could give directly, but the policy text then differs from every catalog policy and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69), because policy.txt is hashed as join(lines,'\\n') into the configuration digest (policy_config.bend:27-28). No pre-accounting use of these values does anything a legal U32 could not."
+ },
+ {
+  "index": 22,
+  "site": "src/header.bend:95",
+  "name": "version-unknown (policy)",
+  "class": "shadowed",
+  "reason": "A policy whose first line is not 'version H821' differs from every catalog policy, so it is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69), because policy.txt is hashed as join(lines,'\\n') into the configuration digest (policy_config.bend:27-28). Before that, the parse only works on the bounded 64 KiB text."
+ },
+ {
+  "index": 23,
+  "site": "src/header.bend:98",
+  "name": "shape-words",
+  "class": "self-check",
+  "reason": "lt is taken from the same first 'lt ' line already restricted to 6 or 10 by T.load at policy_tables.bend:60-63 (run earlier in S.load, policy_statement.bend:88 before :90), which implies 4<=lt<=16; policy.txt is also digest-bound (accounting.bend:51)."
+ },
+ {
+  "index": 25,
+  "site": "src/key_stage.bend:45",
+  "name": "key-table-size",
+  "class": "self-check",
+  "reason": "v is read from the plan item 'the test on the table' (key_stage.bend:49-53). The plan file is checked against its catalog pin by R.finish (plan.bend:115, via Plan.load at key_stage.bend:163)."
+ },
+ {
+  "index": 29,
+  "site": "src/key_stage_base.bend:41",
+  "name": "key-base-symbol",
+  "class": "shadowed",
+  "reason": "The BASE message, lambda and opened columns are prover data, but each key BASE round opens one tree (key_stage_geometry.bend schedules). Its group is checked again by FV.custom, whose last stage runs the same B.symbols on the same rows, lambda, positions and columns (fold_verify.bend:155,169). That check refuses as key-range-proximity (key_stage_range_check.bend:65) or as lin-folded/omega/own-proximity (lin_run.bend:94, called from lin_shared.bend:179,182 and lin_own.bend:139). All of these run before the key stage returns."
+ },
+ {
+  "index": 30,
+  "site": "src/key_stage_batt.bend:50",
+  "name": "key-batt-extra-rounds",
+  "class": "self-check",
+  "reason": "events is the tape left after kcol plain rounds; the tape is plan rounds and kcol is lookup metadata from the plan (key_stage_batt.bend:124, key_stage_wf.bend:31)."
+ },
+ {
+  "index": 31,
+  "site": "src/key_stage_batt.bend:98",
+  "name": "key-W-answer",
+  "class": "self-check",
+  "reason": "named(p) is the plan Round name of the round after 'SEND seed' (key_stage_batt.bend:75-77,93-96); the plan sequence is digest-pinned."
+ },
+ {
+  "index": 32,
+  "site": "src/key_stage_batt.bend:123",
+  "name": "key-batt-count",
+  "class": "self-check",
+  "reason": "count is the BAT-sigma plan round's rows field (key_stage_batt.bend:110-113), and parts has one entry per pending lookup built from plan lookup metadata (key_stage_matrix.bend:132-139, key_stage_batt.bend:129-131)."
+ },
+ {
+  "index": 33,
+  "site": "src/key_stage_codes.bend:54",
+  "name": "key-range-choices",
+  "class": "self-check",
+  "reason": "Reads only the plan item 'ranges' (key_stage_codes.bend:94-95), and the plan file is digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 34,
+  "site": "src/key_stage_codes.bend:66",
+  "name": "key-stage-list",
+  "class": "self-check",
+  "reason": "Parses the stage lists in the plan item 'the test on the table' (key_stage_codes.bend:96-97), which is digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 35,
+  "site": "src/key_stage_codes.bend:74",
+  "name": "key-split-choices",
+  "class": "self-check",
+  "reason": "after is the tail of the plan item 'the test on the table' (key_stage_codes.bend:34,96-97), which is digest-pinned."
+ },
+ {
+  "index": 36,
+  "site": "src/key_stage_lookup.bend:102",
+  "name": "key-lookup-zero",
+  "class": "self-check",
+  "reason": "z is the list of draws for the ZERO round, and its length is the plan round's n (key_stage_lookup_rows.bend:41-46). mu and d come from the plan metadata, and round_io.bend:80-87 fixes the message sizes from the plan."
+ },
+ {
+  "index": 37,
+  "site": "src/key_stage_lookup.bend:153",
+  "name": "key-lookup-join",
+  "class": "self-check",
+  "reason": "The coords are the JOIN round's draws, whose count is the plan round's n (key_stage_lookup_rows.bend:45). mu comes from the plan lookup metadata."
+ },
+ {
+  "index": 38,
+  "site": "src/key_stage_lookup_plan.bend:31",
+  "name": "key-lookup-vector",
+  "class": "self-check",
+  "reason": "Parses lookup metadata from the plan item 'ranges' (key_stage_lookup_plan.bend:110), which is digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 39,
+  "site": "src/key_stage_lookup_rows.bend:57",
+  "name": "key-lookup-round",
+  "class": "self-check",
+  "reason": "The event names on the tape are plan round names (key_stage_wf.bend:51-56). The expected names come from code structure driven by the plan metadata (key_stage_lookup.bend:186-194)."
+ },
+ {
+  "index": 40,
+  "site": "src/key_stage_range_batch.bend:145",
+  "name": "key-range-mask-budget",
+  "class": "self-check",
+  "reason": "slots is the tape's mask-slot counter ms (key_stage_wf.bend:27,31), advanced only by plan-sized message counts; m and ml are plan metadata and codes (key_stage_range_batch.bend:136-138)."
+ },
+ {
+  "index": 42,
+  "site": "src/key_stage_walk.bend:94",
+  "name": "unfinished-key-openings",
+  "class": "self-check",
+  "reason": "groups is the profile's fixed opening schedule, consumed one tree per plan round's roots during the walk (key_stage_walk.bend:40-44); the plan round list is digest-pinned. Same reasoning as unfinished-key-base."
+ },
+ {
+  "index": 43,
+  "site": "src/key_stage_walk.bend:95",
+  "name": "unfinished-key-base",
+  "class": "self-check",
+  "reason": "B.complete compares the finals list from the plan items (key_stage.bend:151) with the BASE lambda/BASE rounds in the plan's round list (key_stage_base.bend:30-36). WF.finished changes state only on the plan's BAT round (key_stage_wf.bend:39-56)."
+ },
+ {
+  "index": 44,
+  "site": "src/key_stage_wf.bend:29",
+  "name": "key-range-batch-rows",
+  "class": "self-check",
+  "reason": "The unused algebra rounds and the row count depend only on the plan's round names and draw counts and on the lookup metadata from plan items (key_stage_wf.bend:33-37). The expected value is the plan round's rows field."
+ },
+ {
+  "index": 45,
+  "site": "src/layout.bend:31",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "nat_value is called only from coord (layout.bend:41). coord already requires at most 15 digits and, when there are exactly 15, the string to be <= '281474976710655' = 2^48-1 (layout.bend:37-40), which is exactly nat_limit (layout.bend:25). The layout is also digest-authenticated before Layout.check runs (policy_config.bend:69-71)."
+ },
+ {
+  "index": 46,
+  "site": "src/layout.bend:37",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 47,
+  "site": "src/layout.bend:40",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 48,
+  "site": "src/layout.bend:46",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "number is used only inside Layout.check, which runs from verify_config after Accounting.check has matched the digest over layout.txt bytes (policy_config.bend:28,69-71). The layout lines are therefore one of the four catalog layouts, for which the bounds hold."
+ },
+ {
+  "index": 49,
+  "site": "src/layout.bend:69",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 50,
+  "site": "src/layout.bend:77",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 51,
+  "site": "src/layout.bend:81",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 53,
+  "site": "src/layout.bend:94",
+  "name": "layout-placement",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 54,
+  "site": "src/layout.bend:106",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 55,
+  "site": "src/layout.bend:111",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 59,
+  "site": "src/layout.bend:198",
+  "name": "unsupported-layout-area",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 61,
+  "site": "src/layout.bend:256",
+  "name": "layout-missing-array",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 63,
+  "site": "src/layout.bend:312",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 66,
+  "site": "src/layout.bend:345",
+  "name": "layout-group-order",
+  "class": "self-check",
+  "reason": "Runs in Layout.check from verify_config (policy_config.bend:71), after Accounting.check matched the config digest to a catalog entry (policy_config.bend:69 -> accounting.bend:51) and Plan.load authenticated the plan items (wire_reader.bend:163 plan-digest); layout.txt bytes, policy lines and plan items are all digest-authenticated, so COND holds for the four admitted configurations."
+ },
+ {
+  "index": 67,
+  "site": "src/leaf_batch.bend:27",
+  "name": "link-row-order",
+  "class": "self-check",
+  "reason": "EntryRound names are plan round names (leaf_walk.bend:111-119), and the walk follows the digest-pinned leaf plan (plan.bend:115)."
+ },
+ {
+  "index": 69,
+  "site": "src/leaf_shape.bend:32",
+  "name": "leaf-codes",
+  "class": "self-check",
+  "reason": "Every caller of codes() passes the plan item 'codes' (leaf_shape.bend:83, key_stage_codes.bend:93, lin_shape.bend:79, fold_request_shape.bend:82, request_stage.bend:55). These items are digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 70,
+  "site": "src/leaf_stage.bend:29",
+  "name": "leaf-unopened-tree",
+  "class": "self-check",
+  "reason": "The stages come from the plan-derived leaf shape. The book length grows by the plan round's roots count (leaf_walk.bend:118), and next advances once per plan CS/BASE round (leaf_walk.bend:79-90)."
+ },
+ {
+  "index": 73,
+  "site": "src/leaf_walk.bend:56",
+  "name": "link-draw-count",
+  "class": "self-check",
+  "reason": "xs has exactly the plan round's positions count (transcript.bend:197-203, leaf_walk.bend:116). n and m are the first/further counts in the plan-derived shape (leaf_shape.bend:68-75)."
+ },
+ {
+  "index": 74,
+  "site": "src/leaf_walk.bend:67",
+  "name": "leaf-base-symbols",
+  "class": "shadowed",
+  "reason": "The BASE message and columns are prover data, but the same EntryRound, with the same message, lambda stream, draws and columns, reaches fold_verify.last. Its B.symbols check (fold_verify.bend:155,169) is identical, so a violating input is refused as link-proximity (leaf_check.bend:17) before acceptance."
+ },
+ {
+  "index": 75,
+  "site": "src/lin_own.bend:123",
+  "name": "lin-index-mask-pad",
+  "class": "self-check",
+  "reason": "Slot indices are ordinal counters set by the plan-sized message element counts (key_stage_lookup_rows.bend:68-90, key_stage_batt.bend:138-148). ell_mask comes from the plan's codes. No prover value sets an index."
+ },
+ {
+  "index": 76,
+  "site": "src/lin_own.bend:140",
+  "name": "lin-own-rounds",
+  "class": "self-check",
+  "reason": "The rest is the event tail after the BASE round found by name in Run.group (lin_run.bend:65-82). The event list and names follow the digest-pinned plan rounds."
+ },
+ {
+  "index": 77,
+  "site": "src/lin_run.bend:80",
+  "name": "lin-bat-missing",
+  "class": "self-check",
+  "reason": "The first event's name is a plan round name (key_stage_walk.bend:63-69). The plan file is digest-pinned (plan.bend:115)."
+ },
+ {
+  "index": 78,
+  "site": "src/lin_shape.bend:43",
+  "name": "lin-stage-count",
+  "class": "self-check",
+  "reason": "Reads the stage-list count from the plan item 'the test on the table' (lin_shape.bend:76-82), which is digest-pinned."
+ },
+ {
+  "index": 79,
+  "site": "src/lin_shape.bend:66",
+  "name": "lin-split-shape",
+  "class": "self-check",
+  "reason": "Compares fixed words of the plan item 'the test on the table' (lin_shape.bend:81) against constants. The item is digest-pinned."
+ },
+ {
+  "index": 80,
+  "site": "src/lin_shape.bend:72",
+  "name": "lin-choices",
+  "class": "self-check",
+  "reason": "rest(third) is the tail of the plan item 'the test on the table' after three stage lists (lin_shape.bend:76-81), digest-pinned."
+ },
+ {
+  "index": 81,
+  "site": "src/lin_shared.bend:54",
+  "name": "lin-seed-width",
+  "class": "self-check",
+  "reason": "n and nz are fields of the plan Round record (lin_shared.bend:52), not proof data."
+ },
+ {
+  "index": 82,
+  "site": "src/lin_shared.bend:90",
+  "name": "lin-omega-rounds",
+  "class": "self-check",
+  "reason": "Compares plan round names in a fixed order (lin_shared.bend:86-88), and the event sequence follows the digest-pinned plan."
+ },
+ {
+  "index": 83,
+  "site": "src/lin_shared.bend:103",
+  "name": "lin-table-rounds",
+  "class": "self-check",
+  "reason": "Compares plan round names in a fixed order (lin_shared.bend:99-101), and the event sequence follows the digest-pinned plan."
+ },
+ {
+  "index": 84,
+  "site": "src/lin_shared.bend:183",
+  "name": "lin-seal",
+  "class": "self-check",
+  "reason": "After two plan-driven Run.group/verify splits, the remaining events are plan rounds, so the final SEAL name and the count are fixed by the plan (lin_shared.bend:165-183)."
+ },
+ {
+  "index": 85,
+  "site": "src/plan.bend:39",
+  "name": "plan-item",
+  "class": "shadowed",
+  "reason": "The plan file is read through a hashing Reader bounded by the catalog-pinned size (plan.bend:145, wire_reader.bend:67 'plan-length'). A different item name changes the bytes, so R.finish (plan.bend:116) refuses at wire_reader.bend:145 'trailing-data' or :164 'plan-digest' before the Plan is returned."
+ },
+ {
+  "index": 86,
+  "site": "src/plan.bend:52",
+  "name": "plan-version",
+  "class": "shadowed",
+  "reason": "The plan file in DIR/plans is read with the catalog-pinned size and every byte is hashed; R.finish (plan.bend:116) refuses any altered file at wire_reader.bend:145 'NO: trailing-data' or wire_reader.bend:163 'NO: plan-digest'. Reads are bounded by the pinned size (wire_reader.bend:67), so no hang."
+ },
+ {
+  "index": 87,
+  "site": "src/plan.bend:59",
+  "name": "plan-round-count",
+  "class": "shadowed",
+  "reason": "The round count comes from the plan file bytes, which are bounded by the pinned size and hashed; an altered count changes the bytes, so the call ends in wire_reader.bend:67 'plan-length', :145 'trailing-data' or :163 'plan-digest' (plan.bend:116)."
+ },
+ {
+  "index": 88,
+  "site": "src/plan.bend:124",
+  "name": "plan-configuration",
+  "class": "shadowed",
+  "reason": "The plan pinned for this configuration digest (plan.bend:153-155) carries that digest in its configuration item; otherwise the accepting fixtures would fail. A violating file therefore differs from the pinned plan, and complete -> R.finish refuses it at wire_reader.bend:164 'plan-digest' (or :67/:145), since the reads are bounded by the pinned size."
+ },
+ {
+  "index": 90,
+  "site": "src/policy.bend:89",
+  "name": "policy-length",
+  "class": "shadowed",
+  "reason": "The only violating case is a read of exactly 65537 bytes (limit at policy.bend:88). That text is longer than any catalog policy, so after bounded parsing it is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69), because policy.txt is hashed as join(lines,'\\n') into the configuration digest (policy_config.bend:27-28)."
+ },
+ {
+  "index": 91,
+  "site": "src/policy.bend:90",
+  "name": "policy-line-form",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 92,
+  "site": "src/policy.bend:92",
+  "name": "parameter-line-missing",
+  "class": "shadowed",
+  "reason": "Without a final newline String.lines has no trailing \"\" so Model.calls reaches [] and dies 'NO: parameter-line-missing' at policy_model.bend:115 (same name); the text is also digest-bound and refused at accounting.bend:51."
+ },
+ {
+  "index": 93,
+  "site": "src/policy.bend:101",
+  "name": "statement-range",
+  "class": "self-check",
+  "reason": "The same r,e words were already checked by Header.request_status (header.bend:64-65: start<end, end<=length, and exact word count) via policy_statement.bend:64 before count_words at :78."
+ },
+ {
+  "index": 94,
+  "site": "src/policy_config.bend:36",
+  "name": "unsupported-configuration",
+  "class": "shadowed",
+  "reason": "A layout read of 224976 bytes (the read cap, policy_config.bend:35) is length-prefixed into the digest (policy_config.bend:23,28) and cannot equal any catalog layout (all <=224975 B), so Accounting.check refuses it at accounting.bend:51 with the same name."
+ },
+ {
+  "index": 95,
+  "site": "src/policy_config.bend:55",
+  "name": "plan-layout",
+  "class": "self-check",
+  "reason": "verify_config runs after Accounting.check matched the digest of the policy text (policy_config.bend:69 -> accounting.bend:51), so NAf/NAd/NAs/NHf come from one of the four authenticated policy files."
+ },
+ {
+  "index": 96,
+  "site": "src/policy_frame.bend:27",
+  "name": "parameter-line-order",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 100,
+  "site": "src/policy_frame.bend:112",
+  "name": "w-shape-lk",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read. w is only bounded by b<=w<=40 at policy_frame.bend:109 before this."
+ },
+ {
+  "index": 101,
+  "site": "src/policy_frame.bend:122",
+  "name": "parameter-group-shape",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 102,
+  "site": "src/policy_frame.bend:130",
+  "name": "parameter-range",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 103,
+  "site": "src/policy_frame.bend:136",
+  "name": "parameter-range",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 106,
+  "site": "src/policy_model.bend:66",
+  "name": "policy-",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read. (Also any eg/smax line other than the defaults is refused by policy_tables.bend:60.)"
+ },
+ {
+  "index": 108,
+  "site": "src/policy_model.bend:107",
+  "name": "policy-call-list",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 109,
+  "site": "src/policy_model.bend:110",
+  "name": "policy-line-long",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 110,
+  "site": "src/policy_model.bend:112",
+  "name": "policy-call-line",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 112,
+  "site": "src/policy_scales.bend:25",
+  "name": "KL-kq-kk",
+  "class": "shadowed",
+  "reason": "KL.bin words are hashed into the configuration digest (policy_config.bend:28 word_bytes(scales), exact bytes given the KL-length check at policy_scales.bend:57), so a violating KL.bin differs from all four catalog ones and is refused at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69)."
+ },
+ {
+  "index": 116,
+  "site": "src/policy_scales.bend:29",
+  "name": "af-policy-C",
+  "class": "self-check",
+  "reason": "soft_size is the softmax table word count, fixed at 2307 by policy_tables.bend:72 and the length check at :30; with sh in 4..12 already enforced at policy_scales.bend:28, 16711680>>sh >= 4080 > 2307, so COND always holds."
+ },
+ {
+  "index": 117,
+  "site": "src/policy_scales.bend:30",
+  "name": "unsupported parameter form: attention-shifts",
+  "class": "shadowed",
+  "reason": "KL.bin words are hashed into the configuration digest (policy_config.bend:28 word_bytes(scales), exact bytes given the KL-length check at policy_scales.bend:57), so a violating KL.bin differs from all four catalog ones and is refused at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69)."
+ },
+ {
+  "index": 118,
+  "site": "src/policy_scales.bend:31",
+  "name": "unsupported parameter form: norm-shifts",
+  "class": "shadowed",
+  "reason": "KL.bin words are hashed into the configuration digest (policy_config.bend:28 word_bytes(scales), exact bytes given the KL-length check at policy_scales.bend:57), so a violating KL.bin differs from all four catalog ones and is refused at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69). norm() at :26 does not imply k<=m (e.g. k=32,m=24)."
+ },
+ {
+  "index": 119,
+  "site": "src/policy_scales.bend:41",
+  "name": "KL-shift-range",
+  "class": "shadowed",
+  "reason": "KL.bin words are hashed into the configuration digest (policy_config.bend:28 word_bytes(scales), exact bytes given the KL-length check at policy_scales.bend:57), so a violating KL.bin differs from all four catalog ones and is refused at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69)."
+ },
+ {
+  "index": 120,
+  "site": "src/policy_scales.bend:49",
+  "name": "shape-words",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read. A bad ll only changes the KL.bin read limit; KL-length (policy_scales.bend:57/:33) still bounds what follows by the file size."
+ },
+ {
+  "index": 121,
+  "site": "src/policy_scales.bend:51",
+  "name": "shape-L",
+  "class": "shadowed",
+  "reason": "L comes from policy.txt. Before accounting, L is used only to size the KL.bin read and the row loop (policy_scales.bend:55-68), and :52 keeps it at most 28*64, so the work stays bounded with no division. A violating policy differs from the catalog and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69), because policy.txt is hashed as join(lines,'\\n') into the configuration digest (policy_config.bend:27-28)."
+ },
+ {
+  "index": 122,
+  "site": "src/policy_scales.bend:52",
+  "name": "plan-groups-base",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read. A wrapped U32 length is caught by rows() dying 'NO: KL-length' (policy_scales.bend:33)."
+ },
+ {
+  "index": 123,
+  "site": "src/policy_scales.bend:57",
+  "name": "KL-length",
+  "class": "tested",
+  "reason": "KL.bin ends in zero bytes; H.u32s packs a cut tail to the same words, scales and configuration digest (hash_bytes.bend:42-44, policy_config.bend:28), so only this length check refuses a trimmed KL.bin. scripts/standalone-test.py now requires NO: KL-length for KL.bin missing its last byte."
+ },
+ {
+  "index": 124,
+  "site": "src/policy_scales.bend:71",
+  "name": "policy-norm-F",
+  "class": "shadowed",
+  "reason": "policy.txt is hashed byte-exactly into the configuration digest (policy_config.bend:27-29, join(String.lines(t),'\\n')==t), so any file violating this differs from all four catalog files and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (called at policy_config.bend:69); nothing before it allocates beyond the bounded policy (65536 B) read."
+ },
+ {
+  "index": 125,
+  "site": "src/policy_scales.bend:72",
+  "name": "unsupported parameter form: norm-shifts",
+  "class": "shadowed",
+  "reason": "MF/KF come from policy.txt and are used before accounting only in this check. norm() at :71 allows kF>mF (e.g. MF 24, KF 30), but such a policy differs from every catalog policy and is refused by Accounting.check at accounting.bend:51 'NO: unsupported-configuration' (policy_config.bend:69), because policy.txt is hashed as join(lines,'\\n') into the configuration digest (policy_config.bend:27-28)."
+ },
+ {
+  "index": 129,
+  "site": "src/request_stage.bend:47",
+  "name": "request-binding-shape",
+  "class": "self-check",
+  "reason": "depth and salt are read from the plan item 'binding tree' (request_stage.bend:62-63). The plan is digest-pinned, and all four plans hold depth=6, salt=40."
+ },
+ {
+  "index": 130,
+  "site": "src/request_stage.bend:100",
+  "name": "request-binding-slot",
+  "class": "shadowed",
+  "reason": "hi comes from PROOF, but a slot >= 2^48 then fails O.binding_root, which requires slot == short(depth,slot), i.e. slot < 2^6 for the pinned depth 6 (opening_bytes.bend:235,40-43). That refusal has the same name, request-binding-slot (request_stage.bend:104-106), so only the line differs."
+ },
+ {
+  "index": 131,
+  "site": "src/request_stage.bend:169",
+  "name": "request-stored-copy",
+  "class": "self-check",
+  "reason": "copy and expected are both the leaf index of the same first 12 bytes of PROOF, read once in standalone.bend:75-76 and again at request_stage.bend:185-186. They differ only if PROOF changes during the call, which the trust model excludes (verifier.md 'Don't let any input change while the call runs')."
+ },
+ {
+  "index": 132,
+  "site": "src/request_walk.bend:38",
+  "name": "header-y",
+  "class": "shadowed",
+  "reason": "The REPLY token comes from PROOF, but head requires it to equal the caller's y (request_walk.bend:63, NO: reply-differs). The caller's y is already checked < V at the public stage (header.bend:66, NO: token-range), so a token >= V always differs."
+ },
+ {
+  "index": 134,
+  "site": "src/result.bend:20",
+  "name": "statement-range",
+  "class": "self-check",
+  "reason": "The same request words r,e were validated by Header.request_status (header.bend:64-65) at policy_statement.bend:64 and again at policy.bend:101, with t equal to the token count."
+ },
+ {
+  "index": 136,
+  "site": "src/round_io.bend:84",
+  "name": "round-plan",
+  "class": "self-check",
+  "reason": "count, name, size and roots are fields of the digest-pinned plan Round (round_io.bend:80, plan.bend:142-149 with the Catalog.pin digest)."
+ },
+ {
+  "index": 137,
+  "site": "src/segment_attention.bend:59",
+  "name": "attention-forest-boundary",
+  "class": "self-check",
+  "reason": "bytes is the plan round size and n is slots(shape) from the trusted forest geometry (segment_attention.bend:42-46,70). The events list is the plan's round sequence."
+ },
+ {
+  "index": 138,
+  "site": "src/segment_attention_psc.bend:47",
+  "name": "attention-psc-values",
+  "class": "self-check",
+  "reason": "name is the plan round name, count is the number of round elements (fixed by the plan's byte size) and n is a geometry constant passed by the caller (segment_attention_psc.bend:42-47)."
+ },
+ {
+  "index": 139,
+  "site": "src/segment_attention_psc.bend:81",
+  "name": "attention-psc",
+  "class": "self-check",
+  "reason": "name is the plan round name of the next algebra round, and the single-challenge pattern is fixed by the plan's draw count (segment_attention_psc.bend:79-82)."
+ },
+ {
+  "index": 140,
+  "site": "src/segment_attention_psc.bend:98",
+  "name": "attention-coin",
+  "class": "self-check",
+  "reason": "name, the number of message elements (plan byte size) and the number of challenges (the plan's elements/nonzero fields via L.event, key_stage_lookup_rows.bend:41-46) are all plan-determined, and n and c are caller constants."
+ },
+ {
+  "index": 141,
+  "site": "src/segment_batch.bend:51",
+  "name": "segment-mask-slot",
+  "class": "self-check",
+  "reason": "Mask slots are counters the verifier derives from the plan-sized hidden values (L.next and slot arithmetic), and slots is the segment geometry's slot count, so no PROOF byte sets a slot index."
+ },
+ {
+  "index": 142,
+  "site": "src/segment_batch.bend:108",
+  "name": "segment-free-slot",
+  "class": "negligible-event",
+  "reason": "Whether the free slot gets a mask is fixed by the structure, and the other slots must be nonzero. The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 143,
+  "site": "src/segment_chain.bend:88",
+  "name": "segment-link-order",
+  "class": "self-check",
+  "reason": "Local.number(model) is the link counter assigned consecutively by Inputs.batches (segment_inputs.bend:59-67), and the scheduler counts from the same start, so the two always agree."
+ },
+ {
+  "index": 144,
+  "site": "src/segment_chain.bend:145",
+  "name": "segment-link-order",
+  "class": "self-check",
+  "reason": "Same as site 143: Inputs.batches numbers inputs consecutively from 0 (segment_inputs.bend:63-67), and serial walks them with the same counter."
+ },
+ {
+  "index": 145,
+  "site": "src/segment_digits.bend:28",
+  "name": "segment-zero-BZ-column",
+  "class": "negligible-event",
+  "reason": "w = alpha-1-v(tables) and the tensor factors are built from sumcheck challenge points (key_stage_lookup.bend:56-60, segment_forest.bend:~76). The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 146,
+  "site": "src/segment_digits.bend:93",
+  "name": "segment-digits-shape",
+  "class": "self-check",
+  "reason": "The S.Forest calls (iota, first, r) come from the trusted segment table geometry, not from PROOF (segment_digits.bend:85-89)."
+ },
+ {
+  "index": 147,
+  "site": "src/segment_digits.bend:94",
+  "name": "segment-zero-ZZ-join",
+  "class": "negligible-event",
+  "reason": "e and the prefix factors are eq-tensor entries at the key point coords, which are sumcheck challenges (segment_digits.bend:64-71). The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 148,
+  "site": "src/segment_ff.bend:39",
+  "name": "feed-forward-weight-count",
+  "class": "self-check",
+  "reason": "cs has one claim per weighted geometry panel (ff_stack_weights.bend:105-112) plus one embedding claim when the merge coin has one value; that coin's length is forced to the verifier constant pre by P.coin (ff_rounds.bend:95, segment_attention_psc.bend:98). NCL is a geometry field."
+ },
+ {
+  "index": 149,
+  "site": "src/segment_forest.bend:83",
+  "name": "segment-forest-slots",
+  "class": "self-check",
+  "reason": "m is the verifier's mask-slot counter, advanced by the plan-sized fresh values; stop is the geometry's slot count (segment_forest.bend:80-84)."
+ },
+ {
+  "index": 150,
+  "site": "src/segment_forest.bend:107",
+  "name": "segment-forest-planes",
+  "class": "self-check",
+  "reason": "zs is the challenge list of the plan's ZERO/join round, whose length is set by the plan round's element count (segment_forest.bend:101-107)."
+ },
+ {
+  "index": 151,
+  "site": "src/segment_head.bend:50",
+  "name": "head-slot-count",
+  "class": "self-check",
+  "reason": "at is the PSC cursor slot after parsing plan-sized rounds, and slots is a geometry constant (segment_head.bend:47-50)."
+ },
+ {
+  "index": 152,
+  "site": "src/segment_local.bend:55",
+  "name": "segment-U3-rows",
+  "class": "self-check",
+  "reason": "rows comes from the plan's 'layout' item, parsed by Layout.parse (segment_local.bend:40-45)."
+ },
+ {
+  "index": 153,
+  "site": "src/segment_local.bend:72",
+  "name": "segment-zero-U3-column",
+  "class": "negligible-event",
+  "reason": "ok comes from Dense.scan over the terminal basis coordinates gs/gr, which are challenges. The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 154,
+  "site": "src/segment_local.bend:77",
+  "name": "segment-zero-U3-column",
+  "class": "negligible-event",
+  "reason": "Cover.form needs a structural fit (term widths set by the verifier) and nonzero entries of challenge-derived tensors (segment_coverage.bend:72-74). The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 155,
+  "site": "src/segment_local.bend:86",
+  "name": "segment-zero-U3-column",
+  "class": "self-check",
+  "reason": "Dense.fits checks the widths of read terms that the verifier itself built against row_bits(n) from the geometry, so it is structural."
+ },
+ {
+  "index": 156,
+  "site": "src/segment_projection.bend:57",
+  "name": "request-terminal-dimensions",
+  "class": "self-check",
+  "reason": "ell is the plan code length, n is a geometry dimension, and bits counts challenge coords whose number is fixed by the plan rounds (segment_projection.bend:50-57)."
+ },
+ {
+  "index": 157,
+  "site": "src/segment_stage.bend:33",
+  "name": "coin-zero",
+  "class": "negligible-event",
+  "reason": "The value is the PSC epsilon challenge drawn from the transcript stream, not a PROOF value (segment_stage.bend:30-33). The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 158,
+  "site": "src/segment_transport.bend:70",
+  "name": "request-switch-equations",
+  "class": "self-check",
+  "reason": "F.fits checks factor-list widths of forms the verifier built against CS.bits(ell) from plan codes; gs has the plan-fixed gamma length (segment_transport.bend:66-80). The check is structural."
+ },
+ {
+  "index": 159,
+  "site": "src/smallness.bend:30",
+  "name": "segment-functional-rows",
+  "class": "self-check",
+  "reason": "The functional n and offsets are built by the verifier from the segment shapes, and rows comes from the geometry matrices (smallness.bend:26-31)."
+ },
+ {
+  "index": 160,
+  "site": "src/smallness.bend:76",
+  "name": "segment-smallness-equation-count",
+  "class": "self-check",
+  "reason": "entries and want come from the plan's RNG trits and BAT-sigma rows fields (smallness_columns.bend:38-48); d, t and n are counts of equations the verifier built from the geometry."
+ },
+ {
+  "index": 161,
+  "site": "src/smallness.bend:88",
+  "name": "segment-smallness-rng-size",
+  "class": "self-check",
+  "reason": "mz and the matrix rows/columns come from the geometry, and n is the plan's RNG trits field (smallness_columns.bend:45-46)."
+ },
+ {
+  "index": 162,
+  "site": "src/smallness.bend:91",
+  "name": "segment-linear-count",
+  "class": "self-check",
+  "reason": "linear, start and suffix come from the geometry, and the counts of ds, ts and reads are structural results of the verifier's own construction (smallness.bend:87-92)."
+ },
+ {
+  "index": 163,
+  "site": "src/smallness.bend:102",
+  "name": "segment-smallness-row-powers",
+  "class": "negligible-event",
+  "reason": "Cover.order tests that the powers of the challenge chi are distinct and nonzero (segment_coverage.bend:31-42). The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 164,
+  "site": "src/smallness.bend:104",
+  "name": "segment-functional-coverage",
+  "class": "self-check",
+  "reason": "The spans come from verifier-built functionals and geometry matrices, and len is a geometry length (smallness.bend:103-104)."
+ },
+ {
+  "index": 165,
+  "site": "src/smallness_packing.bend:58",
+  "name": "segment-packing-width",
+  "class": "self-check",
+  "reason": "bits = row_bits(m), where m is a geometry matrix row count (smallness_matrix.bend:74)."
+ },
+ {
+  "index": 166,
+  "site": "src/smallness_reads.bend:53",
+  "name": "segment-functional-shape",
+  "class": "self-check",
+  "reason": "length, phi and rows come from verifier-built functionals and geometry matrices (smallness_reads.bend:33-34), not PROOF; same as segment-functional-rows (smallness.bend:30)."
+ },
+ {
+  "index": 167,
+  "site": "src/smallness_reads.bend:90",
+  "name": "segment-zero-ZZ-read",
+  "class": "negligible-event",
+  "reason": "The weights are built from the gamma column challenges and the powers of chi (smallness_reads.bend:49-56, smallness_matrix.bend:43-46). The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 168,
+  "site": "src/smallness_reads.bend:99",
+  "name": "segment-smallness-zero-column",
+  "class": "negligible-event",
+  "reason": "gamma is drawn from the RNG transcript stream (smallness_matrix.bend:43-46), and uses(fns) is structural. The values are Fiat-Shamir challenges (or products of them and public tables), so a violation is a section 13.9 negligible event (about 2^-190 per draw); the prover cannot force it without breaking the hash."
+ },
+ {
+  "index": 170,
+  "site": "src/weight_merge.bend:28",
+  "name": "weights-start-slot",
+  "class": "self-check",
+  "reason": "The claim slot i is A.at(P.ends(logits),1) and next is a slot counter, both derived by the verifier from plan-sized rounds (head_weights.bend:41-49,53-55)."
+ },
+ {
+  "index": 171,
+  "site": "src/weight_merge.bend:64",
+  "name": "weights-claim-count",
+  "class": "self-check",
+  "reason": "The only caller passes a one-element list [c] (head_weights.bend:55)."
+ },
+ {
+  "index": 172,
+  "site": "src/weight_rows.bend:56",
+  "name": "weights-equality-shape",
+  "class": "self-check",
+  "reason": "p = F.take(rs,bits) and hv = F.take(high,odd) are built by the verifier from a plan-sized point and the trusted weight layout (head_weights.bend:21-26)."
+ },
+ {
+  "index": 173,
+  "site": "src/weight_rows.bend:60",
+  "name": "weights-array-shape",
+  "class": "self-check",
+  "reason": "vals is the vocabulary factor built by V.vocabulary from geometry constants (head_weights.bend:44-47), and len comes from the trusted weight layout."
+ },
+ {
+  "index": 174,
+  "site": "src/weight_rows.bend:64",
+  "name": "weights-array-shape",
+  "class": "self-check",
+  "reason": "Same as site 173: the ArrayFactor values are built by the verifier with a geometry-fixed length (head_weights.bend:44-47)."
+ },
+ {
+  "index": 175,
+  "site": "src/weight_rows.bend:156",
+  "name": "weights-column-point",
+  "class": "self-check",
+  "reason": "psi = A.rev(at), where at is the point of P.parse run with width(g) = k variables (weight_merge.bend:46-57), so its length is k."
+ },
+ {
+  "index": 176,
+  "site": "src/wire_reader.bend:22",
+  "name": "file-too-long",
+  "class": "self-check",
+  "reason": "Every caller passes cap=4294967295 (key_stage.bend:164, request_stage.bend:185, leaf_stage.bend:79), and size is a U32, so U32.is_le(size,cap) always holds."
+ },
+ {
+  "index": 179,
+  "site": "src/wire_reader.bend:128",
+  "name": "plan-name",
+  "class": "shadowed",
+  "reason": "Names are read only from plan files (src/plan.bend:45, :86), which are opened at their catalog size and hashed. Any change to a name changes the plan digest, so src/wire_reader.bend:164 refuses with NO: plan-digest."
+ },
+ {
+  "index": 180,
+  "site": "src/wire_reader.bend:145",
+  "name": "trailing-data",
+  "class": "shadowed",
+  "reason": "Trailing bytes stay unread in the file, and the one-byte read at src/wire_reader.bend:148 refuses them under the same name. With :145 disabled, key.bin with 1, 7, 100 or 5000 bytes appended was still refused with NO: trailing-data."
+ }
+]

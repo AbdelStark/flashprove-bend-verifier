@@ -83,30 +83,6 @@ def configuration(+config: String) -> IO(H.Bytes):
 type Shape is Data:
   Shape{rows_log: U32, code_log: U32, message: U32, random: U32, salt: U32}
 
-def table(line: Maybe<&2, String>) -> IO(List<&2, String>):
-  match line:
-    case Some{text}: IO.pure(List<&2, String>, String.split(text, ' '))
-    case None{}: IO.die(List<&2, String>, 1, "NO: policy-table")
-
-def shape(values: List<&2, String>, salt: U32) -> IO(Shape):
-  match values:
-    case [_, b, n, i, m, e, w]:
-      do IO<Shape>:
-        +rows : U32 <- Header.decimal(Nat.read(b))
-        +bits : U32 <- Header.decimal(Nat.read(n))
-        +message : U32 <- Header.decimal(Nat.read(i))
-        +random : U32 <- Header.decimal(Nat.read(m))
-        entry : U32 <- Header.decimal(Nat.read(e))
-        +block : U32 <- Header.decimal(Nat.read(w))
-        checked : Unit <- Header.require(
-          U32.is_le(rows, 20) && U32.is_le(bits, 32) && U32.is_ne(message, 0) &&
-          U32.is_zero(entry) && U32.is_le(rows, block) && U32.is_le(block, 40), "NO: parameter-table-shape")
-        checked : Unit <- Header.require(
-          Nat.is_lt(Nat.add(U32.to_nat(message), U32.to_nat(random)), P2.pow2(U32.to_nat(bits))),
-          "NO: parameter-table-shape")
-        return Shape{rows, bits, message, random, salt}
-    case _: IO.die(Shape, 1, "NO: policy-table")
-
 def variables(+message: U32) -> Nat:
   match message:
     case 1: 0n
